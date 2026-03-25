@@ -95,9 +95,9 @@ android {
 
     // Lint configuration: treat all warnings as errors in CI
     lint {
-        abortOnError = false
-        checkReleaseBuilds = false
-        warningsAsErrors = false   // Set to true for release builds in CI
+        abortOnError = true
+        checkReleaseBuilds = true
+        warningsAsErrors = true
         checkDependencies = true
     }
 
@@ -121,6 +121,7 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            isReturnDefaultValues = true
         }
     }
 }
