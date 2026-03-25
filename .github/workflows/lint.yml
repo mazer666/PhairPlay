@@ -42,7 +42,7 @@ jobs:
       # The lint configuration in app/build.gradle.kts controls what is reported.
       # See: https://developer.android.com/studio/write/lint
       - name: Run Android Lint
-        run: ./gradlew lint --stacktrace
+        run: ./gradlew :app:lintGoogletvDebug --stacktrace
 
       # Upload the lint report so it's easy to review in GitHub
       - name: Upload Lint report

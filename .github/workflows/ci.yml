@@ -80,7 +80,7 @@ jobs:
       # Unit tests run on the build machine (no Android device needed)
       - name: Run unit tests
         run: |
-          ./gradlew :app:testDebugUnitTest --stacktrace 2>&1 | tee app/build/reports/test-error.txt
+          ./gradlew :app:testGoogletvDebugUnitTest :app:testFiretvDebugUnitTest --stacktrace 2>&1 | tee app/build/reports/test-error.txt
           TEST_EXIT=${PIPESTATUS[0]}
           if [ $TEST_EXIT -ne 0 ]; then
             ERROR=$(grep -n "error:\|Error:\|FAILURE:\|Exception\|Caused by:\|Could not\|failed\|FAILED\|unresolved\|Unresolved" app/build/reports/test-error.txt | grep -v "^[[:space:]]*at " | head -50)
