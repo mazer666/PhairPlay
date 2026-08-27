@@ -11,6 +11,7 @@ import android.os.IBinder
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.view.View
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -241,6 +242,7 @@ class MainActivity : AppCompatActivity() {
         streamingScreen.visibility = View.VISIBLE
         streamingContainer.visibility = View.VISIBLE
         streamingContainer.bringToFront()
+        setKeepScreenOn(true)
     }
 
     fun showPhotoScreen(photoFrame: PhotoFrame) {
@@ -251,6 +253,7 @@ class MainActivity : AppCompatActivity() {
             photoScreen.visibility = View.VISIBLE
             streamingContainer.visibility = View.VISIBLE
             streamingContainer.bringToFront()
+            setKeepScreenOn(true)
         }
     }
 
@@ -263,6 +266,8 @@ class MainActivity : AppCompatActivity() {
         nowPlayingScreen.visibility = View.VISIBLE
         streamingContainer.visibility = View.VISIBLE
         streamingContainer.bringToFront()
+        // Audio-only too: the sender is streaming, so the TV must not doze off mid-track.
+        setKeepScreenOn(true)
     }
 
     /**
@@ -277,6 +282,29 @@ class MainActivity : AppCompatActivity() {
         pinScreen.visibility = View.GONE
         streamingScreen.visibility = View.VISIBLE
         streamingContainer.visibility = View.GONE
+        setKeepScreenOn(false)
+    }
+
+    /**
+     * Holds the display awake for as long as something is actually being received.
+     *
+     * Without this the TV's own screensaver / power-saving timer fires straight through an
+     * active session — mirroring simply stops being watchable after the timeout, which is
+     * what every other casting app avoids. `FLAG_KEEP_SCREEN_ON` is the right instrument
+     * rather than a `PowerManager` wake lock: it needs no permission, it is scoped to this
+     * window, and Android drops it automatically if the activity goes away, so a crash or a
+     * forgotten `false` can never leave the panel burning indefinitely.
+     *
+     * Set from every path that raises or lowers the overlay: mirroring, photos, and
+     * audio-only now-playing all count as "in use".
+     */
+    private fun setKeepScreenOn(keepOn: Boolean) {
+        if (keepOn) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        Timber.d("Keep-screen-on: $keepOn")
     }
 
     /** Returns the SurfaceView Surface for the VideoDecoder. */
