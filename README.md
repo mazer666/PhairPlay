@@ -22,7 +22,7 @@ PhairPlay's AirPlay 2 receiver is fully implemented and available as a signed be
 
 The AirPlay 2 stack is complete end-to-end: mDNS advertising, RTSP handshake, HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, and DACP reverse remote. Real-device validation with macOS and iOS senders is the current focus.
 
-Miracast and Google Cast receiver stacks are in progress (control-plane implemented; media playback pending).
+The Google Cast receiver lifecycle is implemented (end-to-end testing needs a registered Cast app ID). Miracast was removed: a sideloaded Android app cannot be discovered as a Miracast sink (see [ADR-004](docs/decisions/ADR-004-miracast-removed.md)); Windows senders will be served by DLNA instead.
 
 ## Features
 
@@ -43,7 +43,6 @@ Miracast and Google Cast receiver stacks are in progress (control-plane implemen
 - Android TV / Fire TV app shell with foreground service and status UI
 - Mirror audio toggle and PIN-auth toggle in Settings
 - Works on Google TV (Android 10+) and Fire TV (Android 7+)
-- Miracast Wi-Fi Direct / WFD advertisement and RTSP control-plane
 - Google TV Cast Connect SDK lifecycle (full testing requires Cast app ID)
 - Zero ads, zero analytics, zero internet required
 - Open source — Apache 2.0 license
@@ -51,10 +50,11 @@ Miracast and Google Cast receiver stacks are in progress (control-plane implemen
 ## What PhairPlay Does NOT Do
 
 - **FairPlay DRM content** (Netflix, Disney+, Apple TV+) — Apple DRM; not decryptable by any open-source receiver
-- **Apple Music in-app audio** — protected on every AirPlay path; use system audio output instead
+- **Music.app / iTunes audio-only from macOS** — Music streams to receivers without AirPlay 2 buffered audio over the AirPlay 1 path with FairPlay v2 key wrapping, which no open-source implementation can decrypt (only v3 has been reverse-engineered). Route the Mac's **system audio output** to PhairPlay instead — that path works. The real fix is AirPlay 2 buffered audio (below).
 - **Buffered audio playback** (AirPlay 2 type 103) — accepted but not played back yet
 - **Cloud/remote streaming** — local network only
-- **Miracast / Cast media playback** — control plane is ready; media decode integration is in progress
+- **Miracast** — impossible for a sideloaded app (the Wi-Fi Display advertisement needs a system permission; see ADR-004). Windows: use DLNA once sub-project 3 lands.
+- **Cast media playback** — needs a registered Cast app ID for end-to-end testing
 
 ---
 
@@ -180,11 +180,10 @@ Then install it via ADB (see the Sideloading Guide below) or a sideloading app l
 ## Known Limitations
 
 - **Beta software** — the AirPlay 2 stack is complete but real-device validation with various macOS/iOS senders is ongoing. Please report issues.
-- **Apple Music in-app audio is not decryptable.** macOS protects it with FairPlay on every AirPlay path. Route the Mac's system audio output instead (works fine).
+- **Music.app audio-only stays silent.** macOS Music uses the AirPlay 1 flow with FairPlay v2 key wrapping for receivers that lack AirPlay 2 buffered audio; FairPlay v2 has not been reverse-engineered. The session now stays connected and shows now-playing metadata, but no sound plays. Route the Mac's system audio output (System Settings → Sound → Output) to PhairPlay instead — that works.
 - **FairPlay-protected video** (Netflix, Disney+, Apple TV+) cannot be mirrored — this is Apple's DRM, not a PhairPlay limitation.
 - **Buffered audio (AirPlay 2 type 103)** is accepted but not yet played back.
 - **Google Cast** requires a registered Cast app ID for end-to-end testing; see [docs/guides/CAST_APP_ID.md](docs/guides/CAST_APP_ID.md).
-- **Miracast** — Wi-Fi Direct and RTSP control plane work; MPEG-TS media decode is future work.
 - If your router has **AP isolation** or **multicast filtering** enabled, PhairPlay may not appear in the AirPlay menu. Disable these settings on your router.
 - On very busy 2.4 GHz Wi-Fi networks, you may experience latency above 100 ms. Use 5 GHz or Ethernet for best results.
 - **PIN auth is optional.** When disabled (default), any device on the same network can mirror to the TV. Enable PIN auth in Settings if you're on a shared network.

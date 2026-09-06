@@ -1,7 +1,7 @@
 # ADR-001: Multi-Protocol Support (AirPlay + Miracast + Cast)
 
 **Date:** 2026-03-23
-**Status:** Accepted
+**Status:** Accepted — **amended 2026-09-06:** the Miracast part is superseded by ADR-004 (Miracast removed; a sideloaded app cannot be a Miracast sink).
 
 ---
 
@@ -29,7 +29,7 @@ Each protocol is implemented as an independent component that can be enabled/dis
 - Adds ~3 new package directories (`airplay/`, `miracast/`, `cast/`)
 - Increases APK size by ~2-5 MB (Cast SDK dependency)
 - Fire TV flavor must gracefully handle missing Google Play Services
-- Miracast requires `CHANGE_WIFI_STATE` and `ACCESS_FINE_LOCATION` permissions (Wi-Fi P2P)
+- Miracast required `CHANGE_WIFI_STATE` and `ACCESS_FINE_LOCATION` permissions (Wi-Fi P2P) — removed with the receiver, see ADR-004
 
 ## Alternatives Considered
 

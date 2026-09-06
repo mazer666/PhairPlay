@@ -11,8 +11,8 @@ Last Updated: 2026-05-23
 
 ```
 Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11
- Spec     Skeleton  AirPlay   AirPlay   AirPlay   AirPlay   Miracast    Cast     Stability  Fire TV   i18n      Release
-          + UI       mDNS     Handshk    Video     Audio+    Receiver  Receiver             Port      Polish
+ Spec     Skeleton  AirPlay   AirPlay   AirPlay   AirPlay   (removed)   Cast     Stability  Fire TV   i18n      Release
+          + UI       mDNS     Handshk    Video     Audio+    Miracast  Receiver             Port      Polish
                     +Service  +RTSP     +Photo    Opt.Codec  Full     Full
                               +Photo   +Opt.HEVC  +HEVC    Codecs    Codecs
   M0        M1       M2        M3        M4        M5        M6         M7        M8         M9       M10       M11
@@ -24,11 +24,11 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 |---|---|---|---|
 | 0 | M0 – Spec | ✅ Complete | All spec docs written, codec matrix added (v2.2) |
 | 1 | M1 – Skeleton | ✅ Complete | UI, settings, foreground service, and both APK flavors build |
-| 2 | M2 – mDNS | ✅ Complete | AirPlay mDNS + InfoResponder implemented; Miracast WFD advertising added; Cast remains registration-dependent |
+| 2 | M2 – mDNS | ✅ Complete | AirPlay mDNS + InfoResponder implemented; Cast remains registration-dependent |
 | 3 | M3 – AirPlay Handshake | ✅ Complete | Full RTSP router, SDP parsing, plist codec, pairing (Ed25519/X25519 + SRP), FairPlay fp-setup, `/photo` endpoint, 247 unit tests |
 | 4 | M4 – AirPlay Video | ✅ Complete | H.264 via MirrorStreamServer + MirrorCrypto (AES-128-CTR), MediaCodec with SPS-driven reinit and self-heal, aspect-fit rendering; real-device validation ongoing |
 | 5 | M5 – AirPlay Audio | ✅ Complete | AAC-ELD/AAC-LC (AudioStreamServer), ALAC (AlacDecoder + libalac), AES-128-CBC, NTP sync, DACP reverse remote, NowPlayingScreen; real-device validation ongoing |
-| 6 | M6 – Miracast | 🔄 Started | Wi-Fi Direct/WFD advertising and RTSP control-plane implemented; MPEG-TS, HDCP, and A/V playback pending |
+| 6 | M6 – Miracast | ❌ Removed | Sideloaded apps cannot be Miracast sinks (WFD IE needs a system permission) — ADR-004. Replaced by DLNA (sub-project 3) |
 | 7 | M7 – Google Cast | 🔄 Started | Google TV Cast Connect SDK lifecycle implemented; full testing requires registered Cast app ID |
 | 8 | M8 – Stability | ⏳ Pending | |
 | 9 | M9 – Fire TV | 🔄 In Progress | Signed Fire TV APK released (v1.0.0-beta.1); real Fire TV A/V validation pending |
@@ -73,7 +73,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 
 **Definition of Done:**
 - App starts on both platforms without crash
-- HomeScreen shows 3 service cards (AirPlay / Miracast / Cast) with status
+- HomeScreen shows 2 service cards (AirPlay / Cast) with status
 - Settings screen opens and saves settings
 - ForegroundService persists in background
 - Notification visible with Stop/Restart buttons
@@ -87,11 +87,10 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 
 **Milestone:** M2
 
-**Goal:** All enabled services advertise on the network. macOS sees AirPlay. Windows sees Miracast. Chrome sees Cast.
+**Goal:** All enabled services advertise on the network. macOS sees AirPlay. Chrome sees Cast.
 
 **Tasks:**
 - [x] `MdnsService.kt` — AirPlay mDNS advertisement
-- [x] Miracast Wi-Fi Direct / WFD service advertisement
 - [x] Google TV Cast Connect SDK lifecycle and manifest registration
 - [x] `NetworkUtils.kt` — IP, MAC, UUID helpers
 - [x] Settings: device name applied to implemented advertisers
@@ -99,7 +98,6 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 **Definition of Done:**
 - macOS sees PhairPlay within 3s (AC-2.1)
 - Device name from Settings is shown in picker
-- WifiP2p service registered (Miracast P2P)
 - Service cards update when advertising starts/stops
 
 ---
@@ -176,44 +174,9 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 
 ---
 
-## Phase 6 – Miracast Receiver (full codec matrix)
+## Phase 6 – Miracast Receiver — removed
 
-**Milestone:** M6
-
-**Goal:** Miracast screen mirroring from Windows 10+ and Android with full WFD codec matrix.
-
-**Tasks:**
-
-**Protocol and transport:**
-- [ ] `WifiDirectManager.kt` — full Wi-Fi P2P (peer discovery, connection accept)
-- [ ] `MiracastSession.kt` — WFD RTSP negotiation (capability exchange, `wfd-video-formats`, `wfd-audio-codecs`)
-- [ ] WFD capability advertisement: report supported video/audio codecs in WFD capability exchange
-- [ ] MPEG-TS demuxer: parse incoming MPEG Transport Stream; extract video/audio elementary streams
-
-**Mandatory video (H.264):**
-- [ ] `MiracastDecoder.kt` — H.264 AVC decode via VideoDecoder (Constrained High Profile + Constrained Baseline Profile)
-- [ ] H.264 level negotiation: advertise up to Level 4.2 in WFD capability exchange
-
-**Optional video (H.265):**
-- [ ] Runtime HEVC capability check; advertise in WFD `wfd-video-formats` only if available
-- [ ] H.265 HEVC decode via extended VideoDecoder
-
-**Mandatory audio (LPCM):**
-- [ ] `MiracastAudio.kt` — LPCM 16-bit / 48 kHz decode via AudioTrack direct pass-through
-
-**Optional audio (AAC, AC-3):**
-- [ ] AAC-LC / AAC-HE decode via MediaCodec; advertise in WFD `wfd-audio-codecs`
-- [ ] AC-3 (Dolby Digital) pass-through via AudioTrack `ENCODING_AC3` (if device supports)
-- [ ] Runtime audio capability check before advertising surround in WFD exchange
-
-**DRM / copy protection:**
-- [ ] Negotiate HDCP 2.x in WFD capability exchange (`wfd-content-protection`)
-- [ ] Graceful fallback if HDCP negotiation fails: reject session with WFD RTSP 403
-
-**UI:**
-- [ ] Miracast status card updates in HomeScreen (connecting, streaming, codec info in debug overlay)
-
-**Definition of Done:** AC-6.x — Windows 10 screen mirroring works end-to-end; LPCM and AAC audio work; H.265 works on capable hardware; HDCP negotiated.
+**Milestone:** M6 — ❌ removed 2026-09-06. A sideloaded Android app cannot set the Wi-Fi Display information element, so no Miracast sender can discover it; see `docs/decisions/ADR-004-miracast-removed.md`. Windows senders are served by the DLNA MediaRenderer (sub-project 3).
 
 ---
 
@@ -327,11 +290,11 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 |---|---|---|---|---|
 | M0 | Spec | 4 spec docs, codec matrix, photo/DRM spec | ✅ Complete | AC-0.x |
 | M1 | Skeleton | Service + UI scaffold (both flavors) | ✅ Build-ready | AC-1.x |
-| M2 | Discovery | AirPlay mDNS + Miracast WFD advertising groundwork | 🔄 In Progress | AC-2.x |
+| M2 | Discovery | AirPlay mDNS advertising | ✅ Complete | AC-2.x |
 | M3 | AirPlay Handshake + Photo | RTSP session + `/photo` endpoint | 🔄 In Progress | AC-3.x |
 | M4 | AirPlay Video | H.264 mandatory ≥25fps; H.265 optional | 🔄 In Progress | AC-4.x |
 | M5 | AirPlay Audio | A/V sync ≤40ms; ALAC; optional surround | 🔄 In Progress | AC-5.x |
-| M6 | Miracast | H.264 CHP/CBP + LPCM mandatory; HEVC/AAC/AC3 optional | 🔄 Started | AC-6.x |
+| M6 | Miracast | Removed — ADR-004 | ❌ Removed | — |
 | M7 | Cast | H.264+VP8 mandatory; HEVC/VP9/AV1 optional; Widevine | 🔄 Started | AC-7.x |
 | M8 | Stability | 30min tests all protocols; auto-reconnect | ⏳ Pending | AC-8.x |
 | M9 | Fire TV | All protocols on Fire TV; Cast graceful fallback | 🔄 Build-ready | AC-9.x |
@@ -345,15 +308,11 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | AirPlay undocumented behavior | High | High | Reference UxPlay/RPiPlay open-source implementations for protocol understanding; write code from scratch |
-| Miracast requires hidden Android APIs on some devices | High | High | Use WifiP2pManager + custom WFD RTSP; test early on real hardware |
 | Cast not available on Fire TV (no GMS) | Certain | Medium | Graceful fallback; disable Cast toggle on Fire TV flavor |
-| Wi-Fi P2P conflicts with existing AP connection | Medium | High | Test multi-connected scenarios early |
 | Google Cast SDK license terms | Low | High | Review carefully before distribution |
 | Open-source AirPlay implementations: legal risk | Low | High | Reference only for protocol understanding; write code from scratch |
 | H.265 / HEVC not available on all target devices | High | Low | Runtime capability check; feature advertised only when HW available; graceful fallback to H.264 |
 | AV1 hardware decoder not available below API 31 | High | Low | Software AV1 decoder (API 29+) as fallback; advertise only if decoder found via MediaCodecList |
-| HDCP negotiation fails on some Android TV hardware | Medium | Medium | Graceful WFD session rejection; log HDCP capability at startup; test on Fire TV (limited HDCP HW) |
 | Dolby Atmos / AC-3 pass-through requires specific HDMI setup | Medium | Low | Runtime check via AudioManager; optional feature; disabled if not advertised by sink device |
 | FairPlay DRM requested by users | Low | Low | Document clearly in FAQ: FairPlay not supported by design; AirPlay screen mirroring (non-DRM) works |
 | Large JPEG/PNG images (e.g. 12MP from iPhone) cause OOM | Medium | Medium | Use BitmapFactory.Options.inSampleSize; downsample to display resolution before decoding |
-| MPEG-TS demuxing complexity for WFD | Medium | High | Consider reusing ExoPlayer's TS extractor for WFD streams to avoid reimplementing demuxing |

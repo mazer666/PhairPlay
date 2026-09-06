@@ -158,19 +158,19 @@ UI behaviour: the app remains on the **HomeScreen**. The AirPlay protocol card u
 │                               │ binds / observes StateFlow            │
 │  ┌────────────────────────────▼───────────────────────────────────┐  │
 │  │               PhairPlayService  (ForegroundService)             │  │
-│  │  serviceState / airPlayState / miracastState / castState        │  │
-│  └────────┬──────────────────┬───────────────────┬────────────────┘  │
-│           │                  │                   │                   │
-│  ┌────────▼──────┐  ┌────────▼──────┐  ┌────────▼──────┐           │
-│  │ AirPlayReceiver│  │MiracastReceiver│  │ CastReceiver  │           │
-│  │               │  │               │  │               │           │
-│  │ MdnsService   │  │ WifiP2pManager│  │ CastReceiver  │           │
-│  │ RtspHandler   │  │ WfdRtspHandler│  │ Context (GMS) │           │
-│  │ VideoDecoder  │  │ VideoDecoder  │  └───────────────┘           │
-│  │ AudioPlayer   │  │ AudioPlayer   │                               │
-│  └───────┬───────┘  └───────┬───────┘                               │
-│          │                  │                                        │
-│  ┌───────▼──────────────────▼────────────────────────────────────┐  │
+│  │  serviceState / airPlayState / castState                        │  │
+│  └────────┬─────────────────────────────────┬─────────────────────┘  │
+│           │                                 │                        │
+│  ┌────────▼──────┐                 ┌────────▼──────┐                │
+│  │ AirPlayReceiver│                 │ CastReceiver  │                │
+│  │               │                 │               │                │
+│  │ MdnsService   │                 │ CastReceiver  │                │
+│  │ RtspHandler   │                 │ Context (GMS) │                │
+│  │ VideoDecoder  │                 └───────────────┘                │
+│  │ AudioPlayer   │                                                  │
+│  └───────┬───────┘                                                  │
+│          │                                                           │
+│  ┌───────▼───────────────────────────────────────────────────────┐  │
 │  │              SettingsRepository (DataStore)                    │  │
 │  │  Flow<AppSettings> — drives enable/disable of each receiver    │  │
 │  └───────────────────────────────────────────────────────────────┘  │
@@ -180,14 +180,13 @@ UI behaviour: the app remains on the **HomeScreen**. The AirPlay protocol card u
               ┌───────▼─────────────────────┐
               │   Android OS / Hardware      │
               │  GPU decode, AudioFlinger,   │
-              │  SurfaceView, Wi-Fi P2P      │
+              │  SurfaceView                 │
               └─────────────────────────────┘
 
 Data flows (sender → receiver):
 macOS/iOS  ──[mDNS]────────► MdnsService
 macOS/iOS  ──[RTSP/TCP:7000]► RtspHandler ──► VideoDecoder ──► SurfaceView
 macOS/iOS  ──[RTP/UDP]──────► AudioPlayer ──► AudioTrack
-Windows    ──[Wi-Fi P2P]────► MiracastReceiver (WFD RTSP) ──► VideoDecoder
 Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK)
 ```
 
@@ -215,7 +214,6 @@ Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK)
 | `RtspHandler` | `airplay/RtspHandler.kt` | Full RTSP state machine (OPTIONS→ANNOUNCE→SETUP→RECORD→TEARDOWN) |
 | `VideoDecoder` | `airplay/VideoDecoder.kt` | MediaCodec H.264 hardware decode → SurfaceView |
 | `AudioPlayer` | `airplay/AudioPlayer.kt` | AES-128-CTR decrypt → AAC/ALAC decode → AudioTrack |
-| `MiracastReceiver` | `miracast/MiracastReceiver.kt` | Wi-Fi P2P discovery; WFD RTSP session (M1–M7); shares VideoDecoder/AudioPlayer |
 | `CastReceiver` | `cast/CastReceiver.kt` | Google Cast SDK receiver; GMS availability check; graceful Fire TV degradation |
 
 ### UI Layer
@@ -414,14 +412,14 @@ The following table summarises the full codec support across all three protocols
 
 ### 10.1 Video Codecs
 
-| Codec | AirPlay 2 | Miracast (WFD) | Google Cast | Android API | Hardware Required |
-|---|---|---|---|---|---|
-| H.264 AVC (Baseline/Main) | ✅ Mandatory | ✅ Mandatory (CBP) | ✅ Mandatory | API 16+ | Yes (MediaCodec) |
-| H.264 AVC (High Profile, up to L5.2) | ✅ Mandatory | ✅ Mandatory (CHP) | ✅ Mandatory | API 16+ | Yes |
-| H.265 HEVC | ✅ Optional | ✅ Optional | ✅ Optional | API 21+ | Yes (capability check) |
-| VP8 | ❌ Not used | ❌ Not used | ✅ Mandatory | API 16+ | Yes |
-| VP9 | ❌ Not used | ❌ Not used | ✅ Optional | API 23+ | Yes |
-| AV1 | ❌ Not used | ❌ Not used | ✅ Optional | API 29+ (SW), 31+ (HW) | Preferred HW |
+| Codec | AirPlay 2 | Google Cast | Android API | Hardware Required |
+|---|---|---|---|---|
+| H.264 AVC (Baseline/Main) | ✅ Mandatory | ✅ Mandatory | API 16+ | Yes (MediaCodec) |
+| H.264 AVC (High Profile, up to L5.2) | ✅ Mandatory | ✅ Mandatory | API 16+ | Yes |
+| H.265 HEVC | ✅ Optional | ✅ Optional | API 21+ | Yes (capability check) |
+| VP8 | ❌ Not used | ✅ Mandatory | API 16+ | Yes |
+| VP9 | ❌ Not used | ✅ Optional | API 23+ | Yes |
+| AV1 | ❌ Not used | ✅ Optional | API 29+ (SW), 31+ (HW) | Preferred HW |
 
 **Runtime capability check** (applied for all optional codecs):
 ```kotlin
@@ -433,54 +431,46 @@ val isSupported = decoderName != null
 
 ### 10.2 Audio Codecs
 
-| Codec | AirPlay 2 | Miracast (WFD) | Google Cast | Notes |
-|---|---|---|---|---|
-| LPCM 16-bit / 44.1–48 kHz | ✅ Mandatory (mirror) | ✅ Mandatory | ✅ Mandatory (WAV) | Via AudioTrack directly |
-| AAC-LC | ✅ Mandatory (mirror) | ✅ Optional | ✅ Mandatory | MediaCodec `audio/mp4a-latm` |
-| AAC-ELD | ✅ Mandatory (mirror) | — | — | Enhanced Low Delay variant |
-| AAC-HE | — | ✅ Optional | ✅ Mandatory | High Efficiency AAC |
-| ALAC | ✅ Mandatory (music) | — | — | Apple Lossless; Android MediaCodec `audio/alac` |
-| MP3 | — | — | ✅ Mandatory | MediaCodec `audio/mpeg` |
-| Opus | — | — | ✅ Optional | MediaCodec `audio/opus` (API 21+) |
-| FLAC | — | — | ✅ Optional | MediaCodec `audio/flac` (API 21+) |
-| AC-3 (Dolby Digital) | ✅ Optional (surround) | ✅ Optional | — | `AudioFormat.ENCODING_AC3` |
-| E-AC-3 / Dolby Atmos (JOC) | ✅ Optional (surround) | — | ✅ Optional | `AudioFormat.ENCODING_E_AC3_JOC` |
-| Dolby Digital Plus (E-AC3) | — | — | ✅ Optional | `AudioFormat.ENCODING_E_AC3` |
+| Codec | AirPlay 2 | Google Cast | Notes |
+|---|---|---|---|
+| LPCM 16-bit / 44.1–48 kHz | ✅ Mandatory (mirror) | ✅ Mandatory (WAV) | Via AudioTrack directly |
+| AAC-LC | ✅ Mandatory (mirror) | ✅ Mandatory | MediaCodec `audio/mp4a-latm` |
+| AAC-ELD | ✅ Mandatory (mirror) | — | Enhanced Low Delay variant |
+| AAC-HE | — | ✅ Mandatory | High Efficiency AAC |
+| ALAC | ✅ Mandatory (music) | — | Apple Lossless; Android MediaCodec `audio/alac` |
+| MP3 | — | ✅ Mandatory | MediaCodec `audio/mpeg` |
+| Opus | — | ✅ Optional | MediaCodec `audio/opus` (API 21+) |
+| FLAC | — | ✅ Optional | MediaCodec `audio/flac` (API 21+) |
+| AC-3 (Dolby Digital) | ✅ Optional (surround) | — | `AudioFormat.ENCODING_AC3` |
+| E-AC-3 / Dolby Atmos (JOC) | ✅ Optional (surround) | ✅ Optional | `AudioFormat.ENCODING_E_AC3_JOC` |
+| Dolby Digital Plus (E-AC3) | — | ✅ Optional | `AudioFormat.ENCODING_E_AC3` |
 
 ### 10.3 Container Formats
 
-| Container | AirPlay 2 | Miracast (WFD) | Google Cast | Notes |
-|---|---|---|---|---|
-| MPEG-TS | — | ✅ Required | — | WFD stream encapsulation |
-| MP4 / ISOBMFF | ✅ Required | — | ✅ Required | Standard media container |
-| MOV | ✅ Required | — | — | Apple QuickTime container |
-| M4V | ✅ Required | — | — | iTunes video container |
-| WebM | — | — | ✅ Required | VP8/VP9/AV1 container |
-| HLS | ✅ Required | — | ✅ Required | Adaptive bitrate streaming |
-| DASH | — | — | ✅ Required | Adaptive bitrate streaming |
-| RTP/RTSP | ✅ Required (mirror) | ✅ Required | — | Live mirroring transport |
+| Container | AirPlay 2 | Google Cast | Notes |
+|---|---|---|---|
+| MP4 / ISOBMFF | ✅ Required | ✅ Required | Standard media container |
+| MOV | ✅ Required | — | Apple QuickTime container |
+| M4V | ✅ Required | — | iTunes video container |
+| WebM | — | ✅ Required | VP8/VP9/AV1 container |
+| HLS | ✅ Required | ✅ Required | Adaptive bitrate streaming |
+| DASH | — | ✅ Required | Adaptive bitrate streaming |
+| RTP/RTSP | ✅ Required (mirror) | — | Live mirroring transport |
 
 ### 10.4 Maximum Resolution & HDR
 
 | Protocol | Mandatory Max | Optional Max | HDR |
 |---|---|---|---|
 | AirPlay 2 | 1080p @ 60fps | 4K UHD @ 60fps | HDR10, Dolby Vision (optional, API 24+) |
-| Miracast (WFD) | 1080p @ 60fps | 4K UHD @ 60fps | — |
 | Google Cast | 1080p @ 60fps | 4K UHD @ 60fps | HDR10+ (optional) |
 
 ---
 
 ## 11. DRM / Copy Protection
 
-### 11.1 HDCP (Miracast)
+### 11.1 HDCP (Miracast) — not applicable
 
-HDCP 2.x (High-bandwidth Digital Content Protection) is negotiated at the **WFD protocol level** during session setup. The WFD capability exchange includes HDCP capability bits:
-
-```
-wfd-content-protection: HDCP2.2 port=1189
-```
-
-If the receiver does not support HDCP and the sender requires it, the session setup fails gracefully (WFD RTSP `403 Forbidden`). Android TV hardware typically includes HDCP 2.x support via the SoC's secure video path. PhairPlay does not implement the HDCP key exchange itself — it is handled by the Android framework's `MediaDrm` / display pipeline.
+The Miracast receiver was removed (ADR-004); no WFD/HDCP negotiation remains in PhairPlay.
 
 ### 11.2 Widevine & PlayReady (Google Cast)
 

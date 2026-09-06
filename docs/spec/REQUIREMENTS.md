@@ -11,9 +11,9 @@ Date: 2026-03-23
 ### 1.1 Service Discovery & Advertising
 
 - FR-01: The app MUST advertise an AirPlay 2 receiver via mDNS (`_airplay._tcp`, `_raop._tcp`).
-- FR-02: The app MUST advertise a Miracast receiver via Wi-Fi Direct (P2P) service discovery.
+- FR-02: *(removed 2026-09-06 — Miracast; see ADR-004)*
 - FR-03: The app MUST optionally advertise a Google Cast receiver (if Cast SDK is registered).
-- FR-04: All three services can be enabled/disabled independently in Settings.
+- FR-04: Both services can be enabled/disabled independently in Settings.
 - FR-05: The device name shown in sender pickers MUST be configurable in Settings (defaults to Android device name).
 - FR-06: All services start advertising within 2 seconds of app or service launch.
 - FR-07: All services stop advertising within 5 seconds of being disabled or app close.
@@ -42,28 +42,9 @@ Date: 2026-03-23
 
 - FR-42: Accept **AirPlay Photo / Image** transfers sent by iOS/macOS (via the `/photo` HTTP endpoint). Display the received image full-screen. Support JPEG and PNG. Return to HomeScreen on connection close. (Requires AirPlay feature bit 1 `Photo` to be set in the `features` TXT record.)
 
-### 1.3 Miracast Receiver
+### 1.3 Miracast Receiver — removed
 
-- FR-13: Discover and accept incoming Miracast (Wi-Fi Display / WFD) connection requests.
-- FR-14: Negotiate the WFD session (capability exchange, RTSP-WFD handshake).
-- FR-15: Decode and display the incoming video stream from the Miracast sender per the codec matrix below.
-- FR-16: Play audio from the Miracast stream per the codec matrix below.
-- FR-17: Support Windows 10+, Android, and Samsung Galaxy as Miracast senders (Phase 3+).
-- FR-18: Show the Miracast connection state on the HomeScreen status card.
-
-#### Miracast (WFD) Codec Requirements
-
-| Category | Codec / Format | Status | Notes |
-|---|---|---|---|
-| Video (Mandatory) | H.264 AVC — Constrained High Profile (CHP) and Constrained Baseline Profile (CBP), up to Level 4.2 | **Required** | WFD spec primary codec |
-| Video (Optional / 4K) | H.265 HEVC | Optional | Newer senders (Windows 11 / Android 10+) |
-| Audio (Mandatory) | LPCM 16-bit / 48 kHz (mono, stereo) | **Required** | WFD baseline audio |
-| Audio (Optional) | AAC-LC, AAC-HE | Optional | More efficient than LPCM |
-| Audio (Surround – Optional) | AC-3 (Dolby Digital) | Optional | When sender/display supports it |
-| Container | MPEG-TS (MPEG Transport Stream) | **Required** | Standard WFD stream encapsulation |
-| Max Resolution | 1080p @ 60fps | **Required** | Mandatory WFD baseline |
-| Max Resolution (Optional) | 4K UHD @ 60fps | Optional | Only on hardware that supports it |
-| DRM / Copy Protection | HDCP 2.x (hardware-based link protection) | **Required** | Negotiated during WFD setup |
+Removed 2026-09-06: a sideloaded Android app cannot be discovered as a Miracast sink. See `docs/decisions/ADR-004-miracast-removed.md`. Windows senders are addressed by the DLNA MediaRenderer (planned).
 
 ### 1.4 Google Cast Receiver
 
@@ -105,7 +86,6 @@ Date: 2026-03-23
 |---|---|---|
 | Display name | Android device name | Name shown in sender pickers |
 | AirPlay enabled | ON | Enable/disable AirPlay service |
-| Miracast enabled | ON | Enable/disable Miracast service |
 | Cast enabled | ON | Enable/disable Cast service |
 | AirPlay PIN auth | OFF | Require PIN for AirPlay connections |
 | Start on boot | OFF | Auto-start service on device boot |
@@ -115,7 +95,6 @@ Date: 2026-03-23
 
 - FR-33: Decode video using hardware `MediaCodec`. Supported codecs per protocol:
   - **AirPlay**: H.264 AVC (mandatory, up to High Profile Level 5.2); H.265 HEVC (optional, hardware check required).
-  - **Miracast**: H.264 AVC CHP/CBP (mandatory); H.265 HEVC (optional).
   - **Google Cast**: H.264 AVC + VP8 (mandatory); H.265 HEVC, VP9, AV1 (optional, API-level gated).
   - Software fallback is NOT used; if hardware decoder is unavailable, the stream is rejected gracefully.
 - FR-34: Display decoded video full-screen maintaining aspect ratio.
@@ -160,7 +139,7 @@ Date: 2026-03-23
 - NFR-16: Fire TV: Android 7.1+ (API 25+), ARMv7/ARMv8.
 - NFR-17: AirPlay sender (screen mirroring): macOS 12+, iOS/iPadOS 13+.
 - NFR-18: AirPlay sender (audio-only): macOS 12+, iOS/iPadOS 13+.
-- NFR-19: Miracast sender: Windows 10+, Android 4.2+.
+- NFR-19: *(removed — Miracast, ADR-004)*
 - NFR-20: Cast sender: Chrome 72+, Android 5+.
 
 ### 2.5 Code Quality
@@ -177,15 +156,15 @@ Date: 2026-03-23
 | FairPlay DRM (streaming content) | See evaluation note below | Not in v1; v2 research item |
 | HomeKit / HAP pairing | Complex separate protocol | v3 roadmap |
 | WiDi (Intel) | EOL technology | Not planned |
-| DLNA / UPnP | Out of scope | Not planned |
+| Miracast (WFD) | Sideloaded apps cannot set the Wi-Fi Display IE | Removed 2026-09-06 — ADR-004 |
+| DLNA / UPnP MediaRenderer | Windows "Cast to Device", BubbleUPnP/VLC senders | Planned (sub-project 3) |
 | Cloud / remote streaming | Security risk | Not planned |
 | Screen recording to file | Privacy concern | Not planned |
 | H.265 / HEVC decode (AirPlay) | Optional, hardware-gated | v2 optional (API check required) |
-| H.265 / HEVC decode (Miracast) | Optional, hardware-gated | v2 optional |
 | VP9 / AV1 decode (Cast) | Optional, API level gated (API 31+ for AV1) | v2 optional |
 | Dolby Atmos / AC-3 decode | Optional surround audio | v2 optional |
 | AirPlay audio grouping (multi-room) | Requires full AirPlay 2 stack | v3 roadmap |
-| 4K UHD streams (AirPlay, Miracast) | Optional, hardware-dependent | v2 optional |
+| 4K UHD streams (AirPlay) | Optional, hardware-dependent | v2 optional |
 | HDR10 / Dolby Vision (AirPlay) | Optional, API 31+ required | v2 optional |
 
 ### FairPlay DRM – Evaluation Note
@@ -206,7 +185,7 @@ Date: 2026-03-23
 
 > **Note on open codecs:** H.265 HEVC, VP9, and AV1 are fully implementable on Android via `MediaCodec` with hardware support checks. These are planned as optional features in v2 behind `MediaCodecInfo.CodecCapabilities` capability queries at runtime.
 
-> **Note on HDCP and Widevine/PlayReady:** HDCP (for Miracast) is negotiated at the WFD protocol level and enforced by hardware — no software implementation is needed. Widevine and PlayReady (for Cast) are handled by the Google Cast SDK and the Android DRM framework (`MediaDrm`) — the app does not need to implement DRM logic directly.
+> **Note on Widevine/PlayReady:** Widevine and PlayReady (for Cast) are handled by the Google Cast SDK and the Android DRM framework (`MediaDrm`) — the app does not need to implement DRM logic directly.
 
 ---
 
@@ -224,7 +203,5 @@ Date: 2026-03-23
 |---|---|---|---|
 | AirPlay 2 | macOS | 12 (Monterey)+ | Screen mirroring + audio-only |
 | AirPlay 2 | iOS / iPadOS | 13+ | Screen mirroring + audio-only |
-| Miracast | Windows | 10+ | Screen mirroring |
-| Miracast | Android | 4.2+ | Screen mirroring |
 | Google Cast | Chrome browser | 72+ | Tab/screen cast |
 | Google Cast | Android | 5+ | Screen cast |

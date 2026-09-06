@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Music.app / iTunes audio-only sessions no longer drop within seconds: album artwork arrives as a
+  ~430 KB `SET_PARAMETER` body, which the 64 KB control-message limit rejected, closing the
+  connection. Artwork now has its own 4 MB limit (`RtspRequestReader`).
+- Native crash (SIGSEGV in `ALACDecoder::Decode`) when a muted, wrong-key audio stream kept being
+  fed to libalac — the legacy `AudioPlayer` now stops decoding once the stream is muted.
+- `ANNOUNCE` with an `rsaaeskey` that cannot be RSA-recovered is rejected with RTSP 500 instead of
+  playing a silent stream.
+- FairPlay fp-setup phase-2 reply uses the fixed `FPLY 03 01 04 …` header for v2 and v3 senders,
+  matching the reference implementation (previously the version byte was echoed).
+- Choppy macOS system-audio output (AirPlay 2 realtime ALAC): the realtime audio player started with
+  an empty, minimum-size AudioTrack and never got ahead of the sender, so any scheduling hiccup or
+  Wi-Fi jitter burst underran it. Audio-only streams now pre-roll ~200 ms before playback, the track
+  buffer is doubled, and the playback thread runs at urgent-audio priority. Mirroring audio keeps
+  immediate playback so lip-sync is unchanged.
+
+### Changed
+- `_raop._tcp` TXT record moved to `RaopTxtRecord` (pure Kotlin, unit-tested) and extended with the
+  AirPlay 2 keys UxPlay publishes (`ft`, `pk`, `sf`, `vv`, `txtvers`, `ch`, `sr`, `ss`); `pk` is
+  also advertised on `_airplay._tcp`.
+
+### Removed
+- Miracast receiver (Wi-Fi Direct advertisement + WFD RTSP control plane), its settings toggle, home
+  card, strings and the `CHANGE_WIFI_STATE` / location / `NEARBY_WIFI_DEVICES` permissions. A sideloaded
+  Android app cannot set the Wi-Fi Display information element, so no sender could ever discover it —
+  see `docs/decisions/ADR-004-miracast-removed.md`. Windows senders will be served by DLNA.
+
+### Known issue
+- Music.app audio-only from macOS connects and shows now-playing metadata but stays silent: Music
+  uses the AirPlay 1 flow with FairPlay v2 key wrapping, which no open-source implementation can
+  decrypt. macOS system-audio output (AirPlay 2 realtime, FairPlay v3) plays correctly. The fix is
+  AirPlay 2 buffered audio (type 103), tracked as future work.
+
 ---
 
 ## [1.0.0-beta.1] - 2026-06-14

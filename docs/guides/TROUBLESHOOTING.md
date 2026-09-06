@@ -2,7 +2,7 @@
 
 ---
 
-## Device not appearing in AirPlay / Miracast / Cast menu
+## Device not appearing in AirPlay / Cast menu
 
 **Cause 1: Not on the same network**
 - Ensure your Mac/PC and the TV are connected to the **same Wi-Fi network** (same router, same subnet).
@@ -19,10 +19,6 @@
 **Cause 4: PhairPlay service is stopped**
 - Check the HomeScreen: all service cards should show "Running".
 - If stopped, press the **Start** button or swipe to the control card.
-
-**Cause 5: Wi-Fi P2P disabled (Miracast)**
-- Miracast requires Wi-Fi Direct. Some Android TVs disable this.
-- Check: Settings → My Fire TV / Google TV → About → verify Wi-Fi Direct is available.
 
 ---
 

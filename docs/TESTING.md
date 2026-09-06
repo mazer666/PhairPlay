@@ -105,7 +105,7 @@ adb logcat -c
 Install the correct debug APK:
 
 ```bash
-# Google TV with AirPlay/Miracast only
+# Google TV with AirPlay only
 ./gradlew assembleGoogletvDebug
 
 # Google TV with Cast enabled for real testing

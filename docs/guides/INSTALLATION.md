@@ -91,7 +91,7 @@ Google Cast requires a registered Cast App ID for real testing. See
 ## After Installation
 
 1. Launch PhairPlay — the **HomeScreen** appears showing three service cards
-2. All services (AirPlay, Miracast, Cast) are enabled by default
+2. All services (AirPlay, Cast) are enabled by default
 3. On your Mac: click the AirPlay icon → select your TV
 4. On Windows: Settings → Display → Connect to wireless display → select your TV
 5. In Chrome: Menu → Cast → select your TV
