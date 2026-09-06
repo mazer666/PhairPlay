@@ -2,7 +2,7 @@
 
 ---
 
-## Device not appearing in AirPlay / Cast menu
+## Device not appearing in AirPlay / Cast / DLNA menu
 
 **Cause 1: Not on the same network**
 - Ensure your Mac/PC and the TV are connected to the **same Wi-Fi network** (same router, same subnet).
@@ -67,6 +67,19 @@ The Cast toggle in Settings will be automatically hidden on Fire TV devices.
 This is by design and cannot be changed.
 
 ---
+
+## Windows "Cast to Device" does not list the TV
+
+- The PC's network profile must be **Private** (Settings → Network → properties). On a Public profile Windows blocks discovery.
+- Turn on **Network discovery** in Advanced sharing settings.
+- The **Windows Media Player Network Sharing Service** must be running (services.msc) — it hosts the files Windows streams to the TV.
+- Router AP isolation or multicast filtering blocks SSDP exactly like mDNS (see the first section).
+- On the TV, `adb logcat -s DlnaReceiver` should show "DLNA renderer … ready at http://<ip>:49494"; `curl http://<tv-ip>:49494/description.xml` from the PC must return XML.
+
+## DLNA plays audio but no video, or Windows says the file can't be played
+
+- The format is not in the advertised sink list (Android MediaPlayer cannot decode it, e.g. WMV/WMA). Windows either transcodes or gives up. Re-encode to MP4 (H.264 + AAC) or MP3.
+- A DLNA **video** is refused while an AirPlay session is mirroring; stop the AirPlay session first.
 
 ## Still stuck?
 

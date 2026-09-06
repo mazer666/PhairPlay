@@ -76,6 +76,7 @@ Android framework behavior.
 | `VideoDecoderTest` | 4 | Pre-init safety, double-release safety, empty input handling, basic construction |
 | `NetworkUtilsTest` | 5 | Device name reading, fallback behavior, special character sanitization, MAC address format |
 | `MainActivityTest` | 3 | Activity startup, WaitingScreen visibility, StreamingScreen hidden at startup |
+| `dlna.*Test` (25 classes) | ~160 | SSDP messages, HTTP reader/response, SecureXml/SOAP, device description + SCPD cross-check, DIDL-Lite, protocolInfo classification, AVTransport/RenderingControl/ConnectionManager services, LastChange + GENA subscriptions, router, photo fetcher, MediaRenderer state machine (fake player) |
 
 ### What Is NOT Unit Tested (and why)
 
@@ -86,6 +87,7 @@ Android framework behavior.
 | NsdManager mDNS broadcast | Requires real network stack | Manual testing: observe macOS AirPlay menu |
 | Full RTSP session (network) | Requires real TCP socket pair | Integration tested manually with a Mac |
 | AES-CTR encryption (end-to-end) | Requires real audio stream | Manual: verify audio plays correctly |
+| DLNA sockets and MediaPlayer (`DlnaPlayer`, `SsdpAdvertiser`, `DlnaHttpServer`, `HttpNotifySender`, `DlnaReceiver`) | Real UDP/TCP sockets and media hardware | Scenario 8 below |
 
 ---
 
@@ -229,6 +231,16 @@ The script writes ADB device details, package info, memory stats, process CPU, a
 3. **Expected:** PhairPlay reappears in the macOS AirPlay menu within 5 seconds of network restoration
 
 ---
+
+### Scenario 8: DLNA "Cast to Device"
+
+1. On a Windows PC on the same network (network profile Private, Network discovery on, "Windows Media Player Network Sharing Service" running) right-click an MP4 → Cast to Device → the TV appears under its display name. Expected: video plays full-screen; pause, seek, stop and the volume slider work; the DLNA card shows Connected with "Windows PC".
+2. Repeat with an MP3 → now-playing card with title/artist and album art. Repeat with a JPEG → full-screen photo; a folder of photos advances slides.
+3. BubbleUPnP (Android): select the TV as renderer, play an album → the second track starts automatically; TV remote play/pause toggles and the phone UI follows.
+4. VLC (Mac): Playback → Renderer → the TV; play a video and seek from VLC.
+5. Regression: AirPlay mirroring still works; while mirroring, a DLNA video cast is refused but DLNA audio plays; DLNA off in Settings stops advertising and `curl http://<tv>:49494/description.xml` fails.
+
+Logs: `tools/collect-device-logs.sh` captures `DlnaReceiver` and `MediaRenderer` tags.
 
 ## Performance Benchmarks
 

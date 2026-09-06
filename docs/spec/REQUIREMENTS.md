@@ -44,7 +44,7 @@ Date: 2026-03-23
 
 ### 1.3 Miracast Receiver — removed
 
-Removed 2026-09-06: a sideloaded Android app cannot be discovered as a Miracast sink. See `docs/decisions/ADR-004-miracast-removed.md`. Windows senders are addressed by the DLNA MediaRenderer (planned).
+Removed 2026-09-06: a sideloaded Android app cannot be discovered as a Miracast sink. See `docs/decisions/ADR-004-miracast-removed.md`. Windows senders are served by the DLNA MediaRenderer (§1.9).
 
 ### 1.4 Google Cast Receiver
 
@@ -87,6 +87,7 @@ Removed 2026-09-06: a sideloaded Android app cannot be discovered as a Miracast 
 | Display name | Android device name | Name shown in sender pickers |
 | AirPlay enabled | ON | Enable/disable AirPlay service |
 | Cast enabled | ON | Enable/disable Cast service |
+| DLNA enabled | ON | Enable/disable DLNA service |
 | AirPlay PIN auth | OFF | Require PIN for AirPlay connections |
 | Start on boot | OFF | Auto-start service on device boot |
 | Show debug overlay | OFF | Show FPS / latency overlay (dev) |
@@ -111,6 +112,17 @@ Removed 2026-09-06: a sideloaded Android app cannot be discovered as a Miracast 
 - FR-41: Date/time formats, number formats, and text direction MUST respect the device locale.
 
 ---
+
+### 1.9 DLNA / UPnP MediaRenderer
+
+- FR-40: Advertise as `urn:schemas-upnp-org:device:MediaRenderer:1` via SSDP (alive/byebye NOTIFY, M-SEARCH replies).
+- FR-41: Serve a root device description with `dlna:X_DLNADOC` DMR-1.50, an icon, and AVTransport:1, RenderingControl:1, ConnectionManager:1 with the standard serviceIds.
+- FR-42: Implement AVTransport SetAVTransportURI, SetNextAVTransportURI, Play, Pause, Stop, Seek (REL_TIME/ABS_TIME/TRACK_NR), Next, Previous and the Get* queries with UPnP fault codes (401/402/501/701/714/718).
+- FR-43: Implement RenderingControl Master-channel volume (0–100) and mute applied to the DLNA stream only.
+- FR-44: Implement ConnectionManager GetProtocolInfo with a sink list limited to formats Android MediaPlayer decodes.
+- FR-45: GENA eventing: SUBSCRIBE/renew/UNSUBSCRIBE, SEQ 0 initial event, moderated `LastChange`; callbacks restricted to private IPv4 addresses.
+- FR-46: Render video on the streaming surface, audio on the now-playing card (DIDL title/artist/album/art), images on the photo overlay.
+- FR-47: TV remote play/pause, stop, seek ±10 s and next act on the DLNA session while it is connected.
 
 ## 2. Non-Functional Requirements
 
@@ -157,7 +169,8 @@ Removed 2026-09-06: a sideloaded Android app cannot be discovered as a Miracast 
 | HomeKit / HAP pairing | Complex separate protocol | v3 roadmap |
 | WiDi (Intel) | EOL technology | Not planned |
 | Miracast (WFD) | Sideloaded apps cannot set the Wi-Fi Display IE | Removed 2026-09-06 — ADR-004 |
-| DLNA / UPnP MediaRenderer | Windows "Cast to Device", BubbleUPnP/VLC senders | Planned (sub-project 3) |
+| DLNA / UPnP MediaRenderer | Windows "Cast to Device", BubbleUPnP/VLC senders | Implemented (sub-project 3, ADR-005) |
+| DLNA media server / control point, transcoding, playlists, subtitles | Renderer only | Not planned |
 | Cloud / remote streaming | Security risk | Not planned |
 | Screen recording to file | Privacy concern | Not planned |
 | H.265 / HEVC decode (AirPlay) | Optional, hardware-gated | v2 optional (API check required) |

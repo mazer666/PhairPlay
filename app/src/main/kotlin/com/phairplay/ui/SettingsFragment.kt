@@ -52,6 +52,7 @@ class SettingsFragment : Fragment() {
     private lateinit var textDisplayNameValue: TextView
     private lateinit var rowAirPlay: View
     private lateinit var rowCast: View
+    private lateinit var rowDlna: View
     private lateinit var rowMirrorAudio: View
     private lateinit var rowPinAuth: View
     private lateinit var rowStartOnBoot: View
@@ -89,6 +90,7 @@ class SettingsFragment : Fragment() {
         textDisplayNameValue = view.findViewById(R.id.text_display_name_value)
         rowAirPlay          = view.findViewById(R.id.row_airplay)
         rowCast             = view.findViewById(R.id.row_cast)
+        rowDlna             = view.findViewById(R.id.row_dlna)
         rowMirrorAudio      = view.findViewById(R.id.row_mirror_audio)
         rowPinAuth          = view.findViewById(R.id.row_pin_auth)
         rowStartOnBoot      = view.findViewById(R.id.row_start_on_boot)
@@ -112,6 +114,7 @@ class SettingsFragment : Fragment() {
     private fun setRowLabels() {
         configureToggleRow(rowAirPlay,      R.string.setting_airplay_enabled,    R.string.setting_airplay_subtitle)
         configureToggleRow(rowCast,         R.string.setting_cast_enabled,       R.string.setting_cast_subtitle)
+        configureToggleRow(rowDlna,         R.string.setting_dlna_enabled,       R.string.setting_dlna_subtitle)
         configureToggleRow(rowMirrorAudio,  R.string.setting_mirror_audio,       R.string.setting_mirror_audio_subtitle)
         configureToggleRow(rowPinAuth,      R.string.setting_pin_auth,           R.string.setting_pin_auth_subtitle)
         configureToggleRow(rowStartOnBoot,  R.string.setting_start_on_boot,      0)
@@ -160,6 +163,7 @@ class SettingsFragment : Fragment() {
         }
         setToggle(rowAirPlay,      settings.airPlayEnabled)
         setToggle(rowCast,         settings.castEnabled)
+        setToggle(rowDlna,         settings.dlnaEnabled)
         setToggle(rowMirrorAudio,  settings.mirrorAudioEnabled)
         setToggle(rowPinAuth,      settings.airPlayPinAuthEnabled)
         setToggle(rowStartOnBoot,  settings.startOnBoot)
@@ -183,6 +187,7 @@ class SettingsFragment : Fragment() {
 
         setToggleListener(rowAirPlay)      { enabled -> save { it.copy(airPlayEnabled = enabled) } }
         setToggleListener(rowCast)         { enabled -> save { it.copy(castEnabled = enabled) } }
+        setToggleListener(rowDlna)         { enabled -> saveAndRestart { it.copy(dlnaEnabled = enabled) } }
         setToggleListener(rowMirrorAudio)  { enabled -> saveAndRestart { it.copy(mirrorAudioEnabled = enabled) } }
         setToggleListener(rowPinAuth)      { enabled -> saveAndRestart { it.copy(airPlayPinAuthEnabled = enabled) } }
         setToggleListener(rowStartOnBoot)  { enabled -> save { it.copy(startOnBoot = enabled) } }
@@ -265,14 +270,15 @@ class SettingsFragment : Fragment() {
             .setView(editText)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val newName = editText.text?.toString()?.trim() ?: ""
-                save { it.copy(displayName = newName) }
+                // Both receivers read the name only at start; restart so the AirPlay/DLNA name follows immediately.
+                saveAndRestart { it.copy(displayName = newName) }
                 textDisplayNameValue.text = newName.ifEmpty {
                     getString(R.string.setting_display_name_system_default)
                 }
                 Logger.i("Display name updated to: '${newName.ifEmpty { "(system default)" }}'")
             }
             .setNeutralButton(R.string.setting_display_name_reset) { _, _ ->
-                save { it.copy(displayName = "") }
+                saveAndRestart { it.copy(displayName = "") }
                 textDisplayNameValue.text = getString(R.string.setting_display_name_system_default)
                 Logger.i("Display name reset to system default")
             }

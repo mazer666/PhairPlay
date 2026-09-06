@@ -39,6 +39,8 @@ adb logcat -d -v time \
   'PhairPlay:V' \
   'AirPlayReceiver:V' \
   'RtspHandler:V' \
+  'DlnaReceiver:V' \
+  'MediaRenderer:V' \
   > "$OUT_DIR/logcat.txt" || true
 
 {

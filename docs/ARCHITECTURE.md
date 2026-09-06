@@ -107,6 +107,22 @@ When you stop screen sharing, the Mac sends a "goodbye" message (RTSP TEARDOWN) 
 | `AirPlayNtpClient` | `airplay/handshake/AirPlayNtpClient.kt` | Apple NTP for A/V synchronisation |
 | `TimingHandler` | `airplay/TimingHandler.kt` | NTP timing state |
 
+### DLNA / UPnP MediaRenderer (`dlna/`)
+
+| Component | File | What It Does |
+|---|---|---|
+| `DlnaReceiver` | `dlna/DlnaReceiver.kt` | **Orchestrator** — MulticastLock, wires SSDP, HTTP, services, eventing, renderer |
+| `SsdpAdvertiser` / `SsdpMessages` | `dlna/SsdpAdvertiser.kt`, `SsdpMessages.kt` | SSDP alive/byebye NOTIFY and M-SEARCH replies |
+| `DlnaHttpServer` / `DlnaRouter` | `dlna/DlnaHttpServer.kt`, `DlnaRouter.kt` | Raw HTTP/1.1 server; routes description, SCPD, SOAP, GENA, icon |
+| `HttpRequestReader` / `HttpResponse` | `dlna/HttpRequest.kt`, `HttpResponse.kt` | Size-capped request parsing, sanitised responses |
+| `DeviceDescription` / `scpd/*` | `dlna/DeviceDescription.kt`, `dlna/scpd/` | Root device XML (`X_DLNADOC` DMR-1.50) and the three SCPDs |
+| `SoapDispatcher` / `SoapXml` / `SecureXml` | `dlna/SoapDispatcher.kt`, … | Hardened XML, SOAP envelopes, UPnP faults |
+| `AvTransportService` / `RenderingControlService` / `ConnectionManagerService` | `dlna/*Service.kt` | The UPnP AV services (pure protocol logic) |
+| `EventSubscriptions` / `LastChangeEncoder` | `dlna/EventSubscriptions.kt`, `LastChangeEncoder.kt` | GENA subscriptions, moderated `LastChange` events |
+| `MediaRenderer` | `dlna/MediaRenderer.kt` | Session state machine: URI → player or photo, overlays, remote keys |
+| `DlnaPlayer` / `PhotoFetcher` | `dlna/DlnaPlayer.kt`, `PhotoFetcher.kt` | MediaPlayer wrapper (video/audio); capped image download |
+| `ProtocolInfoList` / `DidlLite` | `dlna/ProtocolInfoList.kt`, `DidlLite.kt` | Advertised formats + classification; DIDL-Lite metadata |
+
 ### Metadata & Remote
 
 | Component | File | What It Does |
@@ -116,6 +132,16 @@ When you stop screen sharing, the Mac sends a "goodbye" message (RTSP TEARDOWN) 
 | `StreamStats` | `airplay/StreamStats.kt` | Per-session RTP statistics (count, duplicates, queue drops) |
 
 ---
+
+## How Does DLNA Work? (Simple Explanation)
+
+Windows ("Cast to Device"), BubbleUPnP and VLC use UPnP instead of AirPlay:
+
+1. **Announce:** `SsdpAdvertiser` multicasts `NOTIFY ssdp:alive` and answers `M-SEARCH`, pointing at `http://<tv-ip>:49494/description.xml`.
+2. **Describe:** the control point fetches the device description and the three service descriptions, and subscribes to events (GENA).
+3. **Control:** it POSTs SOAP actions — `SetAVTransportURI` (with DIDL-Lite metadata) then `Play`; later `Pause`, `Seek`, `Stop`, `SetVolume`.
+4. **Fetch and play:** the TV downloads the media itself. `MediaRenderer` hands video/audio to `DlnaPlayer` (MediaPlayer) and images to `PhotoFetcher`; the same overlays as AirPlay are used.
+5. **Report:** every state change is evented as `LastChange`, so the sender's progress bar and buttons follow the TV.
 
 ## Full Data Flow Diagram
 
@@ -128,7 +154,7 @@ When you stop screen sharing, the Mac sends a "goodbye" message (RTSP TEARDOWN) 
                                                │
                                           MainActivity.onCreate()
                                                │
-                                          AirPlayReceiver.start()
+                                          AirPlayReceiver.start()  (+ DlnaReceiver.start())
                                            ├── MdnsService.start()
                                            │    └── NsdManager.registerService(_airplay._tcp)
                                            │    └── NsdManager.registerService(_raop._tcp)

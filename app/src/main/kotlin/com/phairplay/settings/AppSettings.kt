@@ -43,6 +43,13 @@ data class AppSettings(
      */
     val castEnabled: Boolean = true,
 
+    /**
+     * Whether the DLNA / UPnP MediaRenderer is enabled.
+     * When false: no SSDP advertising and the DLNA HTTP port is not opened.
+     * Windows exposes this receiver as "Cast to Device".
+     */
+    val dlnaEnabled: Boolean = true,
+
     // ─── AirPlay specific ──────────────────────────────────────────────────
     /**
      * Whether AirPlay connections require PIN authentication.
@@ -100,10 +107,10 @@ data class AppSettings(
 
     /**
      * Returns true if at least one protocol is enabled.
-     * If both are disabled, the service has nothing to do.
+     * If all are disabled, the service has nothing to do.
      */
     val anyProtocolEnabled: Boolean
-        get() = airPlayEnabled || castEnabled
+        get() = airPlayEnabled || castEnabled || dlnaEnabled
 
     companion object {
         /** The default settings instance used on first launch. */

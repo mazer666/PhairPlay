@@ -23,6 +23,7 @@
     <!-- ── Protocol names ──────────────────────────────────────── -->
     <string name="protocol_airplay">AirPlay</string>
     <string name="protocol_cast">Cast</string>
+    <string name="protocol_dlna">DLNA</string>
 
     <!-- ── Protocol states (shown in status cards) ─────────────── -->
     <string name="protocol_state_disabled">Disabled</string>
@@ -54,7 +55,7 @@
 
     <!-- ── Notification ────────────────────────────────────────── -->
     <string name="notification_channel_name">PhairPlay Service</string>
-    <string name="notification_channel_description">Persistent notification for the AirPlay/Cast receiver service</string>
+    <string name="notification_channel_description">Persistent notification for the AirPlay/Cast/DLNA receiver service</string>
     <string name="notification_status_running">Receiver active — advertising on network</string>
     <string name="notification_status_stopped">Receiver stopped</string>
     <!-- %1$s = sender device name -->
@@ -79,6 +80,8 @@
     <string name="setting_airplay_subtitle">Accept connections from macOS</string>
     <string name="setting_cast_enabled">Google Cast Receiver</string>
     <string name="setting_cast_subtitle">Accept connections from Chrome and Android</string>
+    <string name="setting_dlna_enabled">DLNA Renderer</string>
+    <string name="setting_dlna_subtitle">Accept "Cast to Device" from Windows and DLNA apps</string>
     <string name="setting_mirror_audio">Mirror audio</string>
     <string name="setting_mirror_audio_subtitle">Play the Mac\'s sound while mirroring</string>
     <string name="setting_pin_auth">Require pairing PIN</string>
@@ -113,6 +116,7 @@
     <!-- ── Accessibility ───────────────────────────────────────── -->
     <string name="content_desc_airplay_icon">AirPlay protocol icon</string>
     <string name="content_desc_cast_icon">Google Cast protocol icon</string>
+    <string name="content_desc_dlna_icon">DLNA protocol icon</string>
     <string name="content_desc_status_dot">Status indicator</string>
 
 </resources>

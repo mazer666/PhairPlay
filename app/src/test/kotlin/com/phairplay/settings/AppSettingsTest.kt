@@ -32,6 +32,7 @@ class AppSettingsTest {
     fun `default settings have all protocols enabled`() {
         assertTrue(AppSettings.DEFAULT.airPlayEnabled)
         assertTrue(AppSettings.DEFAULT.castEnabled)
+        assertTrue(AppSettings.DEFAULT.dlnaEnabled)
     }
 
     @Test
@@ -84,26 +85,27 @@ class AppSettingsTest {
 
     @Test
     fun `anyProtocolEnabled is true when all protocols are enabled`() {
-        val settings = AppSettings(airPlayEnabled = true, castEnabled = true)
-        assertTrue(settings.anyProtocolEnabled)
+        assertTrue(AppSettings(airPlayEnabled = true, castEnabled = true, dlnaEnabled = true).anyProtocolEnabled)
     }
 
     @Test
     fun `anyProtocolEnabled is true when only AirPlay is enabled`() {
-        val settings = AppSettings(airPlayEnabled = true, castEnabled = false)
-        assertTrue(settings.anyProtocolEnabled)
+        assertTrue(AppSettings(airPlayEnabled = true, castEnabled = false, dlnaEnabled = false).anyProtocolEnabled)
     }
 
     @Test
     fun `anyProtocolEnabled is true when only Cast is enabled`() {
-        val settings = AppSettings(airPlayEnabled = false, castEnabled = true)
-        assertTrue(settings.anyProtocolEnabled)
+        assertTrue(AppSettings(airPlayEnabled = false, castEnabled = true, dlnaEnabled = false).anyProtocolEnabled)
+    }
+
+    @Test
+    fun `anyProtocolEnabled is true when only DLNA is enabled`() {
+        assertTrue(AppSettings(airPlayEnabled = false, castEnabled = false, dlnaEnabled = true).anyProtocolEnabled)
     }
 
     @Test
     fun `anyProtocolEnabled is false when all protocols are disabled`() {
-        val settings = AppSettings(airPlayEnabled = false, castEnabled = false)
-        assertFalse(settings.anyProtocolEnabled)
+        assertFalse(AppSettings(airPlayEnabled = false, castEnabled = false, dlnaEnabled = false).anyProtocolEnabled)
     }
 
     // ─── copy() and equality ──────────────────────────────────────────────────

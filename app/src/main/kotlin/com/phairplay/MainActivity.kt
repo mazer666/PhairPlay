@@ -21,6 +21,7 @@ import com.phairplay.service.PhotoFrame
 import com.phairplay.service.ProtocolState
 import com.phairplay.service.ServiceController
 import com.phairplay.airplay.NowPlayingInfo
+import com.phairplay.dlna.RemoteCommand
 import com.phairplay.ui.HomeFragment
 import com.phairplay.ui.NowPlayingScreen
 import com.phairplay.ui.PhotoScreen
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity() {
     private var service: PhairPlayService? = null
     private var isBound = false
     private var currentAirPlayState = ProtocolState.DISABLED
+    private var currentDlnaState = ProtocolState.DISABLED
     private var currentPhotoFrame: PhotoFrame? = null
     private var currentNowPlaying: NowPlayingInfo? = null
     private var currentPin: String? = null
@@ -283,13 +285,33 @@ class MainActivity : AppCompatActivity() {
     fun getVideoSurface() = streamingScreen.getSurface()
 
     /**
-     * Routes TV-remote media keys to the AirPlay sender (DACP reverse control) while audio-only or a
-     * stream is showing — so the remote can play/pause/skip what the Mac/iPhone is streaming. Returns
-     * false for other keys so normal navigation is unaffected.
+     * Routes TV-remote media keys while an overlay is showing. AirPlay keys go back to the sender via DACP
+     * (reverse remote); DLNA keys act locally on the renderer, which events the change so the control
+     * point's UI follows. Returns false for other keys so normal navigation is unaffected.
      */
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        val overlayActive = currentNowPlaying != null || currentAirPlayState == ProtocolState.CONNECTED
-        if (overlayActive) {
+        val airPlayActive = currentAirPlayState == ProtocolState.CONNECTED ||
+            (currentNowPlaying != null && currentDlnaState != ProtocolState.CONNECTED)
+        if (currentDlnaState == ProtocolState.CONNECTED && !airPlayActive) {
+            val command = when (keyCode) {
+                android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                android.view.KeyEvent.KEYCODE_MEDIA_PLAY,
+                android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,
+                android.view.KeyEvent.KEYCODE_DPAD_CENTER -> RemoteCommand.PLAY_PAUSE
+                android.view.KeyEvent.KEYCODE_MEDIA_STOP -> RemoteCommand.STOP
+                android.view.KeyEvent.KEYCODE_MEDIA_NEXT,
+                android.view.KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD -> RemoteCommand.NEXT
+                android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> RemoteCommand.SEEK_FORWARD
+                android.view.KeyEvent.KEYCODE_MEDIA_REWIND -> RemoteCommand.SEEK_BACK
+                else -> null
+            }
+            if (command != null) {
+                service?.sendDlnaRemoteCommand(command)
+                return true
+            }
+            return super.onKeyDown(keyCode, event)
+        }
+        if (airPlayActive) {
             val command = when (keyCode) {
                 android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
                 android.view.KeyEvent.KEYCODE_MEDIA_PLAY,
@@ -369,20 +391,29 @@ class MainActivity : AppCompatActivity() {
                 updateOverlay()
             }
         }
+        lifecycleScope.launch {
+            svc.dlnaState.collectLatest { state ->
+                currentDlnaState = state
+                updateOverlay()
+            }
+        }
     }
 
     private fun updateOverlay() {
         val photoFrame = currentPhotoFrame
         val nowPlaying = currentNowPlaying
         val pin = currentPin
+        val videoActive = currentAirPlayState == ProtocolState.CONNECTED ||
+            currentDlnaState == ProtocolState.CONNECTED
         when {
             // PIN pairing (access control) happens before streaming — show the code over everything.
             pin != null -> showPinScreen(pin)
-            // Audio-only AirPlay (system audio, Music, podcasts): show the now-playing card instead
-            // of the black video surface. Set whenever audio plays without video.
+            // Audio-only (AirPlay system audio / Music, DLNA music): now-playing card instead of a black surface.
             nowPlaying != null -> showNowPlayingScreen(nowPlaying)
-            currentAirPlayState == ProtocolState.CONNECTED -> showStreamingScreen()
+            // Photos (AirPlay /photo, DLNA image items). Safe above the surface: the service clears the photo
+            // when an AirPlay stream connects, and the DLNA renderer clears it when a video loads.
             photoFrame != null -> showPhotoScreen(photoFrame)
+            videoActive -> showStreamingScreen()
             else -> hideStreamingScreen()
         }
     }

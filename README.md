@@ -1,6 +1,6 @@
 # PhairPlay
 
-PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and Fire TV. It lets your macOS or iOS/iPadOS device mirror its screen and audio directly to your TV — no Apple TV required.
+PhairPlay is a free, open-source, ad-free AirPlay 2 and DLNA receiver for Android TV and Fire TV. It lets your macOS or iOS/iPadOS device mirror its screen and audio directly to your TV, and lets Windows and DLNA apps cast video, music and photos to it — no Apple TV or Chromecast required.
 
 ```
  macOS (Monterey+)            Android TV / Fire TV
@@ -22,7 +22,7 @@ PhairPlay's AirPlay 2 receiver is fully implemented and available as a signed be
 
 The AirPlay 2 stack is complete end-to-end: mDNS advertising, RTSP handshake, HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, and DACP reverse remote. Real-device validation with macOS and iOS senders is the current focus.
 
-The Google Cast receiver lifecycle is implemented (end-to-end testing needs a registered Cast app ID). Miracast was removed: a sideloaded Android app cannot be discovered as a Miracast sink (see [ADR-004](docs/decisions/ADR-004-miracast-removed.md)); Windows senders will be served by DLNA instead.
+The Google Cast receiver lifecycle is implemented (end-to-end testing needs a registered Cast app ID). Miracast was removed: a sideloaded Android app cannot be discovered as a Miracast sink (see [ADR-004](docs/decisions/ADR-004-miracast-removed.md)); Windows senders are served by the DLNA MediaRenderer ("Cast to Device", see [ADR-005](docs/decisions/ADR-005-dlna-hand-rolled-upnp.md)).
 
 ## Features
 
@@ -39,6 +39,13 @@ The Google Cast receiver lifecycle is implemented (end-to-end testing needs a re
 - AirPlay photo receiver — JPEG/PNG from iOS Photos app displayed full-screen
 - Access-control lockout after repeated failed pairing attempts
 
+### DLNA / UPnP MediaRenderer
+- Windows "Cast to Device" — video, music and photos
+- BubbleUPnP, VLC and other UPnP control points
+- Transport controls, seek and volume from the sender; TV remote play/pause/stop/seek
+- Now-playing card with metadata and album art for music; full-screen photos
+- Hand-rolled SSDP/SOAP/GENA stack, no extra dependencies (ADR-005)
+
 ### App & Platform
 - Android TV / Fire TV app shell with foreground service and status UI
 - Mirror audio toggle and PIN-auth toggle in Settings
@@ -53,7 +60,8 @@ The Google Cast receiver lifecycle is implemented (end-to-end testing needs a re
 - **Music.app / iTunes audio-only from macOS** — Music streams to receivers without AirPlay 2 buffered audio over the AirPlay 1 path with FairPlay v2 key wrapping, which no open-source implementation can decrypt (only v3 has been reverse-engineered). Route the Mac's **system audio output** to PhairPlay instead — that path works. The real fix is AirPlay 2 buffered audio (below).
 - **Buffered audio playback** (AirPlay 2 type 103) — accepted but not played back yet
 - **Cloud/remote streaming** — local network only
-- **Miracast** — impossible for a sideloaded app (the Wi-Fi Display advertisement needs a system permission; see ADR-004). Windows: use DLNA once sub-project 3 lands.
+- **Miracast** — impossible for a sideloaded app (the Wi-Fi Display advertisement needs a system permission; see ADR-004). Windows: use DLNA ("Cast to Device") instead.
+- **DLNA formats Android cannot decode** (WMA/WMV, raw LPCM) — Windows transcodes them or reports the file as unplayable.
 - **Cast media playback** — needs a registered Cast app ID for end-to-end testing
 
 ---
@@ -175,6 +183,12 @@ Then install it via ADB (see the Sideloading Guide below) or a sideloading app l
 4. Your Mac's screen will appear on the TV instantly.
 5. To stop: click the AirPlay icon on your Mac and select "Turn Off AirPlay Mirroring", or just quit PhairPlay on the TV.
 
+### From Windows (DLNA)
+
+1. Make sure the PC's network profile is **Private**, Network discovery is on, and the "Windows Media Player Network Sharing Service" is running.
+2. Right-click a video, music or photo file → **Cast to Device** → pick your TV's name.
+3. Playback starts on the TV; use the Windows controls or the TV remote to pause, seek or stop.
+
 ---
 
 ## Known Limitations
@@ -186,6 +200,7 @@ Then install it via ADB (see the Sideloading Guide below) or a sideloading app l
 - **Google Cast** requires a registered Cast app ID for end-to-end testing; see [docs/guides/CAST_APP_ID.md](docs/guides/CAST_APP_ID.md).
 - If your router has **AP isolation** or **multicast filtering** enabled, PhairPlay may not appear in the AirPlay menu. Disable these settings on your router.
 - On very busy 2.4 GHz Wi-Fi networks, you may experience latency above 100 ms. Use 5 GHz or Ethernet for best results.
+- **DLNA volume** from the sender changes the cast stream only, not the TV's own volume.
 - **PIN auth is optional.** When disabled (default), any device on the same network can mirror to the TV. Enable PIN auth in Settings if you're on a shared network.
 
 For real-device failures, run `tools/collect-device-logs.sh` before restarting the app. It captures package state, memory, CPU, and filtered PhairPlay logs into `device-test-logs/`.

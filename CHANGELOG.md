@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- DLNA / UPnP MediaRenderer: Windows "Cast to Device", BubbleUPnP and VLC can play video, music and
+  photos on the TV. Hand-rolled SSDP/SOAP/GENA stack, MediaPlayer playback, third protocol card and
+  settings toggle, TV-remote transport keys. See `docs/decisions/ADR-005-dlna-hand-rolled-upnp.md`.
+- Changing the display name now restarts the receivers so the AirPlay and DLNA names update immediately.
+
 ### Fixed
 - Music.app / iTunes audio-only sessions no longer drop within seconds: album artwork arrives as a
   ~430 KB `SET_PARAMETER` body, which the 64 KB control-message limit rejected, closing the

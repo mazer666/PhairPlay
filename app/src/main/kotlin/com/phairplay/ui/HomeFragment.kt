@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 /**
  * HomeFragment — The main screen of PhairPlay.
  *
- * WHY: Shows the status of the receiver protocols (AirPlay / Cast)
+ * WHY: Shows the status of the receiver protocols (AirPlay / Cast / DLNA)
  * and provides Start / Stop / Restart controls. Designed for TV: large cards,
  * D-pad navigable, Google TV Streamer design language.
  *
@@ -65,6 +65,7 @@ class HomeFragment : Fragment() {
     private lateinit var dotServiceState: View
     private lateinit var cardAirPlay: View
     private lateinit var cardCast: View
+    private lateinit var cardDlna: View
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
     private lateinit var btnRestart: Button
@@ -103,6 +104,7 @@ class HomeFragment : Fragment() {
         dotServiceState  = view.findViewById(R.id.dot_service_state)
         cardAirPlay      = view.findViewById(R.id.card_airplay)
         cardCast         = view.findViewById(R.id.card_cast)
+        cardDlna         = view.findViewById(R.id.card_dlna)
         btnStart         = view.findViewById(R.id.btn_start)
         btnStop          = view.findViewById(R.id.btn_stop)
         btnRestart       = view.findViewById(R.id.btn_restart)
@@ -115,6 +117,7 @@ class HomeFragment : Fragment() {
     private fun configureProtocolCards() {
         setupCard(cardAirPlay,   R.drawable.ic_airplay,  R.string.protocol_airplay)
         setupCard(cardCast,      R.drawable.ic_cast,     R.string.protocol_cast)
+        setupCard(cardDlna,      R.drawable.ic_dlna,     R.string.protocol_dlna)
     }
 
     private fun setupCard(card: View, iconRes: Int, nameRes: Int) {
@@ -169,6 +172,9 @@ class HomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             svc.castState.collectLatest { state -> updateProtocolCard(cardCast, state) }
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            svc.dlnaState.collectLatest { state -> updateProtocolCard(cardDlna, state) }
+        }
     }
 
     /**
@@ -189,7 +195,7 @@ class HomeFragment : Fragment() {
     /**
      * Updates a single protocol status card with the current [ProtocolState].
      *
-     * @param card      The card root view (cardAirPlay or cardCast).
+     * @param card      The card root view (cardAirPlay, cardCast or cardDlna).
      * @param state     The current state of this protocol.
      */
     private fun updateProtocolCard(card: View, state: ProtocolState) {

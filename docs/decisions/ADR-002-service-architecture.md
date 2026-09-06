@@ -7,7 +7,7 @@
 
 ## Context
 
-The AirPlay/Cast receivers need to run continuously in the background — even when the user switches to a screensaver or a different app. Android may kill background processes. A ForegroundService with a persistent notification is the correct pattern for long-running background operations in Android.
+The AirPlay/Cast/DLNA receivers need to run continuously in the background — even when the user switches to a screensaver or a different app. Android may kill background processes. A ForegroundService with a persistent notification is the correct pattern for long-running background operations in Android.
 
 ## Decision
 
@@ -25,7 +25,8 @@ MainActivity / HomeFragment
       ▼
 PhairPlayService (ForegroundService)
   ├── AirPlayReceiver
-  └── CastReceiver
+  ├── CastReceiver
+  └── DlnaReceiver
 ```
 
 ## Consequences

@@ -12,10 +12,13 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.phairplay.MainActivity
+import com.phairplay.BuildConfig
 import com.phairplay.R
 import android.view.Surface
 import com.phairplay.airplay.AirPlayReceiver
 import com.phairplay.cast.CastReceiver
+import com.phairplay.dlna.DlnaReceiver
+import com.phairplay.dlna.RemoteCommand
 import com.phairplay.settings.AppSettings
 import com.phairplay.settings.SettingsRepository
 import com.phairplay.util.Logger
@@ -32,7 +35,7 @@ import kotlinx.coroutines.launch
 /**
  * PhairPlayService — Android ForegroundService that hosts all receiver protocols.
  *
- * WHY: The AirPlay/Cast receivers need to run continuously in the background.
+ * WHY: The AirPlay/Cast/DLNA receivers need to run continuously in the background.
  * Android may kill background processes. A ForegroundService with a persistent
  * notification keeps the app alive and shows the user that PhairPlay is active.
  *
@@ -67,6 +70,9 @@ class PhairPlayService : Service() {
     private val _castState = MutableStateFlow(ProtocolState.DISABLED)
     val castState: StateFlow<ProtocolState> = _castState.asStateFlow()
 
+    private val _dlnaState = MutableStateFlow(ProtocolState.DISABLED)
+    val dlnaState: StateFlow<ProtocolState> = _dlnaState.asStateFlow()
+
     private val _activeConnection = MutableStateFlow<ActiveConnection?>(null)
     val activeConnection: StateFlow<ActiveConnection?> = _activeConnection.asStateFlow()
 
@@ -89,6 +95,7 @@ class PhairPlayService : Service() {
     // Receiver instances — null when not running
     private var airPlayReceiver: AirPlayReceiver? = null
     private var castReceiver: CastReceiver? = null
+    private var dlnaReceiver: DlnaReceiver? = null
 
     // Settings — read once when starting, re-read on restart
     private lateinit var settingsRepository: SettingsRepository
@@ -173,13 +180,14 @@ class PhairPlayService : Service() {
      */
     private suspend fun startReceivers() {
         val settings = settingsRepository.settingsFlow.first()
-        Logger.i("Starting receivers: AirPlay=${settings.airPlayEnabled}, Cast=${settings.castEnabled}")
+        Logger.i("Starting receivers: AirPlay=${settings.airPlayEnabled}, Cast=${settings.castEnabled}, DLNA=${settings.dlnaEnabled}")
 
         _serviceState.value = ServiceState.Running
         updateNotification(isRunning = true)
 
         if (settings.airPlayEnabled)   startAirPlay(settings)
         if (settings.castEnabled)      startCast()
+        if (settings.dlnaEnabled)      startDlna(settings)
     }
 
     /**
@@ -298,13 +306,68 @@ class PhairPlayService : Service() {
         Logger.d("Cast receiver started")
     }
 
+    /**
+     * Creates and starts the [DlnaReceiver] (UPnP MediaRenderer — "Cast to Device" on Windows).
+     *
+     * Idempotent like [startAirPlay]: a redundant ACTION_START must not open a second SSDP/HTTP server.
+     * DLNA reuses the AirPlay overlay flows: video → CONNECTED (streaming surface), audio → [_nowPlaying],
+     * photos → [_photoFrame]. The [ActiveConnection] is only cleared when it belongs to DLNA so an AirPlay
+     * session is never clobbered by a DLNA stop.
+     */
+    private fun startDlna(settings: AppSettings) {
+        if (dlnaReceiver != null) {
+            Logger.i("DLNA receiver already running — skipping duplicate start")
+            return
+        }
+        var pendingSenderName = "DLNA Sender"
+        dlnaReceiver = DlnaReceiver(
+            context = applicationContext,
+            displayName = settings.effectiveDisplayName,
+            versionName = BuildConfig.VERSION_NAME,
+            videoSurfaceProvider = { videoSurfaceProvider?.invoke() },
+            isAirPlayConnected = { _airPlayState.value == ProtocolState.CONNECTED },
+            onSenderNameChanged = { name -> pendingSenderName = name.ifEmpty { "DLNA Sender" } },
+            onNowPlayingChanged = { info -> _nowPlaying.value = info },
+            onPhotoReceived = { bytes, mimeType ->
+                _photoFrame.value = PhotoFrame(bytes = bytes.copyOf(), mimeType = mimeType)
+            },
+            onPhotoCleared = { _photoFrame.value = null },
+            onStateChanged = { state ->
+                _dlnaState.value = state
+                when (state) {
+                    ProtocolState.CONNECTED -> {
+                        _activeConnection.value = ActiveConnection(pendingSenderName, Protocol.DLNA)
+                        updateNotification(isRunning = true, streamingSenderName = pendingSenderName)
+                    }
+                    ProtocolState.ADVERTISING,
+                    ProtocolState.DISABLED,
+                    ProtocolState.ERROR -> {
+                        if (_activeConnection.value?.protocol == Protocol.DLNA) {
+                            _activeConnection.value = null
+                            updateNotification(isRunning = state == ProtocolState.ADVERTISING)
+                        }
+                    }
+                }
+            }
+        ).also { it.start() }
+        Logger.d("DLNA receiver started (displayName='${settings.effectiveDisplayName}')")
+    }
+
+    /** Routes a TV-remote media key to the DLNA renderer (play/pause, stop, seek, next). No-op if not running. */
+    fun sendDlnaRemoteCommand(command: RemoteCommand) {
+        dlnaReceiver?.remote(command)
+    }
+
     private fun stopAllReceiversInternal() {
         try { airPlayReceiver?.stop() } catch (e: Exception) { Logger.e("AirPlay stop error", e) }
         try { castReceiver?.stop() } catch (e: Exception) { Logger.e("Cast stop error", e) }
+        try { dlnaReceiver?.stop() } catch (e: Exception) { Logger.e("DLNA stop error", e) }
         airPlayReceiver = null
         castReceiver = null
+        dlnaReceiver = null
         _airPlayState.value = ProtocolState.DISABLED
         _castState.value = ProtocolState.DISABLED
+        _dlnaState.value = ProtocolState.DISABLED
         _photoFrame.value = null
         _nowPlaying.value = null
         _pairingPin.value = null

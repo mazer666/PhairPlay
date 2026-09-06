@@ -28,7 +28,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | 3 | M3 – AirPlay Handshake | ✅ Complete | Full RTSP router, SDP parsing, plist codec, pairing (Ed25519/X25519 + SRP), FairPlay fp-setup, `/photo` endpoint, 247 unit tests |
 | 4 | M4 – AirPlay Video | ✅ Complete | H.264 via MirrorStreamServer + MirrorCrypto (AES-128-CTR), MediaCodec with SPS-driven reinit and self-heal, aspect-fit rendering; real-device validation ongoing |
 | 5 | M5 – AirPlay Audio | ✅ Complete | AAC-ELD/AAC-LC (AudioStreamServer), ALAC (AlacDecoder + libalac), AES-128-CBC, NTP sync, DACP reverse remote, NowPlayingScreen; real-device validation ongoing |
-| 6 | M6 – Miracast | ❌ Removed | Sideloaded apps cannot be Miracast sinks (WFD IE needs a system permission) — ADR-004. Replaced by DLNA (sub-project 3) |
+| 6 | M6 – DLNA MediaRenderer | ✅ Complete | Hand-rolled UPnP (SSDP/SOAP/GENA), MediaPlayer playback, third protocol card — ADR-005; replaces the removed Miracast phase (ADR-004). Windows/BubbleUPnP/VLC device validation pending |
 | 7 | M7 – Google Cast | 🔄 Started | Google TV Cast Connect SDK lifecycle implemented; full testing requires registered Cast app ID |
 | 8 | M8 – Stability | ⏳ Pending | |
 | 9 | M9 – Fire TV | 🔄 In Progress | Signed Fire TV APK released (v1.0.0-beta.1); real Fire TV A/V validation pending |
@@ -174,9 +174,11 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 
 ---
 
-## Phase 6 – Miracast Receiver — removed
+## Phase 6 – DLNA MediaRenderer
 
-**Milestone:** M6 — ❌ removed 2026-09-06. A sideloaded Android app cannot set the Wi-Fi Display information element, so no Miracast sender can discover it; see `docs/decisions/ADR-004-miracast-removed.md`. Windows senders are served by the DLNA MediaRenderer (sub-project 3).
+**Milestone:** M6 — ✅ implemented 2026-09-06 (replaces the Miracast phase, removed the same day: a sideloaded app cannot set the Wi-Fi Display IE — ADR-004).
+
+Deliverables: `com.phairplay.dlna` package (SSDP advertiser, HTTP server + router, device/SCPD descriptions, SOAP dispatcher, AVTransport/RenderingControl/ConnectionManager services, GENA eventing with LastChange, MediaRenderer state machine, MediaPlayer wrapper, photo fetcher), DLNA card and settings toggle, overlay routing, TV-remote transport keys, ADR-005. Tests: ~160 JVM tests for the pure-Kotlin layers; on-device: Windows "Cast to Device" (MP4/MP3/JPEG), BubbleUPnP next-track, VLC seek.
 
 ---
 
@@ -294,7 +296,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | M3 | AirPlay Handshake + Photo | RTSP session + `/photo` endpoint | 🔄 In Progress | AC-3.x |
 | M4 | AirPlay Video | H.264 mandatory ≥25fps; H.265 optional | 🔄 In Progress | AC-4.x |
 | M5 | AirPlay Audio | A/V sync ≤40ms; ALAC; optional surround | 🔄 In Progress | AC-5.x |
-| M6 | Miracast | Removed — ADR-004 | ❌ Removed | — |
+| M6 | DLNA MediaRenderer | Windows Cast to Device, BubbleUPnP, VLC | ✅ Complete | ADR-005 |
 | M7 | Cast | H.264+VP8 mandatory; HEVC/VP9/AV1 optional; Widevine | 🔄 Started | AC-7.x |
 | M8 | Stability | 30min tests all protocols; auto-reconnect | ⏳ Pending | AC-8.x |
 | M9 | Fire TV | All protocols on Fire TV; Cast graceful fallback | 🔄 Build-ready | AC-9.x |

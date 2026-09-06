@@ -36,6 +36,8 @@
     <color name="protocol_airplay">#FF5AC8FA</color>
     <!-- Cast: Google blue -->
     <color name="protocol_cast">#FF4285F4</color>
+    <!-- DLNA: amber, distinct from the two blues -->
+    <color name="protocol_dlna">#FFFF9F0A</color>
 
     <!-- ─── Navigation ────────────────────────────────────────── -->
     <color name="nav_panel_background">#FF111111</color>

@@ -210,6 +210,8 @@ Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK)
 | Component | File | Responsibility |
 |---|---|---|
 | `AirPlayReceiver` | `airplay/AirPlayReceiver.kt` | Orchestrates mDNS, RTSP, video/audio pipeline; emits `ProtocolState` |
+| `DlnaReceiver` | `dlna/DlnaReceiver.kt` | Orchestrates SSDP, HTTP/SOAP/GENA and the `MediaRenderer`; emits `ProtocolState` (ADR-005) |
+| `MediaRenderer` | `dlna/MediaRenderer.kt` | DLNA session state machine: URI → `DlnaPlayer` (MediaPlayer) or `PhotoFetcher`; drives overlays |
 | `MdnsService` | `airplay/MdnsService.kt` | Registers/unregisters `_airplay._tcp` + `_raop._tcp` via NsdManager |
 | `RtspHandler` | `airplay/RtspHandler.kt` | Full RTSP state machine (OPTIONS→ANNOUNCE→SETUP→RECORD→TEARDOWN) |
 | `VideoDecoder` | `airplay/VideoDecoder.kt` | MediaCodec H.264 hardware decode → SurfaceView |
@@ -465,6 +467,12 @@ val isSupported = decoderName != null
 | Google Cast | 1080p @ 60fps | 4K UHD @ 60fps | HDR10+ (optional) |
 
 ---
+
+## 10.5 DLNA formats and ports
+
+The DLNA sink list (`ProtocolInfoList`) advertises only what Android `MediaPlayer` decodes: video `mp4`, `x-matroska`, `webm`, `3gpp`, `mpeg`, `vnd.dlna.mpeg-tts`; audio `mpeg`, `mp4`, `x-m4a`, `aac`, `flac`, `x-wav`, `wav`, `ogg`; images `jpeg`, `png`, `gif`, `webp`; plus DLNA.ORG_PN profiles for MP4/H.264, MP3, AAC, JPEG and PNG. WMA/WMV and raw LPCM are deliberately absent (Windows transcodes or refuses).
+
+Ports: SSDP UDP 1900 (multicast 239.255.255.250); HTTP TCP 49494 (`DlnaConstants.DEFAULT_HTTP_PORT`) with an OS-assigned fallback that is reflected in the SSDP LOCATION.
 
 ## 11. DRM / Copy Protection
 

@@ -56,7 +56,10 @@ sourceSets {
                 // VideoDecoder is shadowed by src/stubs/VideoDecoder.kt which has no
                 // MediaCodec/Surface dependencies but exposes the companion-object
                 // members (parseSpsResolution, SpsBitReader) needed by VideoDecoderSpsTest.
-                "**/airplay/VideoDecoder.kt"
+                "**/airplay/VideoDecoder.kt",
+                // DLNA glue that references R (launcher icon) — everything else in dlna/ compiles on the JVM.
+                "**/dlna/DlnaIcon.kt",
+                "**/dlna/DlnaReceiver.kt"
             )
         }
     }
