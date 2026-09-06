@@ -44,7 +44,7 @@
 
     <!-- ── Notification ────────────────────────────────────────── -->
     <string name="notification_channel_name">PhairPlay-Dienst</string>
-    <string name="notification_channel_description">Benachrichtigung für den AirPlay/Miracast/Cast-Empfänger-Dienst</string>
+    <string name="notification_channel_description">Benachrichtigung für den AirPlay/Cast-Empfänger-Dienst</string>
     <string name="notification_status_running">Empfänger aktiv — Werbung im Netzwerk</string>
     <string name="notification_status_stopped">Empfänger gestoppt</string>
 
@@ -61,8 +61,6 @@
     <string name="setting_display_name_system_default">Systemname wird verwendet</string>
     <string name="setting_airplay_enabled">AirPlay-Empfänger</string>
     <string name="setting_airplay_subtitle">Verbindungen von macOS akzeptieren</string>
-    <string name="setting_miracast_enabled">Miracast-Empfänger</string>
-    <string name="setting_miracast_subtitle">Verbindungen von Windows und Android akzeptieren</string>
     <string name="setting_cast_enabled">Google Cast-Empfänger</string>
     <string name="setting_cast_subtitle">Verbindungen von Chrome und Android akzeptieren</string>
     <string name="setting_mirror_audio">Spiegel-Audio</string>
@@ -82,7 +80,6 @@
     <!-- ── Error messages ──────────────────────────────────────── -->
     <string name="error_network_unavailable">Keine WLAN-Verbindung. Bitte mit WLAN verbinden.</string>
     <string name="error_mdns_failed">Netzwerk-Ankündigung fehlgeschlagen.</string>
-    <string name="error_wifi_p2p_unavailable">Miracast wird auf diesem Gerät nicht unterstützt.</string>
     <string name="error_cast_unavailable">Google Cast erfordert Google Play-Dienste (auf diesem Gerät nicht verfügbar).</string>
 
 </resources>

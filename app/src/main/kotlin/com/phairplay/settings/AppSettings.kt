@@ -37,12 +37,6 @@ data class AppSettings(
     val airPlayEnabled: Boolean = true,
 
     /**
-     * Whether the Miracast (Wi-Fi Display) receiver is enabled.
-     * When false: Wi-Fi P2P service advertisement is stopped.
-     */
-    val miracastEnabled: Boolean = true,
-
-    /**
      * Whether the Google Cast receiver is enabled.
      * On Fire TV (no Google Play Services), this is ignored.
      * When false: Cast SDK is not initialized.
@@ -106,10 +100,10 @@ data class AppSettings(
 
     /**
      * Returns true if at least one protocol is enabled.
-     * If all three are disabled, the service has nothing to do.
+     * If both are disabled, the service has nothing to do.
      */
     val anyProtocolEnabled: Boolean
-        get() = airPlayEnabled || miracastEnabled || castEnabled
+        get() = airPlayEnabled || castEnabled
 
     companion object {
         /** The default settings instance used on first launch. */

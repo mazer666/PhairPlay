@@ -51,7 +51,6 @@ class SettingsFragment : Fragment() {
     private lateinit var rowDisplayName: LinearLayout
     private lateinit var textDisplayNameValue: TextView
     private lateinit var rowAirPlay: View
-    private lateinit var rowMiracast: View
     private lateinit var rowCast: View
     private lateinit var rowMirrorAudio: View
     private lateinit var rowPinAuth: View
@@ -89,7 +88,6 @@ class SettingsFragment : Fragment() {
         rowDisplayName      = view.findViewById(R.id.row_display_name)
         textDisplayNameValue = view.findViewById(R.id.text_display_name_value)
         rowAirPlay          = view.findViewById(R.id.row_airplay)
-        rowMiracast         = view.findViewById(R.id.row_miracast)
         rowCast             = view.findViewById(R.id.row_cast)
         rowMirrorAudio      = view.findViewById(R.id.row_mirror_audio)
         rowPinAuth          = view.findViewById(R.id.row_pin_auth)
@@ -113,7 +111,6 @@ class SettingsFragment : Fragment() {
     /** Sets all row labels and subtitles from string resources. */
     private fun setRowLabels() {
         configureToggleRow(rowAirPlay,      R.string.setting_airplay_enabled,    R.string.setting_airplay_subtitle)
-        configureToggleRow(rowMiracast,     R.string.setting_miracast_enabled,   R.string.setting_miracast_subtitle)
         configureToggleRow(rowCast,         R.string.setting_cast_enabled,       R.string.setting_cast_subtitle)
         configureToggleRow(rowMirrorAudio,  R.string.setting_mirror_audio,       R.string.setting_mirror_audio_subtitle)
         configureToggleRow(rowPinAuth,      R.string.setting_pin_auth,           R.string.setting_pin_auth_subtitle)
@@ -162,7 +159,6 @@ class SettingsFragment : Fragment() {
             getString(R.string.setting_display_name_system_default)
         }
         setToggle(rowAirPlay,      settings.airPlayEnabled)
-        setToggle(rowMiracast,     settings.miracastEnabled)
         setToggle(rowCast,         settings.castEnabled)
         setToggle(rowMirrorAudio,  settings.mirrorAudioEnabled)
         setToggle(rowPinAuth,      settings.airPlayPinAuthEnabled)
@@ -186,7 +182,6 @@ class SettingsFragment : Fragment() {
         rowDisplayName.setOnClickListener { showDisplayNameDialog() }
 
         setToggleListener(rowAirPlay)      { enabled -> save { it.copy(airPlayEnabled = enabled) } }
-        setToggleListener(rowMiracast)     { enabled -> save { it.copy(miracastEnabled = enabled) } }
         setToggleListener(rowCast)         { enabled -> save { it.copy(castEnabled = enabled) } }
         setToggleListener(rowMirrorAudio)  { enabled -> saveAndRestart { it.copy(mirrorAudioEnabled = enabled) } }
         setToggleListener(rowPinAuth)      { enabled -> saveAndRestart { it.copy(airPlayPinAuthEnabled = enabled) } }

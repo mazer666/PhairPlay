@@ -22,7 +22,6 @@
 
     <!-- ── Protocol names ──────────────────────────────────────── -->
     <string name="protocol_airplay">AirPlay</string>
-    <string name="protocol_miracast">Miracast</string>
     <string name="protocol_cast">Cast</string>
 
     <!-- ── Protocol states (shown in status cards) ─────────────── -->
@@ -55,7 +54,7 @@
 
     <!-- ── Notification ────────────────────────────────────────── -->
     <string name="notification_channel_name">PhairPlay Service</string>
-    <string name="notification_channel_description">Persistent notification for the AirPlay/Miracast/Cast receiver service</string>
+    <string name="notification_channel_description">Persistent notification for the AirPlay/Cast receiver service</string>
     <string name="notification_status_running">Receiver active — advertising on network</string>
     <string name="notification_status_stopped">Receiver stopped</string>
     <!-- %1$s = sender device name -->
@@ -78,8 +77,6 @@
     <string name="setting_display_name_collision_note">Registered as: %1$s</string>
     <string name="setting_airplay_enabled">AirPlay Receiver</string>
     <string name="setting_airplay_subtitle">Accept connections from macOS</string>
-    <string name="setting_miracast_enabled">Miracast Receiver</string>
-    <string name="setting_miracast_subtitle">Accept connections from Windows and Android</string>
     <string name="setting_cast_enabled">Google Cast Receiver</string>
     <string name="setting_cast_subtitle">Accept connections from Chrome and Android</string>
     <string name="setting_mirror_audio">Mirror audio</string>
@@ -111,12 +108,10 @@
     <!-- ── Error messages ──────────────────────────────────────── -->
     <string name="error_network_unavailable">No Wi-Fi connection. Please connect to Wi-Fi.</string>
     <string name="error_mdns_failed">Failed to advertise on the network.</string>
-    <string name="error_wifi_p2p_unavailable">Miracast is not supported on this device.</string>
     <string name="error_cast_unavailable">Google Cast requires Google Play Services (not available on this device).</string>
 
     <!-- ── Accessibility ───────────────────────────────────────── -->
     <string name="content_desc_airplay_icon">AirPlay protocol icon</string>
-    <string name="content_desc_miracast_icon">Miracast protocol icon</string>
     <string name="content_desc_cast_icon">Google Cast protocol icon</string>
     <string name="content_desc_status_dot">Status indicator</string>
 

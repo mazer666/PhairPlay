@@ -34,8 +34,6 @@
     <!-- ─── Protocol brand colors ────────────────────────────── -->
     <!-- AirPlay: Apple silver-blue -->
     <color name="protocol_airplay">#FF5AC8FA</color>
-    <!-- Miracast: neutral teal -->
-    <color name="protocol_miracast">#FF30D158</color>
     <!-- Cast: Google blue -->
     <color name="protocol_cast">#FF4285F4</color>
 

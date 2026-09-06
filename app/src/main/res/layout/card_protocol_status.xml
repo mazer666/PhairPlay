@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    card_protocol_status.xml — Reusable status card for one protocol (AirPlay/Miracast/Cast).
+    card_protocol_status.xml — Reusable status card for one protocol (AirPlay/Cast).
 
     Visual design (Google TV Streamer card style):
     ┌──────────────────────┐
@@ -31,7 +31,7 @@
         android:src="@drawable/ic_airplay"
         android:importantForAccessibility="no" />
 
-    <!-- Protocol name: "AirPlay", "Miracast", "Cast" -->
+    <!-- Protocol name: "AirPlay", "Cast" -->
     <TextView
         android:id="@+id/text_protocol_name"
         android:layout_width="wrap_content"

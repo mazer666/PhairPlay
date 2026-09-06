@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 /**
  * HomeFragment — The main screen of PhairPlay.
  *
- * WHY: Shows the status of all three receiver protocols (AirPlay / Miracast / Cast)
+ * WHY: Shows the status of the receiver protocols (AirPlay / Cast)
  * and provides Start / Stop / Restart controls. Designed for TV: large cards,
  * D-pad navigable, Google TV Streamer design language.
  *
@@ -64,7 +64,6 @@ class HomeFragment : Fragment() {
     private lateinit var textServiceState: TextView
     private lateinit var dotServiceState: View
     private lateinit var cardAirPlay: View
-    private lateinit var cardMiracast: View
     private lateinit var cardCast: View
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
@@ -103,7 +102,6 @@ class HomeFragment : Fragment() {
         textServiceState = view.findViewById(R.id.text_service_state)
         dotServiceState  = view.findViewById(R.id.dot_service_state)
         cardAirPlay      = view.findViewById(R.id.card_airplay)
-        cardMiracast     = view.findViewById(R.id.card_miracast)
         cardCast         = view.findViewById(R.id.card_cast)
         btnStart         = view.findViewById(R.id.btn_start)
         btnStop          = view.findViewById(R.id.btn_stop)
@@ -116,7 +114,6 @@ class HomeFragment : Fragment() {
      */
     private fun configureProtocolCards() {
         setupCard(cardAirPlay,   R.drawable.ic_airplay,  R.string.protocol_airplay)
-        setupCard(cardMiracast,  R.drawable.ic_miracast, R.string.protocol_miracast)
         setupCard(cardCast,      R.drawable.ic_cast,     R.string.protocol_cast)
     }
 
@@ -170,9 +167,6 @@ class HomeFragment : Fragment() {
             svc.airPlayState.collectLatest { state -> updateProtocolCard(cardAirPlay, state) }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            svc.miracastState.collectLatest { state -> updateProtocolCard(cardMiracast, state) }
-        }
-        viewLifecycleOwner.lifecycleScope.launch {
             svc.castState.collectLatest { state -> updateProtocolCard(cardCast, state) }
         }
     }
@@ -195,7 +189,7 @@ class HomeFragment : Fragment() {
     /**
      * Updates a single protocol status card with the current [ProtocolState].
      *
-     * @param card      The card root view (cardAirPlay, cardMiracast, or cardCast).
+     * @param card      The card root view (cardAirPlay or cardCast).
      * @param state     The current state of this protocol.
      */
     private fun updateProtocolCard(card: View, state: ProtocolState) {
