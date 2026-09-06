@@ -3,6 +3,7 @@ package com.phairplay.airplay
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import com.phairplay.airplay.handshake.PairingKeys
 import com.phairplay.service.ProtocolState
 import com.phairplay.util.Logger
 import com.phairplay.util.NetworkUtils
@@ -172,6 +173,7 @@ class MdnsService(
             setAttribute("srcvers", AIRPLAY_SERVER_VERSION)
             setAttribute("vv", "2")                             // AirPlay protocol version 2
             setAttribute("pi", NetworkUtils.getPersistentUuid(context))
+            setAttribute("pk", pairingPublicKeyHex())           // Ed25519 pairing identity (AirPlay 2)
             setAttribute("flags", "0x4")                        // Screen-mirroring receiver
         }
 
@@ -205,21 +207,18 @@ class MdnsService(
      */
     private fun registerRaopService(displayName: String) {
         val macHex = NetworkUtils.getMacAddress().replace(":", "").uppercase()
+        val record = RaopTxtRecord.build(
+            macHex = macHex,
+            displayName = displayName,
+            features = AIRPLAY_FEATURES,
+            publicKeyHex = pairingPublicKeyHex()
+        )
 
         val serviceInfo = NsdServiceInfo().apply {
-            serviceName = "$macHex@$displayName"  // required RAOP format
+            serviceName = record.serviceName  // required RAOP format: MAC@Name
             serviceType = SERVICE_TYPE_RAOP
             port = AIRPLAY_PORT
-
-            setAttribute("cn", "0,1,2,3")        // Cipher numbers (encryption types)
-            setAttribute("da", "true")             // Digest authentication capable
-            setAttribute("et", "0,3,5")            // Encryption types supported
-            setAttribute("md", "0,1,2")            // Metadata types supported
-            setAttribute("sv", "false")            // Software volume control
-            setAttribute("tp", "UDP")              // Transport for audio RTP
-            setAttribute("vn", "65537")            // Version number (required)
-            setAttribute("vs", AIRPLAY_SERVER_VERSION)
-            setAttribute("am", AIRPLAY_MODEL)
+            record.attributes.forEach { (key, value) -> setAttribute(key, value) }
         }
 
         raopListener = createRegistrationListener(
@@ -230,6 +229,10 @@ class MdnsService(
         )
         nsdManager.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, raopListener!!)
     }
+
+    /** Lower-case hex of the persistent Ed25519 pairing public key, advertised as `pk` on both records. */
+    private fun pairingPublicKeyHex(): String =
+        PairingKeys.get(context).edPublic.joinToString("") { "%02x".format(it) }
 
     /**
      * Emits [ProtocolState.ADVERTISING] only after both services have confirmed registration.
@@ -314,7 +317,10 @@ class MdnsService(
         /** Pretend to be an Apple TV so macOS uses the screen mirroring protocol. */
         private const val AIRPLAY_MODEL = "AppleTV5,3"
 
-        /** AirPlay server version — matches a real Apple TV for maximum compatibility. */
+        /**
+         * AirPlay server version — matches a real Apple TV for maximum compatibility.
+         * Keep in sync with [RaopTxtRecord].
+         */
         private const val AIRPLAY_SERVER_VERSION = "220.68"
     }
 }

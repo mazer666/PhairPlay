@@ -124,7 +124,8 @@ open class RtspHandler(
 
     private val requestReader = RtspRequestReader(
         maxMessageBytes = MAX_MESSAGE_BYTES,
-        maxPhotoBytes = PhotoHandler.MAX_PHOTO_BYTES
+        maxPhotoBytes = PhotoHandler.MAX_PHOTO_BYTES,
+        maxArtworkBytes = MAX_ARTWORK_BYTES
     )
 
     /**
@@ -666,9 +667,8 @@ open class RtspHandler(
                         mapOf("type" to 96L, "dataPort" to dataPort.toLong(), "controlPort" to controlPort.toLong())
                     }
                     103 -> {
-                        // Buffered (audio-only) AirPlay 2 — accepted + instrumented, but the macOS
-                        // Music stream stays FairPlay-encrypted (undecryptable), so playback is not
-                        // wired. Stream fields (codec ct, audioFormat, shk/shiv, latencies) logged for ref.
+                        // Buffered (audio-only) AirPlay 2 — accepted + instrumented; playback not implemented
+                        // (needs encrypted control channel + PTP + shk/ChaCha20 decrypt). See BufferedAudioServer.
                         Logger.d("buffered audio stream type=103 dict: " + stream.entries.joinToString { (k, v) ->
                             "$k=" + when (v) { is ByteArray -> "${v.size}B"; is List<*> -> "list[${v.size}]"; else -> v.toString() }
                         })
@@ -722,6 +722,12 @@ open class RtspHandler(
         if (parsed == null) {
             Logger.e("ANNOUNCE: SDP parsing returned no usable session — rejecting")
             return RtspResponse(statusCode = 400, statusMessage = "Bad Request")
+        }
+        if (parsed.audioKeyUnrecoverable) {
+            Logger.e("ANNOUNCE: rsaaeskey could not be recovered — rejecting so the sender shows an error " +
+                     "instead of a silent stream")
+            currentSession = null
+            return RtspResponse(statusCode = 500, statusMessage = "Internal Server Error")
         }
 
         currentSession = parsed.copy(senderName = extractSenderName(request.headers["User-Agent"]))
@@ -996,6 +1002,8 @@ open class RtspHandler(
         private const val BIND_MAX_ATTEMPTS = 12      // ~3s total — covers a quick stop→start restart
         private const val BIND_RETRY_MS = 250L
         private const val MAX_MESSAGE_BYTES = 65536
+        /** Album artwork via SET_PARAMETER: Music.app sends 300–800 KB JPEGs; 4 MB leaves headroom. */
+        private const val MAX_ARTWORK_BYTES = 4 * 1024 * 1024
         private const val OCTET_STREAM = "application/octet-stream"
         private const val TIMING_PORT = 6002   // matches TimingHandler's UDP NTP port
         private const val SESSION_ID = "PhairPlaySession"

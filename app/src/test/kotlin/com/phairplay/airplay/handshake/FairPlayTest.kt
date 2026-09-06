@@ -79,7 +79,13 @@ class FairPlayTest {
             val res = FairPlay().handshake(phase2(version))
             assertEquals(32, res.size)
             assertEquals(0x46, res[0].toInt() and 0xFF)    // "FPLY" header
-            assertEquals(version, res[4].toInt() and 0xFF) // header version echoes the request (v2/v3)
+            // The phase-2 header is the fixed `FPLY 03 01 04 00 00 00 00 14` for BOTH versions —
+            // the sender wraps the audio key from this reply, and echoing 0x02 here produced a wrong
+            // key for every Music.app (v2) session. Reference: shairplay fairplay_v2 fp_header.
+            assertEquals(0x03, res[4].toInt() and 0xFF)
+            assertEquals(0x01, res[5].toInt() and 0xFF)
+            assertEquals(0x04, res[6].toInt() and 0xFF)
+            assertEquals(0x14, res[11].toInt() and 0xFF)
             for (i in 0 until 20) assertEquals(i, res[12 + i].toInt() and 0xFF)  // tail echoed from req[144..)
         }
     }

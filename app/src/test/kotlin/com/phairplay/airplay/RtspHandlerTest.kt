@@ -77,6 +77,36 @@ class RtspHandlerTest {
     // ─── ANNOUNCE ────────────────────────────────────────────────────────────
 
     @Test
+    fun `ANNOUNCE with an unrecoverable rsaaeskey returns 500 and does not start streaming`() {
+        val junkBlob = java.util.Base64.getEncoder().encodeToString(ByteArray(256) { 0x5A })
+        val sdp = """
+            v=0
+            o=iTunes 1 0 IN IP4 192.168.1.10
+            s=iTunes
+            c=IN IP4 192.168.1.185
+            t=0 0
+            m=audio 0 RTP/AVP 96
+            a=rtpmap:96 AppleLossless
+            a=fmtp:96 352 0 16 40 10 14 2 255 0 0 44100
+            a=rsaaeskey:$junkBlob
+            a=aesiv:MTIzNDU2Nzg5MDEyMzQ1Ng==
+        """.trimIndent()
+
+        val handler = createTestHandler()
+        val response = handler.handleAnnouncePublic(
+            RtspRequest(
+                method = "ANNOUNCE",
+                uri = "rtsp://192.168.1.185/1",
+                headers = mapOf("CSeq" to "2", "Content-Type" to "application/sdp"),
+                body = sdp
+            )
+        )
+
+        assertEquals(500, response.statusCode)
+        assertFalse(streamingStarted)
+    }
+
+    @Test
     fun `ANNOUNCE with valid video+audio SDP returns 200`() {
         val response = createTestHandler().handleAnnouncePublic(
             RtspRequest(

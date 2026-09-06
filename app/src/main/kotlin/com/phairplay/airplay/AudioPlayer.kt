@@ -146,6 +146,9 @@ class AudioPlayer {
             // Step 3: Decode ALAC to PCM if this is a lossless stream; otherwise the payload is
             // already PCM (LPCM) and passes through. Skip the packet if ALAC decode fails, and mute
             // the stream entirely if the first frames mostly fail (wrong key → noise suppression).
+            // Once the decode-health gate has muted the stream, stop feeding the native decoder:
+            // garbage input eventually crashes libalac (observed SIGSEGV in ALACDecoder::Decode).
+            if (muted) return
             val pcm = alac?.let { dec ->
                 val out = dec.decode(decryptedPayload)
                 if (!decodeHealthDecided) updateDecodeHealth(out != null)
@@ -295,7 +298,7 @@ class AudioPlayer {
         if (rate < DECODE_HEALTH_MIN_RATE) {
             muted = true
             Logger.w("Audio muted: ALAC decoded only $decodeSuccesses/$decodeAttempts frames — " +
-                     "stream key looks wrong (likely an unsupported FairPlay v2 mode)")
+                     "stream key looks wrong (FairPlay v2 key wrapping is not decryptable; see README)")
         } else {
             Logger.i("Audio decode healthy ($decodeSuccesses/$decodeAttempts frames)")
         }

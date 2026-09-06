@@ -7,6 +7,7 @@ import android.media.AudioTrack
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
+import android.os.Process
 import com.phairplay.airplay.StreamStats
 import com.phairplay.util.Logger
 import kotlinx.coroutines.CoroutineScope
@@ -274,9 +275,14 @@ class AudioStreamServer(
      * finally block, so no other thread ever touches the codec concurrently (see [stop]).
      */
     private fun runPlayback() {
+        // Realtime audio: a late wake-up on this thread drains the AudioTrack and is heard as a gap.
+        val previousPriority = Process.getThreadPriority(Process.myTid())
+        runCatching { Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO) }
         try {
             initDecoder()
             initAudioTrack()
+            awaitPreroll()
+            audioTrack?.play()
             while (running) {
                 val payload = frameQueue.poll(200, TimeUnit.MILLISECONDS) ?: continue
                 try {
@@ -298,8 +304,25 @@ class AudioStreamServer(
             codec = null
             alac = null
             audioTrack = null
+            runCatching { Process.setThreadPriority(previousPriority) }
             Logger.i("AudioStreamServer stopped")
         }
+    }
+
+    /**
+     * Holds playback until ~200 ms of frames are queued (or [PREROLL_MAX_WAIT_MS] passes). The sender
+     * is realtime, so without this the receiver plays with zero lead and any scheduling hiccup or Wi-Fi
+     * jitter burst underruns the AudioTrack (heard as choppy audio). Mirroring audio (AAC-ELD) skips the
+     * pre-roll so it stays lined up with the immediately-rendered video.
+     */
+    private fun awaitPreroll() {
+        val target = prerollFramesFor(codecType, sampleRate, framesPerPacket)
+        if (target == 0) return
+        val deadline = System.currentTimeMillis() + PREROLL_MAX_WAIT_MS
+        while (running && frameQueue.size < target && System.currentTimeMillis() < deadline) {
+            Thread.sleep(PREROLL_POLL_MS)
+        }
+        Logger.i("Audio pre-roll: ${frameQueue.size}/$target frames queued before play()")
     }
 
     /** Decode one decrypted ALAC frame to PCM and write it to AudioTrack (blocking, paces playback). */
@@ -400,13 +423,14 @@ class AudioStreamServer(
                     .setChannelMask(channelMask)
                     .build()
             )
-            // Minimum buffer for LOW LATENCY so audio lines up with the (immediately-rendered)
-            // video. The upstream dedup jitter queue absorbs network jitter, so AudioTrack itself
-            // only needs the floor. (If this underruns/crackles on load, raise toward minBuf*2.)
-            .setBufferSizeInBytes(minBuf)
+            // minBuf alone (~170 ms) underran on the Pi 4 under scheduling/Wi-Fi jitter. Capacity does
+            // not add latency by itself — the fill level is set by how far ahead of playback the stream
+            // is — so 2× gives headroom without hurting mirroring lip-sync. play() is called by
+            // runPlayback after the (codec-dependent) pre-roll.
+            .setBufferSizeInBytes(minBuf * 2)
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
-            .also { it.setVolume(volumeGain); it.play() }
+            .also { it.setVolume(volumeGain) }
     }
 
     companion object {
@@ -434,6 +458,22 @@ class AudioStreamServer(
 
         // Jitter buffer depth between the receive and playback threads (~1 s at 92 frames/s).
         private const val AUDIO_QUEUE_CAPACITY = 96
+
+        // Pre-roll for audio-only streams: how far ahead of playback to get before play(), and how
+        // long to wait for that before starting anyway (a slow sender must not stall playback).
+        private const val PREROLL_MS = 200
+        private const val PREROLL_MAX_WAIT_MS = 600L
+        private const val PREROLL_POLL_MS = 5L
+
+        /** Packets needed to hold [PREROLL_MS] of audio, rounded up so the lead is at least that long. */
+        internal fun prerollFrameCount(sampleRate: Int, framesPerPacket: Int): Int {
+            val samples = PREROLL_MS.toLong() * sampleRate
+            return ((samples + framesPerPacket * 1000L - 1) / (framesPerPacket * 1000L)).toInt()
+        }
+
+        /** Pre-roll frames for a stream: none for mirroring audio (AAC-ELD, must track the video). */
+        internal fun prerollFramesFor(codecType: Int, sampleRate: Int, framesPerPacket: Int): Int =
+            if (codecType == CT_AAC_ELD) 0 else prerollFrameCount(sampleRate, framesPerPacket)
 
         // Sliding window of recently-played RTP sequence numbers for duplicate suppression.
         // ~11 s at 92 packets/s — far longer than any retransmit gap, far shorter than the

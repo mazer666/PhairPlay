@@ -186,6 +186,38 @@ class SdpParserTest {
         SdpParser.parse(badKey)  // must not throw
     }
 
+    // ─── Unrecoverable RSA key ────────────────────────────────────────────────
+
+    @Test
+    fun `rsaaeskey that fails RSA recovery sets audioKeyUnrecoverable`() {
+        // 256 bytes that are not a valid OAEP ciphertext → RaopRsa.decryptAesKey returns null
+        val junkBlob = java.util.Base64.getEncoder().encodeToString(ByteArray(256) { 0x5A })
+        val sdp = """
+            v=0
+            o=iTunes 1 0 IN IP4 192.168.1.10
+            s=iTunes
+            c=IN IP4 192.168.1.185
+            t=0 0
+            m=audio 0 RTP/AVP 96
+            a=rtpmap:96 AppleLossless
+            a=fmtp:96 352 0 16 40 10 14 2 255 0 0 44100
+            a=rsaaeskey:$junkBlob
+            a=aesiv:MTIzNDU2Nzg5MDEyMzQ1Ng==
+        """.trimIndent()
+
+        val result = SdpParser.parse(sdp)
+        assertNotNull(result)
+        assertTrue(result!!.audioKeyUnrecoverable)
+        assertFalse(result.isAudioEncrypted)
+    }
+
+    @Test
+    fun `audio-only SDP without any key is not flagged unrecoverable`() {
+        val result = SdpParser.parse(SDP_AUDIO_ONLY_ALAC)
+        assertNotNull(result)
+        assertFalse(result!!.audioKeyUnrecoverable)
+    }
+
     companion object {
 
         // Video + audio SDP with AAC-ELD (standard AirPlay screen mirroring)

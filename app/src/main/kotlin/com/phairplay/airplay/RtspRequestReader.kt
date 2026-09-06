@@ -11,7 +11,9 @@ import java.io.InputStream
  */
 internal class RtspRequestReader(
     private val maxMessageBytes: Int,
-    private val maxPhotoBytes: Int
+    private val maxPhotoBytes: Int,
+    /** Album artwork arrives as `SET_PARAMETER` with an image-typed body of several hundred KB. */
+    private val maxArtworkBytes: Int = maxPhotoBytes
 ) {
     /**
      * Reads one complete RTSP or AirPlay photo request from [inputStream].
@@ -73,10 +75,10 @@ internal class RtspRequestReader(
         headers: Map<String, String>
     ): ByteArray? {
         val contentLength = headers["Content-Length"]?.toIntOrNull() ?: 0
-        val bodyLimit = if (method == "PUT" && uri.substringBefore("?") == PhotoHandler.PHOTO_PATH) {
-            maxPhotoBytes
-        } else {
-            maxMessageBytes
+        val bodyLimit = when {
+            method == "PUT" && uri.substringBefore("?") == PhotoHandler.PHOTO_PATH -> maxPhotoBytes
+            method == "SET_PARAMETER" && isImage(headers) -> maxArtworkBytes
+            else -> maxMessageBytes
         }
 
         if (contentLength > bodyLimit) {
@@ -106,4 +108,7 @@ internal class RtspRequestReader(
             if (sb.length > maxMessageBytes) return null
         }
     }
+
+    private fun isImage(headers: Map<String, String>): Boolean =
+        headers["Content-Type"]?.lowercase()?.startsWith("image/") == true
 }

@@ -15,10 +15,13 @@ import java.net.Socket
  * connection: the sender streams ahead and the receiver plays from a buffer, scheduled against an
  * anchor time provided by SETRATEANCHORTIME.
  *
- * STATUS: accept-only. It accepts the TCP connection (so macOS doesn't abort) and logs the framing
- * of the first packets. Playback isn't wired: macOS Apple Music never takes this path (it uses legacy
- * RAOP), and the AirPlay 2 buffered stream is FairPlay-2-encrypted, which no FOSS receiver can
- * decrypt. Kept for senders that do reach it and for protocol reference (AudioStreamServer/AudioPlayer).
+ * STATUS: accept-only. It accepts the TCP connection (so a sender that chooses this stream doesn't
+ * abort) and logs the framing of the first packets. Playback isn't implemented: it needs the
+ * HAP-encrypted control channel, PTP timing, the `shk` stream key and ChaCha20-Poly1305 packet
+ * decryption (see Shairport Sync / openairplay/airplay2-receiver). macOS Music.app only takes this
+ * path when the receiver advertises buffered audio (features bit 40); otherwise it falls back to
+ * AirPlay 1 with FairPlay v2 key wrapping, which cannot be decrypted by open-source code. Implementing
+ * this path is therefore the real fix for Music.app audio-only.
  */
 class BufferedAudioServer {
 

@@ -69,6 +69,7 @@ object SdpParser {
 
         // Audio encryption: rsaaeskey (legacy RSA) or fpaeskey (FairPlay-wrapped, needs fp-setup decrypt)
         var aesKey: ByteArray? = null
+        var audioKeyUnrecoverable = false
         var fpAesKey: ByteArray? = null
         var aesIv: ByteArray? = null
 
@@ -109,7 +110,10 @@ object SdpParser {
                                 if (rate > 0) sampleRate = rate
                                 if (ch > 0) channels = ch
                             }
-                            parseAesKey(attr)?.let { aesKey = it }
+                            if (attr.startsWith(RSA_KEY_PREFIX)) {
+                                val recovered = parseAesKey(attr)
+                                if (recovered != null) aesKey = recovered else audioKeyUnrecoverable = true
+                            }
                             parseFpAesKey(attr)?.let { fpAesKey = it }
                             parseAesIv(attr)?.let { aesIv = it }
                         }
@@ -144,7 +148,8 @@ object SdpParser {
             aesKey = aesKey,
             fpAesKey = fpAesKey,
             aesIv = aesIv,
-            alacFramesPerPacket = alacFramesPerPacket
+            alacFramesPerPacket = alacFramesPerPacket,
+            audioKeyUnrecoverable = audioKeyUnrecoverable
         )
     }
 
@@ -242,12 +247,16 @@ object SdpParser {
      * `fpaeskey` instead, decrypted later via fp-setup).
      */
     private fun parseAesKey(attr: String): ByteArray? {
-        if (!attr.startsWith("rsaaeskey:")) return null
-        val blob = decodeBase64Safely(attr.removePrefix("rsaaeskey:")) ?: return null
+        if (!attr.startsWith(RSA_KEY_PREFIX)) return null
+        val blob = decodeBase64Safely(attr.removePrefix(RSA_KEY_PREFIX)) ?: return null
         if (blob.size == 16) return blob
-        return RaopRsa.decryptAesKey(blob)?.also {
+        val key = RaopRsa.decryptAesKey(blob)
+        if (key == null) {
+            Logger.e("rsaaeskey: RSA recovery of ${blob.size}B blob failed — session will be rejected")
+        } else {
             Logger.i("rsaaeskey: RSA-decrypted ${blob.size}B blob → 16B AES key (RSA audio path)")
         }
+        return key
     }
 
     /**
@@ -326,6 +335,12 @@ data class SessionDescription(
     val aesIv: ByteArray? = null,
     val alacFramesPerPacket: Int = 352,
     /**
+     * True when the SDP carried an `rsaaeskey` that [com.phairplay.airplay.handshake.RaopRsa]
+     * could not recover. The handler rejects the session so the sender shows an error instead
+     * of a silent stream.
+     */
+    val audioKeyUnrecoverable: Boolean = false,
+    /**
      * The sender's identifier extracted from the RTSP ANNOUNCE `User-Agent` header.
      *
      * Example: `User-Agent: AirPlay/376.1.1` → senderName = `"AirPlay"`
@@ -378,6 +393,7 @@ data class SessionDescription(
 
 // ─── Companion constants (used in SdpParser + tests) ────────────────────────
 private const val DEFAULT_SAMPLE_RATE = 44100
+private const val RSA_KEY_PREFIX = "rsaaeskey:"
 private const val DEFAULT_CHANNELS = 2
 
 /** Identifies the audio codec used in the AirPlay audio stream. */

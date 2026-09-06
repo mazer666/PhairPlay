@@ -1,6 +1,7 @@
 package com.phairplay.airplay.handshake
 
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
@@ -34,5 +35,25 @@ class AudioStreamServerTest {
             byteArrayOf(0xF8.toByte(), 0xE6.toByte(), 0x30.toByte(), 0x00.toByte()),
             AudioStreamServer.buildAacEldAsc(48000, 1)
         )
+    }
+
+    // ─── Pre-roll ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `pre-roll frame count covers 200 ms of ALAC at 44_1 kHz (352 samples per packet)`() {
+        // 200 ms × 44100 Hz = 8820 samples → 25.06 packets → round up to 26 so the lead is ≥ 200 ms.
+        assertEquals(26, AudioStreamServer.prerollFrameCount(sampleRate = 44100, framesPerPacket = 352))
+    }
+
+    @Test
+    fun `pre-roll frame count covers 200 ms of AAC-LC at 48 kHz (1024 samples per packet)`() {
+        // 200 ms × 48000 Hz = 9600 samples → 9.375 packets → 10.
+        assertEquals(10, AudioStreamServer.prerollFrameCount(sampleRate = 48000, framesPerPacket = 1024))
+    }
+
+    @Test
+    fun `mirroring audio (AAC-ELD) gets no pre-roll so lip-sync is unchanged`() {
+        assertEquals(0, AudioStreamServer.prerollFramesFor(codecType = AudioStreamServer.CT_AAC_ELD, sampleRate = 44100, framesPerPacket = 480))
+        assertEquals(26, AudioStreamServer.prerollFramesFor(codecType = AudioStreamServer.CT_ALAC, sampleRate = 44100, framesPerPacket = 352))
     }
 }

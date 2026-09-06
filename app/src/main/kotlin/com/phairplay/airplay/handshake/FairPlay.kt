@@ -53,11 +53,11 @@ class FairPlay {
         val version = req[4].toInt() and 0xFF
         require(version == 0x03 || version == 0x02) { "unsupported FairPlay version $version" }
         keyMessage = req.copyOf()
-        // Echo the version byte into the phase-2 reply header: v2 senders expect `FPLY 02 01 04…`
-        // (cf. fply_4 in joerg-krause/shairplay), v3 expects `FPLY 03 01 04…`. The sender uses this
-        // reply to wrap the audio key (fpaeskey), so a wrong header version yields a wrong key for
-        // EVERY mode. The trailing 20 bytes are echoed back from the request.
-        return FP_HEADER.copyOf().also { it[4] = req[4] } + req.copyOfRange(144, 164)
+        // The phase-2 header is the FIXED `FPLY 03 01 04 00 00 00 00 14` for BOTH protocol versions
+        // (shairplay fairplay_v2 `fp_header`, used unchanged for v2 and v3). The sender wraps the audio
+        // key (fpaeskey / ekey) from this reply, so echoing 0x02 here for v2 senders produced a wrong
+        // key — and silence — for every Music.app session. The trailing 20 bytes echo the request.
+        return FP_HEADER.copyOf() + req.copyOfRange(144, 164)
     }
 
     /** Decrypts the 72-byte FairPlay-wrapped key (the SETUP `ekey` / SDP `fpaeskey`) into the 16-byte AES key. */
