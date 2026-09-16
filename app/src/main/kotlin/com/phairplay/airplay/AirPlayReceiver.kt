@@ -418,7 +418,8 @@ class AirPlayReceiver(
         mirrorAesKey = aesKey
         mirrorEcdhSecret = ecdhSecret
         mirrorAesIv = aesIv
-        val event = ServerSocket(0)
+        // Explicit IPv4 wildcard — see RtspHandler.bindRtspSocket() for why.
+        val event = ServerSocket(0, 50, java.net.InetAddress.getByName("0.0.0.0"))
         eventSocket = event
         // Accept + drain the event connection. We don't act on events yet, but macOS expects
         // the advertised event port to be connectable, so keep it open and readable.

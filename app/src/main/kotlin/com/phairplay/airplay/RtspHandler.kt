@@ -171,7 +171,11 @@ open class RtspHandler(
             try {
                 return ServerSocket().apply {
                     reuseAddress = true
-                    bind(java.net.InetSocketAddress(RTSP_PORT))
+                    // Bind explicitly to the IPv4 wildcard: InetSocketAddress(port) resolves to
+                    // an IPv6 wildcard on Android, which some devices' network stacks don't
+                    // dual-stack onto the LAN's IPv4 interface — IPv4 senders (most phones on a
+                    // typical home LAN) then get their SYN silently dropped instead of accepted.
+                    bind(java.net.InetSocketAddress(java.net.InetAddress.getByName("0.0.0.0"), RTSP_PORT))
                 }
             } catch (e: java.io.IOException) {
                 lastError = e
