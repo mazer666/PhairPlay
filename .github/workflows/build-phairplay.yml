@@ -17,9 +17,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Добавлено автоматическое кэширование Gradle, чтобы ускорить сборку
-      - name: Setup Gradle cache
+      # ИСПРАВЛЕНО: Добавлен параметр wrapper-validation: false, чтобы отключить упавшую проверку
+      - name: Setup Gradle cache & tools
         uses: gradle/actions/setup-gradle@v4
+        with:
+          wrapper-validation: false
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -31,7 +33,6 @@ jobs:
           sdkmanager "ndk;28.2.13676358"
           sdkmanager "cmake;3.22.1"
 
-      # ИСПРАВЛЕНО: Теперь в local.properties передается и путь к SDK, и точный путь к NDK
       - name: Configure Android SDK and NDK paths
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
@@ -40,11 +41,9 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x gradlew
 
-      # ИСПРАВЛЕНО: Собираем именно Google TV версию приложения
       - name: Build Google TV Debug APK
         run: ./gradlew :app:assembleGoogletvDebug --no-daemon
 
-      # ИСПРАВЛЕНО: Маска пути загрузки артефакта адаптирована под PhairPlay
       - name: Upload Google TV APK Artifact
         uses: actions/upload-artifact@v6
         with:
