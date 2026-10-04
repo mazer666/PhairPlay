@@ -17,11 +17,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # ИСПРАВЛЕНО: Добавлен параметр wrapper-validation: false, чтобы отключить упавшую проверку
+      # ИСПРАВЛЕНО: Использован точный параметр validate-wrappers из лога ошибки
       - name: Setup Gradle cache & tools
         uses: gradle/actions/setup-gradle@v4
         with:
-          wrapper-validation: false
+          validate-wrappers: false
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
