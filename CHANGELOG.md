@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.0-beta.2] - 2026-10-09
+
+### Fixed
+- **Screen awake during playback**: Prevent TV screensaver / sleep from activating during active AirPlay mirroring or audio streaming (`FLAG_KEEP_SCREEN_ON`). Fixes session teardown after ~19 minutes on Fire TV and Google TV (PR #13).
+- **mDNS recovery after standby / network drop**: Automatically re-advertise AirPlay via mDNS when network connectivity returns after device standby or Wi-Fi reconnect (PR #13).
+- **Wi-Fi multicast packet loss**: Acquire `WifiManager.MulticastLock` while advertising to ensure sender discovery packets are received reliably in power-saving mode (PR #13).
+- **iOS 17+ AirPlay 2 mirroring SETUP limit**: Raised RTSP message size cap (`MAX_MESSAGE_BYTES`) from 64 KB to 1 MB, resolving `Request body too large` errors during binary plist negotiation on newer iOS senders (PR #11).
+- **IPv4 wildcard socket binding**: Explicitly bind RTSP, event, audio, and mirror sockets to `0.0.0.0` to ensure compatibility with Android TV network stacks (e.g. Philips/Sony) where dual-stack IPv6 sockets dropped IPv4 SYNs (PR #15).
 
 ---
 
