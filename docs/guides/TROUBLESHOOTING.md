@@ -26,6 +26,26 @@
 
 ---
 
+## TV goes to sleep / screensaver starts during streaming
+
+- **Fixed in v1.0.0-beta.2:** PhairPlay now keeps the screen awake (`FLAG_KEEP_SCREEN_ON`) throughout active mirroring and audio streaming.
+- If you are experiencing a blackout or screensaver after ~15–20 minutes on Fire TV or Google TV, make sure you have upgraded to **v1.0.0-beta.2** or later.
+
+---
+
+## TV not discoverable after waking from standby
+
+- **Fixed in v1.0.0-beta.2:** PhairPlay now monitors network connectivity changes and automatically re-advertises mDNS when the TV wakes up and reconnects to Wi-Fi. In addition, a Wi-Fi Multicast Lock is held to prevent packet dropping during sleep.
+- Ensure your device is updated to **v1.0.0-beta.2**.
+
+---
+
+## iOS 17+ connects briefly then drops with black screen
+
+- **Fixed in v1.0.0-beta.2:** Recent iOS versions send larger RTSP setup plists (~77 KB) which exceeded older buffer limits. This limit was raised to 1 MB in **v1.0.0-beta.2**.
+
+---
+
 ## Connected but black screen
 
 **Cause 1: FairPlay-protected content**

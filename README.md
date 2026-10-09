@@ -16,11 +16,11 @@ PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and 
 
 ---
 
-## Current Status — v1.0.0-beta.1
+## Current Status — v1.0.0-beta.2
 
-PhairPlay's AirPlay 2 receiver is fully implemented and available as a signed beta release. Download the APK directly from the [GitHub Releases page](https://github.com/mazer666/PhairPlay/releases).
+PhairPlay's AirPlay 2 receiver is fully implemented and available as a signed beta release. Download the latest APK directly from the [GitHub Releases page](https://github.com/mazer666/PhairPlay/releases).
 
-The AirPlay 2 stack is complete end-to-end: mDNS advertising, RTSP handshake, HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, and DACP reverse remote. Real-device validation with macOS and iOS senders is the current focus.
+The AirPlay 2 stack is complete end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote. Real-device validation with macOS and iOS senders is ongoing.
 
 Miracast and Google Cast receiver stacks are in progress (control-plane implemented; media playback pending).
 
@@ -28,6 +28,10 @@ Miracast and Google Cast receiver stacks are in progress (control-plane implemen
 
 ### AirPlay 2 (fully implemented)
 - Screen mirroring from macOS 12+ and iOS/iPadOS 16+ — H.264 hardware decode
+- Keep screen awake during mirroring and audio playback (`FLAG_KEEP_SCREEN_ON`) — prevents TV screensaver or sleep
+- Automatic mDNS recovery after TV wake from standby or Wi-Fi reconnect
+- Wi-Fi Multicast Lock held during advertising for reliable device discovery
+- Robust socket binding to IPv4 wildcard (`0.0.0.0`) across all Android TV / Fire TV models
 - FairPlay session decryption (fp-setup v2/v3 + legacy rsaaeskey) via native libplayfair
 - HomeKit-style pairing (Ed25519/X25519) and legacy SRP PIN pairing
 - Mirroring audio: AAC-ELD, AAC-LC, ALAC — with independent A/V start/stop

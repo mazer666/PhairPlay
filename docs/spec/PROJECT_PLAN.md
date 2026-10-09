@@ -30,10 +30,10 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | 5 | M5 – AirPlay Audio | ✅ Complete | AAC-ELD/AAC-LC (AudioStreamServer), ALAC (AlacDecoder + libalac), AES-128-CBC, NTP sync, DACP reverse remote, NowPlayingScreen; real-device validation ongoing |
 | 6 | M6 – Miracast | 🔄 Started | Wi-Fi Direct/WFD advertising and RTSP control-plane implemented; MPEG-TS, HDCP, and A/V playback pending |
 | 7 | M7 – Google Cast | 🔄 Started | Google TV Cast Connect SDK lifecycle implemented; full testing requires registered Cast app ID |
-| 8 | M8 – Stability | ⏳ Pending | |
-| 9 | M9 – Fire TV | 🔄 In Progress | Signed Fire TV APK released (v1.0.0-beta.1); real Fire TV A/V validation pending |
+| 8 | M8 – Stability | 🔄 In Progress | Screen awake, mDNS standby recovery & socket binding fixes integrated in v1.0.0-beta.2 |
+| 9 | M9 – Fire TV | 🔄 In Progress | Signed Fire TV APK released (v1.0.0-beta.2); screensaver timeout resolved |
 | 10 | M10 – i18n | 🔄 Partial | EN/DE resource structure exists; full UX string audit pending |
-| 11 | M11 – Release | 🔄 Beta | v1.0.0-beta.1 signed release published on GitHub (2026-06-14); full stable release pending real-device validation |
+| 11 | M11 – Release | 🔄 Beta | v1.0.0-beta.2 signed release published on GitHub (2026-10-09) |
 
 ---
 
@@ -308,14 +308,14 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 ## Phase 11 – Release
 
 **Milestone:** M11
-**Status:** 🔄 Beta — v1.0.0-beta.1 published 2026-06-14
+**Status:** 🔄 Beta — v1.0.0-beta.2 published 2026-10-09
 
 **Tasks:**
 - [x] Signed release APKs for both flavors (`scripts/release.sh`)
-- [x] GitHub Release with GoogleTV + FireTV APKs ([v1.0.0-beta.1](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-beta.1))
-- [x] CHANGELOG.md entry for v1.0.0-beta.1
-- [x] Documentation updated (README, ARCHITECTURE, PROJECT_PLAN)
-- [ ] All tests green on CI (247 JVM tests pass; Android Lint pending)
+- [x] GitHub Release with GoogleTV + FireTV APKs ([v1.0.0-beta.2](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-beta.2))
+- [x] CHANGELOG.md entry for v1.0.0-beta.2
+- [x] Documentation updated (README, TROUBLESHOOTING, INSTALLATION, PROJECT_PLAN)
+- [x] Community bug fixes merged (screen awake, mDNS standby recovery, iOS 17+ RTSP limit, IPv4 wildcard binding)
 - [ ] Real-device A/V validation on Google TV and Fire TV hardware
 - [ ] Stable v1.0.0 release
 

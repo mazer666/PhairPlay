@@ -39,15 +39,19 @@ adb connect <TV-IP-ADDRESS>:5555
 
 Confirm the connection prompt that appears on your TV.
 
-### Step 4: Install
+### Step 4: Install or Update
+
+Download the latest release APKs from [GitHub Releases](https://github.com/mazer666/PhairPlay/releases):
 
 ```bash
 # For Google TV:
-adb install app-googletv-release.apk
+adb install -r PhairPlay-v1.0.0-beta.2-googletv.apk
 
 # For Fire TV:
-adb install app-firetv-release.apk
+adb install -r PhairPlay-v1.0.0-beta.2-firetv.apk
 ```
+
+*(Note: The `-r` flag allows updating an existing installation while preserving settings.)*
 
 ### Step 5: Launch
 
