@@ -3,6 +3,7 @@ package com.phairplay.airplay
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import com.phairplay.service.ProtocolState
 import com.phairplay.util.Logger
 import com.phairplay.util.NetworkUtils
@@ -56,6 +57,26 @@ class MdnsService(
     private val nsdManager: NsdManager =
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
 
+    /**
+     * Wi-Fi multicast lock, held for as long as we advertise.
+     *
+     * Wi-Fi hardware drops multicast and broadcast frames that are not addressed to this
+     * device whenever it is allowed to power-save, and mDNS is entirely multicast. Without
+     * this lock a sender's query can simply never reach us, which looks exactly like "the TV
+     * is not discoverable" even though the registration is live. The manifest has asked for
+     * CHANGE_WIFI_MULTICAST_STATE since the beginning; nothing used it.
+     *
+     * Costs battery on a phone — irrelevant here, this is a mains-powered TV receiver whose
+     * entire job is to be findable.
+     */
+    private val multicastLock: WifiManager.MulticastLock? = runCatching {
+        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        wifi.createMulticastLock("PhairPlay-mdns").apply { setReferenceCounted(false) }
+    }.getOrElse {
+        Logger.w("Could not create Wi-Fi multicast lock: ${it.message}")
+        null
+    }
+
     // Listeners track registration state; held to enable unregistration later
     private var airPlayListener: NsdManager.RegistrationListener? = null
     private var raopListener: NsdManager.RegistrationListener? = null
@@ -92,6 +113,7 @@ class MdnsService(
         }
         isStarted = true
         registeredCount = 0
+        acquireMulticastLock()
 
         val effectiveName = resolveDisplayName(displayNameOverride)
         Logger.i("Starting mDNS advertising as '$effectiveName'")
@@ -118,6 +140,7 @@ class MdnsService(
             // Unregistration errors are non-fatal: service will expire via mDNS TTL
             Logger.e("Error unregistering mDNS services (non-fatal)", e)
         } finally {
+            releaseMulticastLock()
             airPlayListener = null
             raopListener = null
             registeredCount = 0
@@ -138,6 +161,24 @@ class MdnsService(
         Logger.d("Restarting mDNS advertising")
         stop()
         start(displayNameOverride)
+    }
+
+    private fun acquireMulticastLock() {
+        val lock = multicastLock ?: return
+        if (!lock.isHeld) {
+            runCatching { lock.acquire() }
+                .onSuccess { Logger.d("Wi-Fi multicast lock acquired") }
+                .onFailure { Logger.w("Could not acquire multicast lock: ${it.message}") }
+        }
+    }
+
+    private fun releaseMulticastLock() {
+        val lock = multicastLock ?: return
+        if (lock.isHeld) {
+            runCatching { lock.release() }
+                .onSuccess { Logger.d("Wi-Fi multicast lock released") }
+                .onFailure { Logger.w("Could not release multicast lock: ${it.message}") }
+        }
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────

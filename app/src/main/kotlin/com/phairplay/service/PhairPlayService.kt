@@ -7,6 +7,10 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -92,6 +96,10 @@ class PhairPlayService : Service() {
 
     // Receiver instances — null when not running
     private var airPlayReceiver: AirPlayReceiver? = null
+
+    // Watches for the network coming back so mDNS can be re-registered — see
+    // [registerNetworkCallback]. Null when never registered or already unregistered.
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var miracastReceiver: MiracastReceiver? = null
     private var castReceiver: CastReceiver? = null
 
@@ -105,6 +113,57 @@ class PhairPlayService : Service() {
         Logger.i("PhairPlayService created")
         settingsRepository = SettingsRepository(applicationContext)
         createNotificationChannel()
+        registerNetworkCallback()
+    }
+
+    /**
+     * Re-registers the mDNS advertisement whenever a network becomes available again.
+     *
+     * The TV going into standby takes its Wi-Fi interface down with it. An NsdManager
+     * registration does not survive that, and nothing in the app noticed: on wake the
+     * receiver was still listening on port 7000, still reported itself as running, and was
+     * invisible to every Apple device until the app was restarted by hand.
+     *
+     * [ConnectivityManager.NetworkCallback.onAvailable] fires for the first network too, not
+     * only for a returning one, so [AirPlayReceiver.readvertise] is a no-op before the receiver
+     * exists and an idempotent restart after; either way the advertisement matches reality.
+     */
+    private fun registerNetworkCallback() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: run {
+            Logger.w("No ConnectivityManager — mDNS will not recover automatically from a network drop")
+            return
+        }
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                if (_serviceState.value != ServiceState.Running) return
+                Logger.i("Network available — re-advertising over mDNS")
+                airPlayReceiver?.readvertise()
+            }
+
+            override fun onLost(network: Network) {
+                // Nothing to do: the registration is already gone with the interface. Logged
+                // because it is the other half of the story when reading a diagnostic dump.
+                Logger.i("Network lost — mDNS advertisement is gone until it returns")
+            }
+        }
+        runCatching { cm.registerNetworkCallback(request, callback) }
+            .onSuccess {
+                networkCallback = callback
+                Logger.d("Network callback registered for mDNS recovery")
+            }
+            .onFailure { Logger.e("Could not register network callback", it) }
+    }
+
+    private fun unregisterNetworkCallback() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        networkCallback?.let { cb ->
+            runCatching { cm?.unregisterNetworkCallback(cb) }
+                .onFailure { Logger.w("Could not unregister network callback: ${it.message}") }
+        }
+        networkCallback = null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -163,6 +222,7 @@ class PhairPlayService : Service() {
 
     override fun onDestroy() {
         Logger.i("PhairPlayService destroying")
+        unregisterNetworkCallback()
         stopAllReceiversInternal()
         serviceJob.cancel()
         super.onDestroy()

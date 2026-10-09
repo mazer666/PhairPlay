@@ -193,6 +193,29 @@ class AirPlayReceiver(
     /** True once a sender has advertised DACP reverse-control (so the TV remote can drive playback). */
     fun isRemoteControlAvailable(): Boolean = dacpClient.isAvailable
 
+    /**
+     * Re-registers the mDNS advertisement without touching the RTSP/timing servers.
+     *
+     * For when the network came back under us — the TV waking from standby being the case that
+     * prompted this. An NsdManager registration does not survive its interface going down, and
+     * nothing brings it back on its own, so the receiver keeps listening on port 7000 while
+     * being invisible in every AirPlay picker. Restarting the whole receiver would do it too,
+     * but that needlessly drops the sockets; only the advertisement is stale.
+     *
+     * No-op when the receiver was never started.
+     */
+    fun readvertise() {
+        val mdns = mdnsService ?: return
+        Logger.i("Re-advertising AirPlay over mDNS (network returned)")
+        scope.launch {
+            try {
+                mdns.restart(displayName.ifBlank { null })
+            } catch (e: Exception) {
+                Logger.e("Failed to re-advertise mDNS", e)
+            }
+        }
+    }
+
     // ─── Private: startup ────────────────────────────────────────────────────
 
     private fun startTimingHandler() {
