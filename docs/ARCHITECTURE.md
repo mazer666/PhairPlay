@@ -245,7 +245,7 @@ Every external input passes through a validation gate before being processed:
 Network bytes → [LENGTH CHECK] → [FORMAT CHECK] → [RANGE CHECK] → safe internal data
 ```
 
-1. **LENGTH CHECK**: All RTSP messages are limited to 64 KB. Buffer sizes are checked before any array access.
+1. **LENGTH CHECK**: RTSP control messages are strictly capped at 1 MB (expanded from 64 KB in v1.0.0-beta.2 for modern iOS pairing plists); photo payloads are capped at 25 MB.
 2. **FORMAT CHECK**: RTSP method names are matched against an allowlist. Unknown methods return 501.
 3. **RANGE CHECK**: Numeric values from the network (port numbers, timestamps) are validated to be in expected ranges.
 
@@ -255,4 +255,33 @@ The `Logger` wrapper is designed to be extended to redact IP addresses and keys 
 
 ### Principle of Least Privilege
 
-The app requests only 4 permissions, all of which are strictly necessary. No storage, no camera, no microphone.
+The app requests only minimal necessary permissions. No storage, no camera, no microphone.
+
+---
+
+## Multi-Protocol Architecture & DLNA MediaRenderer Roadmap
+
+PhairPlay is designed with a multi-receiver architecture coordinated by `PhairPlayService`:
+
+```
+                    ┌─────────────────────────┐
+                    │    PhairPlayService     │
+                    │   (ForegroundService)   │
+                    └────────────┬────────────┘
+         ┌───────────────────────┼───────────────────────┬──────────────────────┐
+         ▼                       ▼                       ▼                      ▼
+  AirPlayReceiver           CastReceiver          MiracastReceiver         DlnaReceiver
+  - mDNS (_airplay,_raop)   - Cast Connect        - Wi-Fi Direct (WFD)     (Planned - ADR-004)
+  - RTSP port 7000          - Cast App ID         - RTSP WFD sink          - SSDP 239.255.255.250
+  - H.264 Mirroring                                                        - SOAP AVTransport
+  - AAC/ALAC Audio                                                         - Video/Audio/Photo URL
+```
+
+### Planned DLNA MediaRenderer Architecture (see [ADR-004](decisions/ADR-004-dlna-mediarenderer-roadmap.md))
+
+To serve Windows ("Cast to Device"), VLC, and Android UPnP controllers without requiring hidden Android system permissions (which restrict Miracast), a dedicated **UPnP/DLNA MediaRenderer** module is planned under package `com.phairplay.dlna`:
+
+1. **SSDP Discovery:** Listens and advertises on multicast `239.255.255.250:1900` (`urn:schemas-upnp-org:device:MediaRenderer:1`).
+2. **Embedded HTTP & SOAP Dispatcher:** A lightweight, non-blocking internal HTTP server responding to SOAP actions (`AVTransport:1`, `RenderingControl:1`, `ConnectionManager:1`) with hardened XML parsing (XXE protected).
+3. **Playback Surface Integration:** Directs incoming media stream URLs to the existing `StreamingScreen` SurfaceView and `PhotoScreen` without UI code duplication.
+4. **Stepwise Delivery:** Designed in 4 incremental, reviewable sub-phases (D1 Discovery → D2 Control → D3 Media Playback → D4 Eventing & Hardening).

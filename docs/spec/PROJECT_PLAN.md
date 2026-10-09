@@ -10,12 +10,12 @@ Last Updated: 2026-05-23
 ## Phase Order
 
 ```
-Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11
- Spec     Skeleton  AirPlay   AirPlay   AirPlay   AirPlay   Miracast    Cast     Stability  Fire TV   i18n      Release
-          + UI       mDNS     Handshk    Video     Audio+    Receiver  Receiver             Port      Polish
+Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11 → Phase 12
+ Spec     Skeleton  AirPlay   AirPlay   AirPlay   AirPlay   Miracast    Cast     Stability  Fire TV   i18n      Release    DLNA
+          + UI       mDNS     Handshk    Video     Audio+    Receiver  Receiver             Port      Polish               Renderer
                     +Service  +RTSP     +Photo    Opt.Codec  Full     Full
                               +Photo   +Opt.HEVC  +HEVC    Codecs    Codecs
-  M0        M1       M2        M3        M4        M5        M6         M7        M8         M9       M10       M11
+  M0        M1       M2        M3        M4        M5        M6         M7        M8         M9       M10       M11        M12
 ```
 
 ## Status Overview
@@ -28,12 +28,13 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | 3 | M3 – AirPlay Handshake | ✅ Complete | Full RTSP router, SDP parsing, plist codec, pairing (Ed25519/X25519 + SRP), FairPlay fp-setup, `/photo` endpoint, 247 unit tests |
 | 4 | M4 – AirPlay Video | ✅ Complete | H.264 via MirrorStreamServer + MirrorCrypto (AES-128-CTR), MediaCodec with SPS-driven reinit and self-heal, aspect-fit rendering; real-device validation ongoing |
 | 5 | M5 – AirPlay Audio | ✅ Complete | AAC-ELD/AAC-LC (AudioStreamServer), ALAC (AlacDecoder + libalac), AES-128-CBC, NTP sync, DACP reverse remote, NowPlayingScreen; real-device validation ongoing |
-| 6 | M6 – Miracast | 🔄 Started | Wi-Fi Direct/WFD advertising and RTSP control-plane implemented; MPEG-TS, HDCP, and A/V playback pending |
+| 6 | M6 – Miracast | 🔄 Started | Wi-Fi Direct/WFD advertising and RTSP control-plane implemented; system API limitations identified (see ADR-004) |
 | 7 | M7 – Google Cast | 🔄 Started | Google TV Cast Connect SDK lifecycle implemented; full testing requires registered Cast app ID |
 | 8 | M8 – Stability | 🔄 In Progress | Screen awake, mDNS standby recovery & socket binding fixes integrated in v1.0.0-beta.2 |
 | 9 | M9 – Fire TV | 🔄 In Progress | Signed Fire TV APK released (v1.0.0-beta.2); screensaver timeout resolved |
 | 10 | M10 – i18n | 🔄 Partial | EN/DE resource structure exists; full UX string audit pending |
 | 11 | M11 – Release | 🔄 Beta | v1.0.0-beta.2 signed release published on GitHub (2026-10-09) |
+| 12 | M12 – DLNA | 📋 Planned | Stepwise UPnP/DLNA MediaRenderer for Windows & Android (see ADR-004) |
 
 ---
 
@@ -321,6 +322,38 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 
 ---
 
+## Phase 12 – UPnP / DLNA MediaRenderer 📋
+
+**Milestone:** M12  
+**Status:** 📋 Planned (Architected in [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md))  
+
+**Goal:** Provide native media streaming for Windows ("Cast to Device"), VLC, BubbleUPnP, and Android UPnP controllers via an incremental, secure, and fully unit-tested DLNA MediaRenderer stack.
+
+### Sub-Phase D1: Discovery & Receiver Foundation
+- [ ] Implement `SsdpAdvertiser` on `239.255.255.250:1900` broadcasting `urn:schemas-upnp-org:device:MediaRenderer:1` and responding to `M-SEARCH`
+- [ ] Lightweight embedded HTTP server serving `/description.xml` and SCPD service descriptors
+- [ ] Create `DlnaReceiver` in `com.phairplay.dlna` managed by `PhairPlayService`
+- [ ] Add `dlnaEnabled` preference in `AppSettings` and status card in `HomeFragment`
+
+### Sub-Phase D2: Control Plane & Hardened SOAP Dispatcher
+- [ ] Harden XML parser against XXE (`FEATURE_SECURE_PROCESSING`, entity resolution disabled, recursion depth limit)
+- [ ] Implement `ConnectionManager:1` service (`GetProtocolInfo`, `GetCurrentConnectionIDs`)
+- [ ] Implement `AVTransport:1` state machine (`SetAVTransportURI`, `Play`, `Pause`, `Stop`, `GetTransportInfo`, `GetPositionInfo`)
+- [ ] Implement `RenderingControl:1` service (`GetVolume`, `SetVolume`, `GetMute`, `SetMute`)
+
+### Sub-Phase D3: Media Playback Integration (Video, Audio, Photo)
+- [ ] Connect `AVTransport` media URL playback to Android `SurfaceView` via `StreamingScreen` / `MediaPlayer`
+- [ ] Support audio-only playback with `NowPlayingScreen` metadata display
+- [ ] Support photo display (`PhotoScreen`) with strict payload memory limits (max 20 MB, downsampling)
+- [ ] Connect TV remote transport controls (play, pause, stop) to DLNA state machine
+
+### Sub-Phase D4: GENA Eventing & Security Hardening
+- [ ] Implement GENA event subscription and `LastChange` event dispatching
+- [ ] Enforce SSRF protection: GENA callback URLs restricted to private IPv4 addresses on the local subnet
+- [ ] End-to-end testing with Windows 11 "Cast to Device", VLC Renderer, and BubbleUPnP
+
+---
+
 ## Milestone Summary
 
 | # | Phase | Key Deliverable | Status | Primary AC |
@@ -333,10 +366,11 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | M5 | AirPlay Audio | A/V sync ≤40ms; ALAC; optional surround | 🔄 In Progress | AC-5.x |
 | M6 | Miracast | H.264 CHP/CBP + LPCM mandatory; HEVC/AAC/AC3 optional | 🔄 Started | AC-6.x |
 | M7 | Cast | H.264+VP8 mandatory; HEVC/VP9/AV1 optional; Widevine | 🔄 Started | AC-7.x |
-| M8 | Stability | 30min tests all protocols; auto-reconnect | ⏳ Pending | AC-8.x |
-| M9 | Fire TV | All protocols on Fire TV; Cast graceful fallback | 🔄 Build-ready | AC-9.x |
+| M8 | Stability | 30min tests all protocols; auto-reconnect | 🔄 In Progress | AC-8.x |
+| M9 | Fire TV | All protocols on Fire TV; Cast graceful fallback | 🔄 In Progress | AC-9.x |
 | M10 | i18n | EN+DE complete | 🔄 Partial | AC-10.x |
-| M11 | Release | Signed APKs, CI green, all tests pass | ⏳ Pending | AC-11.x |
+| M11 | Release | Signed APKs, CI green, all tests pass | 🔄 Beta | AC-11.x |
+| M12 | DLNA | Stepwise UPnP/DLNA MediaRenderer (SSDP, SOAP, Playback, GENA) | 📋 Planned | AC-12.x |
 
 ---
 
