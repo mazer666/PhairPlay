@@ -995,7 +995,12 @@ open class RtspHandler(
         private const val MAX_PAIR_ATTEMPTS = 10
         private const val BIND_MAX_ATTEMPTS = 12      // ~3s total — covers a quick stop→start restart
         private const val BIND_RETRY_MS = 250L
-        private const val MAX_MESSAGE_BYTES = 65536
+        // iOS/iPadOS mirror-stream SETUP requests carry a large binary plist
+        // (observed ~77 KB from iPhone17,1 on iOS 26) that exceeded the previous
+        // 64 KB cap, so the reader rejected the video stream SETUP and the sender
+        // tore the session down right after audio started. 1 MB gives ample head-
+        // room for future senders while staying trivially safe on a LAN.
+        private const val MAX_MESSAGE_BYTES = 1024 * 1024
         private const val OCTET_STREAM = "application/octet-stream"
         private const val TIMING_PORT = 6002   // matches TimingHandler's UDP NTP port
         private const val SESSION_ID = "PhairPlaySession"
