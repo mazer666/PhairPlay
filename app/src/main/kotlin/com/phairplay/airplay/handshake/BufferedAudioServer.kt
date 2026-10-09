@@ -22,7 +22,8 @@ import java.net.Socket
  */
 class BufferedAudioServer {
 
-    private val serverSocket = ServerSocket(0)   // OS-assigned port, returned in the SETUP response
+    // OS-assigned port, explicit IPv4 wildcard — see RtspHandler.bindRtspSocket() for why.
+    private val serverSocket = ServerSocket(0, 50, java.net.InetAddress.getByName("0.0.0.0"))
     @Volatile private var running = false
     @Volatile private var client: Socket? = null
 

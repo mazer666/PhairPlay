@@ -43,7 +43,8 @@ class MirrorStreamServer(
     private class Frame(val annexB: ByteArray) : Item()
 
     private val cipher = MirrorCrypto.streamCipher(aesKey, ecdhSecret, streamConnectionId)
-    private val serverSocket = ServerSocket(0)            // OS-assigned free port
+    // OS-assigned free port, explicit IPv4 wildcard — see RtspHandler.bindRtspSocket() for why.
+    private val serverSocket = ServerSocket(0, 50, java.net.InetAddress.getByName("0.0.0.0"))
     private val queue = ArrayBlockingQueue<Item>(QUEUE_CAPACITY)
 
     @Volatile private var running = false
