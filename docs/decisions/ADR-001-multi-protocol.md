@@ -35,3 +35,12 @@ Each protocol is implemented as an independent component that can be enabled/dis
 
 1. **AirPlay-only** — simpler, but limits audience to macOS users only.
 2. **AirPlay + Miracast, no Cast** — reduces dependencies but misses Chrome users.
+
+---
+
+## Amendment (2026-10-09) — DLNA as Fourth Protocol Option
+
+As documented in [ADR-004](ADR-004-dlna-mediarenderer-roadmap.md), **UPnP / DLNA MediaRenderer** is adopted as a fourth, independent protocol option:
+- Coexists alongside AirPlay 2, Google Cast, and Miracast (it does **not** replace any existing protocol).
+- Can be independently toggled in Settings (`dlnaEnabled`).
+- Provides native support for Windows ("Cast to Device"), VLC, and mobile UPnP controllers without requiring elevated Android permissions.

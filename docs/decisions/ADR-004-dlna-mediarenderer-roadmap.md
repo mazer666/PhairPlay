@@ -17,7 +17,7 @@ While the AirPlay 2 receiver is now mature and released (`v1.0.0-beta.2`), user 
 
 We will adopt **UPnP/DLNA MediaRenderer** as an official future protocol in PhairPlay, implemented through a **clean, modular, stepwise approach** rather than a single monolithic dump.
 
-DLNA will complement AirPlay and Cast, providing native support for:
+DLNA will complement AirPlay 2, Google Cast, and Miracast as an **additional, independent option** (it does **not** replace Miracast or any other protocol), providing native support for:
 - Windows "Cast to Device" / Windows Media Player
 - VLC Media Player ("Playback → Renderer")
 - Popular mobile UPnP controllers (BubbleUPnP, mconnect, etc.)

@@ -22,7 +22,7 @@ PhairPlay's AirPlay 2 receiver is fully implemented and available as a signed be
 
 The AirPlay 2 stack is complete end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote. Real-device validation with macOS and iOS senders is ongoing.
 
-Miracast and Google Cast receiver stacks are in progress (control-plane implemented; media playback pending).
+Miracast and Google Cast receiver stacks are in progress (control-plane implemented; media playback pending). In addition, **UPnP/DLNA MediaRenderer** is planned as an upcoming option for Windows ("Cast to Device"), VLC, and mobile UPnP controllers (see [ADR-004](docs/decisions/ADR-004-dlna-mediarenderer-roadmap.md)).
 
 ## Features
 
@@ -45,7 +45,8 @@ Miracast and Google Cast receiver stacks are in progress (control-plane implemen
 
 ### App & Platform
 - Android TV / Fire TV app shell with foreground service and status UI
-- Mirror audio toggle and PIN-auth toggle in Settings
+- Multi-protocol receiver architecture: AirPlay 2 active, Google Cast and Miracast in development, plus UPnP/DLNA MediaRenderer planned as an additional option
+- Each protocol can be toggled on/off independently in Settings
 - Works on Google TV (Android 10+) and Fire TV (Android 7+)
 - Miracast Wi-Fi Direct / WFD advertisement and RTSP control-plane
 - Google TV Cast Connect SDK lifecycle (full testing requires Cast app ID)
