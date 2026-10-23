@@ -2,10 +2,13 @@ package com.phairplay.airplay
 
 import android.content.Context
 import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import com.phairplay.service.ProtocolState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -153,5 +156,156 @@ class MdnsServiceTest {
         verify(atLeast = 4) {
             mockNsdManager.registerService(any(), NsdManager.PROTOCOL_DNS_SD, any())
         }
+    }
+
+    /**
+     * Test: restart() does NOT publish the DISABLED state.
+     *
+     * WHY: A restart is a re-advertisement, not a shutdown — the receiver stays enabled.
+     * Publishing DISABLED in between made the Home screen render "Disabled — Enable in
+     * Settings" for a receiver that was enabled all along (issue #18), which sent users
+     * to the wrong place to fix a problem they did not have.
+     */
+    @Test
+    fun `restart does not report DISABLED`() {
+        val states = mutableListOf<ProtocolState>()
+        val service = MdnsService(mockContext, onStateChange = { states.add(it) })
+
+        service.start()
+        service.restart()
+
+        assertFalse(
+            "a restart must not publish DISABLED — got $states",
+            states.contains(ProtocolState.DISABLED)
+        )
+    }
+
+    /**
+     * Test: A failed registration is retried instead of being left as a dead receiver.
+     *
+     * WHY: The platform rejects registrations for all sorts of transient reasons (the
+     * previous registration has not been released yet, the daemon is busy, the network
+     * just came back). Without a retry the receiver stays invisible in every AirPlay
+     * picker until the user restarts the app by hand.
+     */
+    @Test
+    fun `failed registration is retried`() {
+        val listeners = mutableListOf<NsdManager.RegistrationListener>()
+        every { mockNsdManager.registerService(any(), NsdManager.PROTOCOL_DNS_SD, any()) } answers {
+            listeners.add(thirdArg())
+        }
+
+        val service = MdnsService(mockContext)
+        service.start()
+
+        // Fail the first service of the first round.
+        listeners.first().onRegistrationFailed(mockServiceInfo(), NsdManager.FAILURE_INTERNAL_ERROR)
+
+        // The failed service must be registered again on its own.
+        waitUntil("the registration is retried") {
+            listeners.size >= 3
+        }
+    }
+
+    /**
+     * Test: A failed registration never leaves the receiver in the DISABLED state.
+     *
+     * WHY: DISABLED means "the user switched this protocol off". A failed registration
+     * is an error and must be reported as such — otherwise the UI asks the user to
+     * change a setting that is already correct.
+     */
+    @Test
+    fun `failed registration does not report DISABLED`() {
+        val listeners = mutableListOf<NsdManager.RegistrationListener>()
+        every { mockNsdManager.registerService(any(), NsdManager.PROTOCOL_DNS_SD, any()) } answers {
+            listeners.add(thirdArg())
+        }
+
+        val states = mutableListOf<ProtocolState>()
+        val service = MdnsService(mockContext, onStateChange = { states.add(it) })
+        service.start()
+
+        listeners.first().onRegistrationFailed(mockServiceInfo(), NsdManager.FAILURE_INTERNAL_ERROR)
+
+        waitUntil("the registration is retried") { listeners.size >= 3 }
+        assertFalse(
+            "a failed registration must not report DISABLED — got $states",
+            states.contains(ProtocolState.DISABLED)
+        )
+    }
+
+    /**
+     * Test: A failed service is retried without touching the service that registered fine.
+     *
+     * WHY: The two mDNS services are registered independently. A failure of one must not
+     * unregister the other — that would make the device disappear from every AirPlay
+     * picker even though half of the work succeeded.
+     */
+    @Test
+    fun `failed service is retried without unregistering the sibling`() {
+        val listeners = mutableListOf<NsdManager.RegistrationListener>()
+        every { mockNsdManager.registerService(any(), NsdManager.PROTOCOL_DNS_SD, any()) } answers {
+            listeners.add(thirdArg())
+        }
+
+        val service = MdnsService(mockContext)
+        service.start()
+
+        // The AirPlay service registers, the RAOP service fails.
+        listeners[0].onServiceRegistered(mockServiceInfo())
+        listeners[1].onRegistrationFailed(mockServiceInfo(), NsdManager.FAILURE_INTERNAL_ERROR)
+
+        // Only the failed service is registered again — the AirPlay service keeps its
+        // registration, so exactly one additional registerService call is expected.
+        waitUntil("the failed service is retried") { listeners.size >= 3 }
+
+        // Nothing is unregistered — the sibling service keeps its live registration.
+        verify(exactly = 0) {
+            mockNsdManager.unregisterService(any())
+        }
+    }
+
+    /**
+     * Test: Both services of the current round must register before advertising.
+     */
+    @Test
+    fun `advertising requires both services of the current round`() {
+        val listeners = mutableListOf<NsdManager.RegistrationListener>()
+        every { mockNsdManager.registerService(any(), NsdManager.PROTOCOL_DNS_SD, any()) } answers {
+            listeners.add(thirdArg())
+        }
+
+        val states = mutableListOf<ProtocolState>()
+        val service = MdnsService(mockContext, onStateChange = { states.add(it) })
+        service.start()
+
+        listeners[0].onServiceRegistered(mockServiceInfo())
+        assertFalse("one service is not enough", states.contains(ProtocolState.ADVERTISING))
+
+        listeners[1].onServiceRegistered(mockServiceInfo())
+        assertTrue("both services registered", states.contains(ProtocolState.ADVERTISING))
+    }
+
+    // ─── Test helpers ───────────────────────────────────────────────────────
+
+    private fun mockServiceInfo(): NsdServiceInfo {
+        val info = mockk<NsdServiceInfo>()
+        every { info.serviceName } returns "PhairPlay"
+        return info
+    }
+
+    /**
+     * Waits until [condition] holds, or fails the test after [timeoutMs].
+     *
+     * The registration retry runs on a background coroutine with a backoff, so the
+     * assertions above have to wait for it.
+     */
+    private fun waitUntil(message: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            if (condition()) return
+            Thread.sleep(50)
+        }
+        throw AssertionError("Timed out after ${timeoutMs}ms waiting for: $message")
     }
 }

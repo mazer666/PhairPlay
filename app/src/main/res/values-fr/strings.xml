@@ -18,6 +18,8 @@
 
     <!-- ── Protocol states ─────────────────────────────────────── -->
     <string name="protocol_state_disabled">Désactivé</string>
+    <string name="protocol_detail_service_stopped">Démarrer le service pour diffuser</string>
+    <string name="protocol_detail_restarting">Redémarrage du récepteur…</string>
     <string name="protocol_state_advertising">En attente…</string>
     <string name="protocol_state_connected">Connecté</string>
     <string name="protocol_state_error">Erreur</string>

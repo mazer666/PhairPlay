@@ -106,6 +106,14 @@ class PhairPlayService : Service() {
     // Watches for the network coming back so mDNS can be re-registered — see
     // [registerNetworkCallback]. Null when never registered or already unregistered.
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
+    // Networks currently up. Used to tell "the first network appeared" from
+    // "the network came back" — only the latter needs a re-advertisement.
+    private val knownNetworks = mutableSetOf<Network>()
+
+    // True once the last network was lost, so the next onAvailable re-advertises.
+    @Volatile private var networkWasLost = false
+
     private var miracastReceiver: MiracastReceiver? = null
     private var castReceiver: CastReceiver? = null
     private var dlnaReceiver: DlnaReceiver? = null
@@ -131,9 +139,18 @@ class PhairPlayService : Service() {
      * receiver was still listening on port 7000, still reported itself as running, and was
      * invisible to every Apple device until the app was restarted by hand.
      *
-     * [ConnectivityManager.NetworkCallback.onAvailable] fires for the first network too, not
-     * only for a returning one, so [AirPlayReceiver.readvertise] is a no-op before the receiver
-     * exists and an idempotent restart after; either way the advertisement matches reality.
+     * WHY THE FIRST onAvailable IS IGNORED:
+     * [ConnectivityManager.NetworkCallback.onAvailable] also fires for the very first
+     * network, right after the callback is registered. That happens while the AirPlay
+     * receiver is still starting up, so re-advertising then unregisters an mDNS
+     * registration that is still in flight. The platform answers that with
+     * "already active" or simply drops the new registration — the receiver ends up
+     * registered nowhere, invisible to every sender, while the UI happily claims it is
+     * advertising. Every further network transition (VPN up, captive portal, Wi-Fi
+     * roaming) repeated the churn until the platform refused further registrations
+     * with "Exceeded max outstanding requests".
+     *
+     * So: re-advertise only after the last network was actually lost.
      */
     private fun registerNetworkCallback() {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: run {
@@ -145,14 +162,35 @@ class PhairPlayService : Service() {
             .build()
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
+                val hadNetwork = synchronized(knownNetworks) { knownNetworks.isNotEmpty() }
+                synchronized(knownNetworks) { knownNetworks.add(network) }
+
+                // A second network appeared while one was already up — the existing
+                // advertisement is still valid and re-registering would only churn the
+                // platform's mDNS daemon.
+                if (hadNetwork) {
+                    Logger.d("Additional network available — keeping the existing mDNS advertisement")
+                    return
+                }
+                if (!networkWasLost) {
+                    // The first network of this process: the receiver registers on its own.
+                    Logger.d("First network available — mDNS registers on its own")
+                    return
+                }
+                networkWasLost = false
                 if (_serviceState.value != ServiceState.Running) return
-                Logger.i("Network available — re-advertising over mDNS")
+                Logger.i("Network available again — re-advertising over mDNS")
                 airPlayReceiver?.readvertise()
             }
 
             override fun onLost(network: Network) {
-                // Nothing to do: the registration is already gone with the interface. Logged
-                // because it is the other half of the story when reading a diagnostic dump.
+                // The registration is gone with the interface. Remember that, so the next
+                // onAvailable re-advertises instead of being treated as the initial one.
+                val allLost = synchronized(knownNetworks) {
+                    knownNetworks.remove(network)
+                    knownNetworks.isEmpty()
+                }
+                if (allLost) networkWasLost = true
                 Logger.i("Network lost — mDNS advertisement is gone until it returns")
             }
         }
@@ -315,6 +353,17 @@ class PhairPlayService : Service() {
     private fun startAirPlay(settings: AppSettings) {
         // Mirror the debug-overlay setting into the shared stats bus that StreamingScreen reads.
         com.phairplay.airplay.StreamStats.overlayEnabled = settings.showDebugOverlay
+
+        // Report "Advertising" right away, like Miracast/Cast/DLNA do.
+        //
+        // WHY: The AirPlay receiver only announces ADVERTISING once BOTH mDNS registrations
+        // are confirmed. Until then the state stayed at its initial DISABLED value, and the
+        // Home screen rendered that as "Disabled — Enable in Settings". Users then toggled a
+        // switch that was already on, because the message told them to (issue #18).
+        //
+        // DISABLED now means exactly one thing: "the user switched this protocol off".
+        // A registration that fails ends in ERROR, which is a different message.
+        _airPlayState.value = ProtocolState.ADVERTISING
 
         // Idempotent: a redundant ACTION_START (e.g. the activity being recreated while the
         // foreground service is still alive) must NOT spin up a second AirPlayReceiver competing

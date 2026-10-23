@@ -23,6 +23,8 @@
 
     <!-- ── Protocol card detail lines ──────────────────────────── -->
     <string name="protocol_detail_disabled">In Einstellungen aktivieren</string>
+    <string name="protocol_detail_service_stopped">Dienst starten, um zu senden</string>
+    <string name="protocol_detail_restarting">Empfänger wird neu gestartet…</string>
     <string name="protocol_detail_waiting">Warte auf Sender…</string>
     <string name="protocol_detail_connected">Streaming von %1$s</string>
     <string name="protocol_detail_error">WLAN-Einstellungen prüfen</string>

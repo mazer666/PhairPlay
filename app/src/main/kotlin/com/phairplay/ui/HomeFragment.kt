@@ -44,6 +44,10 @@ class HomeFragment : Fragment() {
     private var service: PhairPlayService? = null
     private var isBound = false
 
+    // Last observed service state — used to phrase the "Disabled" hint on the
+    // protocol cards correctly (see disabledDetailRes()).
+    private var currentServiceState: ServiceState = ServiceState.Stopped
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = (binder as? PhairPlayService.LocalBinder)?.getService()
@@ -188,6 +192,7 @@ class HomeFragment : Fragment() {
      * Colors and text reflect whether the service is running, stopped, or restarting.
      */
     private fun updateServiceStateBadge(state: ServiceState) {
+        currentServiceState = state
         val (textRes, colorRes) = when (state) {
             is ServiceState.Running    -> Pair(R.string.service_state_running,    R.color.status_running)
             is ServiceState.Stopped    -> Pair(R.string.service_state_stopped,    R.color.status_stopped)
@@ -210,7 +215,7 @@ class HomeFragment : Fragment() {
         val detail = card.findViewById<TextView>(R.id.text_protocol_detail)
 
         val (stateRes, colorRes, detailRes) = when (state) {
-            ProtocolState.DISABLED    -> Triple(R.string.protocol_state_disabled,    R.color.status_disabled,  R.string.protocol_detail_disabled)
+            ProtocolState.DISABLED    -> Triple(R.string.protocol_state_disabled,    R.color.status_disabled,  disabledDetailRes())
             ProtocolState.ADVERTISING -> Triple(R.string.protocol_state_advertising, R.color.status_running,   R.string.protocol_detail_waiting)
             ProtocolState.CONNECTED   -> Triple(R.string.protocol_state_connected,   R.color.status_running,   R.string.protocol_detail_connected)
             ProtocolState.ERROR       -> Triple(R.string.protocol_state_error,       R.color.status_stopped,   R.string.protocol_detail_error)
@@ -219,5 +224,19 @@ class HomeFragment : Fragment() {
         stateText.setText(stateRes)
         detail.setText(detailRes)
         dot.background.setTint(requireContext().getColor(colorRes))
+    }
+
+    /**
+     * Picks the hint shown under a "Disabled" protocol card.
+     *
+     * WHY: "Enable in Settings" is only true when the protocol was switched off in the
+     * Settings screen. When the service itself is not running, the switch may well be
+     * on and the hint sends the user to the wrong place — the very complaint in issue #18
+     * ("it just says disabled even though it's switched on").
+     */
+    private fun disabledDetailRes(): Int = when (currentServiceState) {
+        is ServiceState.Running -> R.string.protocol_detail_disabled
+        is ServiceState.Restarting -> R.string.protocol_detail_restarting
+        else -> R.string.protocol_detail_service_stopped
     }
 }

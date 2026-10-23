@@ -189,10 +189,15 @@ class SettingsFragment : Fragment() {
     private fun setupListeners() {
         rowDisplayName.setOnClickListener { showDisplayNameDialog() }
 
-        setToggleListener(rowAirPlay)      { enabled -> save { it.copy(airPlayEnabled = enabled) } }
-        setToggleListener(rowMiracast)     { enabled -> save { it.copy(miracastEnabled = enabled) } }
-        setToggleListener(rowCast)         { enabled -> save { it.copy(castEnabled = enabled) } }
-        setToggleListener(rowDlna)         { enabled -> save { it.copy(dlnaEnabled = enabled) } }
+        // Protocol switches and the display name are read by the receivers only at start-up.
+        // Persisting them alone leaves the running service on the old configuration, so the
+        // switch shows "on" while the receiver is still off — exactly the "it says disabled
+        // even though it's switched on" confusion from issue #18. Every setting that the
+        // receivers read at start-up therefore restarts the service.
+        setToggleListener(rowAirPlay)      { enabled -> saveAndRestart { it.copy(airPlayEnabled = enabled) } }
+        setToggleListener(rowMiracast)     { enabled -> saveAndRestart { it.copy(miracastEnabled = enabled) } }
+        setToggleListener(rowCast)         { enabled -> saveAndRestart { it.copy(castEnabled = enabled) } }
+        setToggleListener(rowDlna)         { enabled -> saveAndRestart { it.copy(dlnaEnabled = enabled) } }
         setToggleListener(rowMirrorAudio)  { enabled -> saveAndRestart { it.copy(mirrorAudioEnabled = enabled) } }
         setToggleListener(rowPinAuth)      { enabled -> saveAndRestart { it.copy(airPlayPinAuthEnabled = enabled) } }
         setToggleListener(rowStartOnBoot)  { enabled -> save { it.copy(startOnBoot = enabled) } }
@@ -275,14 +280,16 @@ class SettingsFragment : Fragment() {
             .setView(editText)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val newName = editText.text?.toString()?.trim() ?: ""
-                save { it.copy(displayName = newName) }
+                // The advertised mDNS name is fixed at registration time, so the receivers
+                // have to restart for the new name to reach the AirPlay picker.
+                saveAndRestart { it.copy(displayName = newName) }
                 textDisplayNameValue.text = newName.ifEmpty {
                     getString(R.string.setting_display_name_system_default)
                 }
                 Logger.i("Display name updated to: '${newName.ifEmpty { "(system default)" }}'")
             }
             .setNeutralButton(R.string.setting_display_name_reset) { _, _ ->
-                save { it.copy(displayName = "") }
+                saveAndRestart { it.copy(displayName = "") }
                 textDisplayNameValue.text = getString(R.string.setting_display_name_system_default)
                 Logger.i("Display name reset to system default")
             }

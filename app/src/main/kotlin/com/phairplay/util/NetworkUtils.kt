@@ -48,6 +48,8 @@ object NetworkUtils {
 
         // Sanitize: keep only safe characters for mDNS service names
         val sanitized = rawName.replace(Regex("[^A-Za-z0-9 _\\-]"), "").trim()
+            .take(MAX_DEVICE_NAME_LENGTH)
+            .trim()
 
         return sanitized.ifEmpty { DEFAULT_DEVICE_NAME }
     }
@@ -127,4 +129,11 @@ object NetworkUtils {
     private const val FALLBACK_MAC_ADDRESS = "aa:bb:cc:dd:ee:ff"
     private const val PREFS_NAME = "phairplay_prefs"
     private const val PREF_KEY_DEVICE_UUID = "phairplay_device_uuid"
+
+    /**
+     * Maximum length of the device name used as an mDNS service instance name.
+     * A vendor device name can be longer than the DNS-SD limit, and an over-long name
+     * is rejected by the platform's mDNS daemon.
+     */
+    private const val MAX_DEVICE_NAME_LENGTH = 63
 }
