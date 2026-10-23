@@ -378,6 +378,9 @@ class PhairPlayService : Service() {
         // this assignment happens-before the Main-thread read in onStateChanged.
         var pendingSenderName = "AirPlay Sender"
 
+        // Whether the session that just started carries video (see onVideoSessionChanged).
+        var pendingHasVideo = false
+
         airPlayReceiver = AirPlayReceiver(
             context = applicationContext,
             displayName = settings.effectiveDisplayName,
@@ -390,6 +393,13 @@ class PhairPlayService : Service() {
             videoSurfaceProvider = { videoSurfaceProvider?.invoke() },
             onSenderNameChanged = { name ->
                 pendingSenderName = name.ifEmpty { "AirPlay Sender" }
+            },
+            // Whether the session that just started carries video. Only a video session
+            // needs the streaming Surface, so only a video session may pull the app to
+            // the front — an audio-only session (Apple Music, a podcast) must not
+            // interrupt whatever the user is watching on the TV.
+            onVideoSessionChanged = { hasVideo ->
+                pendingHasVideo = hasVideo
             },
             onPhotoReceived = { bytes, imageType ->
                 _photoFrame.value = PhotoFrame(
@@ -415,12 +425,15 @@ class PhairPlayService : Service() {
                         _activeConnection.value =
                             ActiveConnection(pendingSenderName, Protocol.AIRPLAY)
                         updateNotification(isRunning = true, streamingSenderName = pendingSenderName)
-                        bringStreamingScreenToFront()
+                        // Only a video session needs the streaming Surface — an audio-only
+                        // session must not pull the app to the front.
+                        if (pendingHasVideo) bringStreamingScreenToFront()
                     }
                     ProtocolState.ADVERTISING,
                     ProtocolState.DISABLED,
                     ProtocolState.ERROR       -> {
                         _activeConnection.value = null
+                        pendingHasVideo = false
                         updateNotification(isRunning = state != ProtocolState.DISABLED &&
                                                        state != ProtocolState.ERROR)
                     }

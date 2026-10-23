@@ -72,6 +72,17 @@ class AirPlayReceiver(
      * Guaranteed to be called BEFORE [onStateChanged] is called with [ProtocolState.CONNECTED].
      */
     private val onSenderNameChanged: (String) -> Unit = {},
+    /**
+     * Called with whether the session that just started carries **video**.
+     *
+     * WHY: The service brings the streaming screen to the front when a session connects
+     * while the app is in the background — but only mirroring sessions need a Surface.
+     * An audio-only session (Apple Music, a podcast) must not pull the TV out of
+     * whatever the user was watching, so the caller needs to tell the two apart.
+     *
+     * Guaranteed to be called BEFORE [onStateChanged] is called with [ProtocolState.CONNECTED].
+     */
+    private val onVideoSessionChanged: (hasVideo: Boolean) -> Unit = {},
     /** Called when iOS/macOS sends a JPEG/PNG to the `/photo` endpoint. */
     private val onPhotoReceived: (bytes: ByteArray, imageType: PhotoImageType) -> Unit = { _, _ -> },
     /** Called when iOS/macOS clears the currently displayed `/photo`. */
@@ -301,6 +312,9 @@ class AirPlayReceiver(
                 // Notify PhairPlayService of the sender name BEFORE emitting CONNECTED,
                 // so the name is ready when the ActiveConnection is created.
                 onSenderNameChanged(session.senderName)
+                // Same for the stream kind: an audio-only session must not pull the
+                // streaming screen to the front.
+                onVideoSessionChanged(session.hasVideo)
                 emitState(ProtocolState.CONNECTED)
             } catch (e: Exception) {
                 Logger.e("Failed to start media pipeline", e)
@@ -464,6 +478,7 @@ class AirPlayReceiver(
         // AirPlay 2 NTP is receiver-initiated: poll the sender's timing port so macOS proceeds.
         val ntp = AirPlayNtpClient(remoteAddress, senderTimingPort).also { ntpClient = it; it.start(scope) }
         onSenderNameChanged("AirPlay")
+        onVideoSessionChanged(true)   // screen mirroring always needs the Surface
         emitState(ProtocolState.CONNECTED)
         Logger.i("Mirror keys set; eventPort=${event.localPort} timingPort=${ntp.localPort}")
         return event.localPort to ntp.localPort
@@ -520,6 +535,7 @@ class AirPlayReceiver(
      */
     private fun startUrlVideo(url: String, startFraction: Double) {
         onSenderNameChanged("AirPlay")
+        onVideoSessionChanged(true)   // the URL player renders onto the Surface
         emitState(ProtocolState.CONNECTED)   // shows StreamingScreen → Surface becomes available
         val player = urlVideoPlayer ?: AirPlayVideoPlayer(
             surfaceProvider = videoSurfaceProvider,
