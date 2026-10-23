@@ -180,6 +180,14 @@ Then install it via ADB (see the Sideloading Guide below) or a sideloading app l
 4. Your Mac's screen will appear on the TV instantly.
 5. To stop: click the AirPlay icon on your Mac and select "Turn Off AirPlay Mirroring", or just quit PhairPlay on the TV.
 
+**Mirroring while PhairPlay is in the background.** To have the video appear when a sender connects while you are on the TV home screen or in another app, allow PhairPlay to open itself: **Settings → Apps → Special app access → Display over other apps → PhairPlay**. If your TV hides that screen, grant it over ADB:
+
+```bash
+adb shell appops set com.phairplay.googletv SYSTEM_ALERT_WINDOW allow   # Fire TV: com.phairplay.firetv
+```
+
+Without it, start PhairPlay before you start mirroring; a session that begins in the background plays audio only.
+
 ---
 
 ## Known Limitations
