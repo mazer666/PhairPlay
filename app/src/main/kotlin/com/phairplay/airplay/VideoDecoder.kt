@@ -2,6 +2,8 @@ package com.phairplay.airplay
 
 import android.media.MediaCodec
 import android.media.MediaFormat
+import android.os.Handler
+import android.os.HandlerThread
 import android.view.Surface
 import com.phairplay.util.Logger
 
@@ -31,7 +33,8 @@ import com.phairplay.util.Logger
 class VideoDecoder(private val outputSurface: Surface) {
 
     // The underlying hardware decoder — null until initialize() is called
-    private var mediaCodec: MediaCodec? = null
+    @Volatile private var mediaCodec: MediaCodec? = null
+    private var renderCallbackThread: HandlerThread? = null
 
     // Track whether the decoder has been initialized (to prevent double-init)
     @Volatile
@@ -72,12 +75,13 @@ class VideoDecoder(private val outputSurface: Surface) {
             return
         }
 
-        // Try to extract actual resolution from the SPS NAL unit. The parser can misread some senders'
-        // SPS (e.g. iPhone) and return nonsense like 32x87392 — configuring MediaCodec with that wedges
-        // the decoder (no input buffers, no frames). Validate the result and fall back to the hint; the
+        // Extract the resolution from the SPS, accepting the Annex-B start code used by mirroring.
+        // Validate the result and fall back to the hint if the sender's SPS is malformed; the
         // hardware decoder reads the true size from the SPS (csd-0) itself and reports it via
         // INFO_OUTPUT_FORMAT_CHANGED, which we use to refine the size for aspect-fit.
-        val parsed = Companion.parseSpsResolution(spsBytes)
+        val parsed = H264SpsParser.parseResolution(spsBytes)
+        StreamStats.videoConfig = "parsed=$parsed hint=${width}x$height"
+        StreamStats.videoStage = "codec init"
         val (actualWidth, actualHeight) = parsed?.takeIf { isPlausibleSize(it.first, it.second) } ?: run {
             Logger.w("SPS resolution $parsed implausible/failed — using hint ${width}x${height}")
             Pair(width, height)
@@ -109,16 +113,40 @@ class VideoDecoder(private val outputSurface: Surface) {
         // "video/avc" is the MIME type for H.264. Android will pick the best
         // available hardware decoder for this format.
         mediaCodec = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+        StreamStats.videoCodec = mediaCodec!!.name
 
         // Configure the decoder:
         // - format: what the input will look like (H.264, width, height, SPS/PPS)
         // - outputSurface: where decoded frames go (directly to screen — no intermediate copy)
         // - crypto: null (we handle decryption before this point, if needed)
         // - flags: 0 (0 = decoder mode; CONFIGURE_FLAG_ENCODE would be for encoding)
-        mediaCodec!!.configure(format, outputSurface, null, 0)
-        mediaCodec!!.start()
+        try {
+            mediaCodec!!.configure(format, outputSurface, null, 0)
+        } catch (e: Exception) {
+            release()
+            throw e
+        }
+        // A vendor that rejects this diagnostic callback should still be able to decode.
+        runCatching {
+            val thread = HandlerThread("PhairPlay-frame-events").apply { start() }
+            renderCallbackThread = thread
+            mediaCodec!!.setOnFrameRenderedListener({ codec, _, _ ->
+                if (codec === mediaCodec) StreamStats.videoPresented.incrementAndGet()
+            }, Handler(thread.looper))
+        }.onFailure {
+            renderCallbackThread?.quitSafely()
+            renderCallbackThread = null
+            StreamStats.videoError("render callback unavailable", it)
+        }
+        try {
+            mediaCodec!!.start()
+        } catch (e: Exception) {
+            release()
+            throw e
+        }
 
         isInitialized = true
+        StreamStats.videoStage = "codec ready"
         Logger.i("H.264 decoder initialized successfully")
     }
 
@@ -139,21 +167,28 @@ class VideoDecoder(private val outputSurface: Surface) {
      * @param nalUnit The raw NAL unit bytes (without the RTP header).
      * @param presentationTimeUs Presentation timestamp in microseconds (for A/V sync).
      */
-    fun decodeNalUnit(nalUnit: ByteArray, presentationTimeUs: Long) {
+    fun decodeNalUnit(nalUnit: ByteArray, presentationTimeUs: Long): Boolean {
         val codec = mediaCodec ?: run {
             Logger.w("decodeNalUnit() called but decoder not initialized")
-            return
+            return false
         }
 
+        var submitted = false
         try {
             // Drain finished frames FIRST — renders them and frees the pipeline so an input
             // buffer becomes available. Dropping NAL units corrupts H.264 (loses reference
             // frames) and causes a black screen until the next keyframe, so we avoid it.
             releaseOutputBuffers(codec)
 
-            // Wait for an input buffer. Longer than before: on a modest SoC the decoder can
-            // briefly fall behind, and waiting beats dropping (which corrupts the stream).
-            val inputBufferIndex = codec.dequeueInputBuffer(INPUT_BUFFER_TIMEOUT_US)
+            // Keep draining while waiting: one long input wait can block the output that must
+            // be released before the codec can accept its first frame after reconfiguration.
+            val deadline = System.nanoTime() + INPUT_BUFFER_WAIT_NS
+            var inputBufferIndex = codec.dequeueInputBuffer(INPUT_BUFFER_TIMEOUT_US)
+            while (inputBufferIndex < 0 && System.nanoTime() < deadline) {
+                StreamStats.videoInputRetries.incrementAndGet()
+                releaseOutputBuffers(codec)
+                inputBufferIndex = codec.dequeueInputBuffer(INPUT_BUFFER_TIMEOUT_US)
+            }
 
             if (inputBufferIndex >= 0) {
                 // We got an input buffer — fill it with the NAL unit bytes
@@ -170,10 +205,16 @@ class VideoDecoder(private val outputSurface: Surface) {
                     presentationTimeUs,
                     0                  // flags: 0 = normal frame (not end-of-stream)
                 )
+                submitted = true
+                StreamStats.videoSubmitted.incrementAndGet()
+                StreamStats.videoStage = "submitted"
             } else {
-                // No input buffer available — the decoder is catching up.
-                // Drop this NAL unit to avoid building up backlog (prefer low latency).
+                // The bounded wait expired. The caller will recreate the codec and, if this
+                // is the rotation's IDR, retry the SAME frame instead of losing its resync point.
                 Logger.v("VideoDecoder: no input buffer available, dropping NAL unit")
+                StreamStats.videoInputMiss.incrementAndGet()
+                StreamStats.videoStage = "no input buffer"
+                isHealthy = false
             }
 
             // Release any output buffers that MediaCodec has finished decoding.
@@ -181,11 +222,26 @@ class VideoDecoder(private val outputSurface: Surface) {
             releaseOutputBuffers(codec)
 
         } catch (e: IllegalStateException) {
+            StreamStats.videoError("codec failed", e)
             // MediaCodec is now in the error state and cannot recover — flag for recreation.
             Logger.e("VideoDecoder entered error state — will recreate", e)
             isHealthy = false
         } catch (e: Exception) {
+            StreamStats.videoError("decode error", e)
             Logger.e("Error decoding NAL unit", e)
+        }
+        return submitted
+    }
+
+    /** Drain asynchronous codec output on the same decoder thread even when no input arrives. */
+    fun drainPendingOutput() {
+        val codec = mediaCodec ?: return
+        if (!isHealthy) return
+        try {
+            releaseOutputBuffers(codec)
+        } catch (e: Exception) {
+            StreamStats.videoError("output drain failed", e)
+            isHealthy = false
         }
     }
 
@@ -215,6 +271,8 @@ class VideoDecoder(private val outputSurface: Surface) {
                 // decoder → the upstream frame queue saturates → big latency + dropped (corrupt) frames.
                 // A/V alignment is handled by keeping the AUDIO path low-latency instead (AudioStreamServer).
                 codec.releaseOutputBuffer(outputBufferIndex, true)
+                StreamStats.videoOutput.incrementAndGet()
+                StreamStats.videoStage = "output released"
             }
             outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 0)
         }
@@ -247,13 +305,18 @@ class VideoDecoder(private val outputSurface: Surface) {
      */
     fun release() {
         Logger.d("Releasing VideoDecoder")
+        val codec = mediaCodec
+        mediaCodec = null // ignore delayed callbacks from the old codec
         try {
-            mediaCodec?.stop()
-            mediaCodec?.release()
+            codec?.stop()
         } catch (e: Exception) {
             Logger.e("Error releasing MediaCodec (non-fatal)", e)
         } finally {
-            mediaCodec = null
+            runCatching { codec?.release() }.onFailure {
+                Logger.e("Error disposing MediaCodec (non-fatal)", it)
+            }
+            renderCallbackThread?.quitSafely()
+            renderCallbackThread = null
             isInitialized = false
         }
     }
@@ -262,185 +325,8 @@ class VideoDecoder(private val outputSurface: Surface) {
     private fun isPlausibleSize(w: Int, h: Int): Boolean = w in 64..8192 && h in 64..8192
 
     companion object {
-        // How long to wait for an input buffer before dropping (microseconds).
-        // 100ms — generous enough that the decoder rarely has to drop a NAL unit (which would
-        // corrupt the stream), while still bounding stall if the codec is truly wedged.
-        private const val INPUT_BUFFER_TIMEOUT_US = 100_000L
+        private const val INPUT_BUFFER_TIMEOUT_US = 10_000L
+        private const val INPUT_BUFFER_WAIT_NS = 250_000_000L
 
-        /**
-         * Parses the H.264 SPS NAL unit to extract the actual video resolution.
-         *
-         * WHY: AirPlay SDP does not include explicit width/height fields.
-         * The true resolution is encoded inside the SPS (Sequence Parameter Set) NAL unit
-         * as `pic_width_in_mbs_minus1` and `pic_height_in_map_units_minus1`.
-         * Each macroblock (MB) is 16×16 pixels.
-         *
-         * Formula:
-         *   width  = (pic_width_in_mbs_minus1  + 1) × 16
-         *   height = (pic_height_in_map_units_minus1 + 1) × 16
-         *
-         * Handles Baseline (66), Main (77), and High profile (100+) SPS formats.
-         * Returns null (graceful fallback) if the SPS is too short, malformed, or uses
-         * an unsupported bitstream feature.
-         *
-         * Exposed as `internal` for unit testing without an Android runtime.
-         *
-         * @param sps The raw SPS NAL unit bytes (first byte is the NAL type, 0x67).
-         * @return (width, height) in pixels, or null if parsing fails.
-         */
-        internal fun parseSpsResolution(sps: ByteArray): Pair<Int, Int>? {
-            try {
-                if (sps.size < 4) return null
-                val reader = SpsBitReader(sps, startOffset = 1)  // skip NAL type byte (0x67)
-
-                val profileIdc = reader.readBits(8)
-                reader.readBits(8)   // constraint flags + 2 reserved zeros
-                reader.readBits(8)   // level_idc
-                reader.readUe()      // seq_parameter_set_id
-
-                // Default for Baseline/Main profiles per H.264 spec.
-                var chromaFormatIdc = 1
-                var separateColorPlaneFlag = 0
-
-                // High-profile and variants have extra fields before the common fields.
-                val highProfiles = setOf(100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135)
-                if (profileIdc in highProfiles) {
-                    chromaFormatIdc = reader.readUe()
-                    if (chromaFormatIdc == 3) {
-                        separateColorPlaneFlag = reader.readBits(1)  // separate_colour_plane_flag
-                    }
-                    reader.readUe()     // bit_depth_luma_minus8
-                    reader.readUe()     // bit_depth_chroma_minus8
-                    reader.readBits(1)  // qpprime_y_zero_transform_bypass_flag
-                    if (reader.readBits(1) == 1) {  // seq_scaling_matrix_present_flag
-                        val count = if (chromaFormatIdc != 3) 8 else 12
-                        repeat(count) {
-                            if (reader.readBits(1) == 1) {  // seq_scaling_list_present_flag[i]
-                                reader.skipScalingList(if (it < 6) 16 else 64)
-                            }
-                        }
-                    }
-                }
-
-                reader.readUe()   // log2_max_frame_num_minus4
-                val picOrderCntType = reader.readUe()
-                when (picOrderCntType) {
-                    0 -> reader.readUe()  // log2_max_pic_order_cnt_lsb_minus4
-                    1 -> {
-                        reader.readBits(1)  // delta_pic_order_always_zero_flag
-                        reader.readSe()     // offset_for_non_ref_pic
-                        reader.readSe()     // offset_for_top_to_bottom_field
-                        repeat(reader.readUe()) { reader.readSe() }
-                    }
-                }
-
-                reader.readUe()     // max_num_ref_frames
-                reader.readBits(1)  // gaps_in_frame_num_value_allowed_flag
-
-                val picWidthInMbsMinus1 = reader.readUe()
-                val picHeightInMapUnitsMinus1 = reader.readUe()
-                val frameMbsOnlyFlag = reader.readBits(1)
-                if (frameMbsOnlyFlag == 0) {
-                    reader.readBits(1)  // mb_adaptive_frame_field_flag
-                }
-                reader.readBits(1)  // direct_8x8_inference_flag
-
-                var cropLeft = 0
-                var cropRight = 0
-                var cropTop = 0
-                var cropBottom = 0
-                if (reader.readBits(1) == 1) {  // frame_cropping_flag
-                    cropLeft = reader.readUe()
-                    cropRight = reader.readUe()
-                    cropTop = reader.readUe()
-                    cropBottom = reader.readUe()
-                }
-
-                val codedWidth = (picWidthInMbsMinus1 + 1) * 16
-                val codedHeight = (picHeightInMapUnitsMinus1 + 1) * 16 * (2 - frameMbsOnlyFlag)
-
-                val chromaArrayType = if (separateColorPlaneFlag == 1) 0 else chromaFormatIdc
-
-                val subWidthC = when (chromaArrayType) {
-                    0 -> 1
-                    1, 2 -> 2
-                    else -> 1
-                }
-                val subHeightC = when (chromaArrayType) {
-                    1 -> 2
-                    else -> 1
-                }
-
-                val cropUnitX = if (chromaArrayType == 0) 1 else subWidthC
-                val cropUnitY = if (chromaArrayType == 0) (2 - frameMbsOnlyFlag) else subHeightC * (2 - frameMbsOnlyFlag)
-
-                val width = codedWidth - (cropLeft + cropRight) * cropUnitX
-                val height = codedHeight - (cropTop + cropBottom) * cropUnitY
-                if (width <= 0 || height <= 0) return null
-
-                Logger.d("SPS parsed: ${width}x${height} (profile=$profileIdc)")
-                return Pair(width, height)
-
-            } catch (e: Exception) {
-                Logger.w("SPS resolution parsing failed: ${e.message} — will use hint dimensions")
-                return null
-            }
-        }
-
-        /**
-         * Bitstream reader for H.264 NAL units.
-         *
-         * Reads bits MSB-first and implements unsigned/signed Exp-Golomb coding.
-         * Exposed as `internal` for use in tests.
-         *
-         * @param data        The raw SPS byte array (including NAL type header).
-         * @param startOffset Byte offset to start reading from (typically 1 to skip NAL type).
-         */
-        class SpsBitReader(private val data: ByteArray, startOffset: Int) {
-            private var bytePos = startOffset
-            private var bitPos  = 7  // MSB first (bit 7 = most significant)
-
-            fun readBit(): Int {
-                if (bytePos >= data.size) throw IndexOutOfBoundsException("SPS RBSP underflow")
-                val bit = (data[bytePos].toInt() ushr bitPos) and 1
-                if (--bitPos < 0) { bitPos = 7; bytePos++ }
-                return bit
-            }
-
-            fun readBits(n: Int): Int {
-                var result = 0
-                repeat(n) { result = (result shl 1) or readBit() }
-                return result
-            }
-
-            /** Reads an unsigned Exp-Golomb code ue(v). */
-            fun readUe(): Int {
-                var leadingZeros = 0
-                while (readBit() == 0) {
-                    if (++leadingZeros > 31) throw ArithmeticException("ue(v) overflow")
-                }
-                return if (leadingZeros == 0) 0
-                       else (1 shl leadingZeros) - 1 + readBits(leadingZeros)
-            }
-
-            /** Reads a signed Exp-Golomb code se(v). */
-            fun readSe(): Int {
-                val k = readUe()
-                return if (k == 0) 0 else if (k % 2 == 1) (k + 1) / 2 else -(k / 2)
-            }
-
-            /** Skips a scaling list of [size] entries (High Profile SPS §7.3.2.1.1.1). */
-            fun skipScalingList(size: Int) {
-                var lastScale = 8
-                var nextScale = 8
-                repeat(size) {
-                    if (nextScale != 0) {
-                        val deltaScale = readSe()
-                        nextScale = (lastScale + deltaScale + 256) % 256
-                    }
-                    lastScale = if (nextScale == 0) lastScale else nextScale
-                }
-            }
-        }
     }
 }

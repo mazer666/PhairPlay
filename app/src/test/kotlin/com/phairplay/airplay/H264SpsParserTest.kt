@@ -1,12 +1,12 @@
 package com.phairplay.airplay
 
-import com.phairplay.airplay.VideoDecoder.Companion.SpsBitReader
+import com.phairplay.airplay.H264SpsParser.SpsBitReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * VideoDecoderSpsTest — Tests for S6-3: H.264 SPS resolution parsing.
+ * H264SpsParserTest — Tests for S6-3: H.264 SPS resolution parsing.
  *
  * WHY: [VideoDecoder] must configure MediaCodec with the correct video resolution.
  * AirPlay SDP does not include explicit width/height fields — the actual resolution
@@ -14,19 +14,18 @@ import org.junit.Test
  * Passing wrong dimensions to MediaCodec produces corrupt or rejected decode output.
  *
  * WHAT WE TEST:
- * - [VideoDecoder.parseSpsResolution] for Baseline 1280×720
- * - [VideoDecoder.parseSpsResolution] for Main 1920×1088 (1080 rounds up to next MB)
+ * - [H264SpsParser.parseResolution] for Baseline 1280×720
+ * - [H264SpsParser.parseResolution] for Main 1920×1088 (1080 rounds up to next MB)
  * - Malformed SPS (too short / all-zeros) → null (graceful fallback)
  * - [SpsBitReader] ue(v): 0, 1, 2 patterns
  * - [SpsBitReader] se(v): 0, +1, −1 patterns
  * - [SpsBitReader] bit/byte boundary crossing
  *
- * HOW: [VideoDecoder.parseSpsResolution] and [VideoDecoder.SpsBitReader] are companion
- * object members marked `internal`, so they are accessible from this package without
+ * HOW: [H264SpsParser.parseResolution] and [H264SpsParser.SpsBitReader] are members of an internal pure Kotlin object, so they are accessible from this package without
  * Android runtime dependencies. We build synthetic SPS byte arrays using a helper
  * [SpsBitWriter] that is the inverse of [SpsBitReader].
  */
-class VideoDecoderSpsTest {
+class H264SpsParserTest {
 
     // ─── SpsBitReader unit tests ──────────────────────────────────────────────
 
@@ -97,23 +96,23 @@ class VideoDecoderSpsTest {
 
     @Test
     fun `parseSpsResolution returns null for empty SPS`() {
-        assertNull(VideoDecoder.parseSpsResolution(ByteArray(0)))
+        assertNull(H264SpsParser.parseResolution(ByteArray(0)))
     }
 
     @Test
     fun `parseSpsResolution returns null for single-byte SPS`() {
-        assertNull(VideoDecoder.parseSpsResolution(byteArrayOf(0x67.toByte())))
+        assertNull(H264SpsParser.parseResolution(byteArrayOf(0x67.toByte())))
     }
 
     @Test
     fun `parseSpsResolution returns null for three-byte SPS (too short for profile fields)`() {
-        assertNull(VideoDecoder.parseSpsResolution(byteArrayOf(0x67.toByte(), 0x42, 0x00)))
+        assertNull(H264SpsParser.parseResolution(byteArrayOf(0x67.toByte(), 0x42, 0x00)))
     }
 
     @Test
     fun `parseSpsResolution returns null for all-zeros SPS (infinite leading zeros in ue(v))`() {
         // All-zero bit stream → ue(v) leadingZeros counter overflows → ArithmeticException → null
-        assertNull(VideoDecoder.parseSpsResolution(ByteArray(32)))
+        assertNull(H264SpsParser.parseResolution(ByteArray(32)))
     }
 
     // ─── Known-good SPS byte arrays ───────────────────────────────────────────
@@ -125,7 +124,7 @@ class VideoDecoderSpsTest {
         // pic_height_in_map_units_minus1=44 → (44+1)*16 = 720
         val sps = buildBaselineSps(profileIdc = 66, levelIdc = 31,
                                    widthInMbs = 79, heightInMapUnits = 44)
-        assertEquals(Pair(1280, 720), VideoDecoder.parseSpsResolution(sps))
+        assertEquals(Pair(1280, 720), H264SpsParser.parseResolution(sps))
     }
 
     @Test
@@ -135,7 +134,7 @@ class VideoDecoderSpsTest {
         // pic_height_in_map_units_minus1=67 → (67+1)*16 = 1088
         val sps = buildBaselineSps(profileIdc = 77, levelIdc = 40,
                                    widthInMbs = 119, heightInMapUnits = 67)
-        assertEquals(Pair(1920, 1088), VideoDecoder.parseSpsResolution(sps))
+        assertEquals(Pair(1920, 1088), H264SpsParser.parseResolution(sps))
     }
 
     @Test
@@ -149,7 +148,7 @@ class VideoDecoderSpsTest {
             frameMbsOnlyFlag = 1,
             cropBottom = 4
         )
-        assertEquals(Pair(1920, 1080), VideoDecoder.parseSpsResolution(sps))
+        assertEquals(Pair(1920, 1080), H264SpsParser.parseResolution(sps))
     }
 
     @Test
@@ -162,15 +161,29 @@ class VideoDecoderSpsTest {
             heightInMapUnits = 44,
             frameMbsOnlyFlag = 0
         )
-        assertEquals(Pair(1280, 1440), VideoDecoder.parseSpsResolution(sps))
+        assertEquals(Pair(1280, 1440), H264SpsParser.parseResolution(sps))
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
+    @Test
+    fun `parseSpsResolution accepts the four byte start code used by mirroring`() {
+        val sps = buildBaselineSps(profileIdc = 66, levelIdc = 31,
+            widthInMbs = 79, heightInMapUnits = 44)
+        assertEquals(Pair(1280, 720), H264SpsParser.parseResolution(byteArrayOf(0, 0, 0, 1) + sps))
+    }
+
+    @Test
+    fun `parseSpsResolution accepts a three byte Annex B start code`() {
+        val sps = buildBaselineSps(profileIdc = 77, levelIdc = 40,
+            widthInMbs = 119, heightInMapUnits = 67)
+        assertEquals(Pair(1920, 1088), H264SpsParser.parseResolution(byteArrayOf(0, 0, 1) + sps))
+    }
+
     /**
      * Builds a minimal but valid H.264 SPS byte array for Baseline or Main profile.
      * Uses [SpsBitWriter] to produce the exact Exp-Golomb bit patterns that
-     * [VideoDecoder.SpsBitReader] expects.
+     * [H264SpsParser.SpsBitReader] expects.
      *
      * pic_order_cnt_type = 0 (most common) is hard-coded.
      */
@@ -219,7 +232,7 @@ class VideoDecoderSpsTest {
     }
 
     /**
-     * Inverse of [VideoDecoder.SpsBitReader]: writes bits MSB-first.
+     * Inverse of [H264SpsParser.SpsBitReader]: writes bits MSB-first.
      * Used only to build synthetic SPS test vectors.
      */
     private class SpsBitWriter {

@@ -43,6 +43,8 @@ sourceSets {
                 "**/service/PhairPlayService.kt",
                 "**/service/BootReceiver.kt",
                 "**/MainActivityTest.kt",
+                // This test exercises the actual MediaCodec submission path, not the JVM stub.
+                "**/airplay/VideoSubmissionTest.kt",
                 // MdnsServiceTest mocks NsdManager whose static initializer calls
                 // VMRuntime.newUnpaddedArray (JNI) — not available in the JVM.
                 // This test must run as an Android instrumented test on a real device.

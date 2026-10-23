@@ -68,6 +68,8 @@ class MirrorStreamServer(
     val dataPort: Int get() = serverSocket.localPort
 
     fun start(scope: CoroutineScope) {
+        StreamStats.resetVideo()
+        StreamStats.videoStage = "waiting connection"
         running = true
         scope.launch(Dispatchers.IO) { runReader() }
         scope.launch(Dispatchers.IO) { runDecoder() }
@@ -86,6 +88,7 @@ class MirrorStreamServer(
         try {
             Logger.i("MirrorStreamServer listening on data port $dataPort")
             val socket = serverSocket.accept().also { client = it }
+            StreamStats.videoStage = "waiting config"
             Logger.i("Mirror data connection from ${socket.inetAddress.hostAddress}")
             val input = socket.getInputStream()
             val header = ByteArray(128)
@@ -101,17 +104,25 @@ class MirrorStreamServer(
                 if (!readFully(input, payload, payloadSize)) break
                 when (payloadType) {
                     0 -> {
+                        StreamStats.videoReceived.incrementAndGet()
                         // ALWAYS advance the AES-CTR keystream, in order, for every video payload —
                         // skipping any packet desyncs the keystream and corrupts all later frames.
                         val annexB = MirrorCrypto.avccToAnnexB(cipher.update(payload))
-                        if (annexB.isNotEmpty()) enqueue(Frame(annexB))
+                        if (annexB.isNotEmpty()) {
+                            enqueue(Frame(annexB))
+                        } else {
+                            StreamStats.videoInvalid.incrementAndGet()
+                        }
                     }
                     1 -> parseConfig(payload)?.let { enqueue(it) }
                     else -> Logger.v("Mirror: ignoring payload type $payloadType ($payloadSize B)")
                 }
             }
         } catch (e: Exception) {
-            if (running) Logger.e("Mirror reader error", e)
+            if (running) {
+                StreamStats.videoError("reader failed", e)
+                Logger.e("Mirror reader error", e)
+            }
         } finally {
             running = false
             Logger.i("Mirror data connection ended")
@@ -139,6 +150,7 @@ class MirrorStreamServer(
     }
 
     private fun parseConfig(payload: ByteArray): Config? = try {
+        StreamStats.videoConfigs.incrementAndGet()
         val spsSize = ((payload[6].toInt() and 0xFF) shl 8) or (payload[7].toInt() and 0xFF)
         val sps = payload.copyOfRange(8, 8 + spsSize)
         val ppsLenOffset = 8 + spsSize + 1                   // skip the 1-byte PPS count
@@ -146,6 +158,7 @@ class MirrorStreamServer(
             (payload[ppsLenOffset + 1].toInt() and 0xFF)
         Config(sps, payload.copyOfRange(ppsLenOffset + 2, ppsLenOffset + 2 + ppsSize))
     } catch (e: Exception) {
+        StreamStats.videoError("config parse failed", e)
         Logger.e("Mirror: failed to parse SPS/PPS", e); null
     }
 
@@ -153,14 +166,20 @@ class MirrorStreamServer(
     private fun runDecoder() {
         try {
             while (running) {
-                val item = queue.poll(200, TimeUnit.MILLISECONDS) ?: continue
+                val item = queue.poll(20, TimeUnit.MILLISECONDS)
+                decoder?.drainPendingOutput()
+                if (item == null) continue
+                StreamStats.videoQueue = queue.size
                 when (item) {
                     is Config -> configureDecoder(item.sps, item.pps)
                     is Frame -> decodeFrame(item.annexB)
                 }
             }
         } catch (e: Exception) {
-            if (running) Logger.e("Mirror decoder thread error", e)
+            if (running) {
+                StreamStats.videoError("decoder thread failed", e)
+                Logger.e("Mirror decoder thread error", e)
+            }
         } finally {
             decoder?.release()
             decoder = null
@@ -190,8 +209,12 @@ class MirrorStreamServer(
         configuredSurface = surface
         val sps = lastSps ?: return
         val pps = lastPps ?: return
-        if (surface == null) return                            // backgrounded — wait for the surface to return
+        if (surface == null) {
+            StreamStats.videoStage = "waiting surface"
+            return
+        }
         val sc = MirrorCrypto.START_CODE
+        StreamStats.videoRebuilds.incrementAndGet()
         decoder = VideoDecoder(surface).also { it.initialize(sc + sps, sc + pps, width, height) }
         awaitingKeyframe = true                                // a fresh decoder must start at an IDR
         StreamStats.videoRes = "${width}x${height}"
@@ -202,26 +225,57 @@ class MirrorStreamServer(
         // Re-attach to the live Surface if it changed (the app was backgrounded and returned, so the
         // SurfaceView made a new Surface). Without this, video stays black after foregrounding.
         val liveSurface = surfaceProvider()
+        StreamStats.videoSurface = if (liveSurface == null) "missing" else
+            "valid=${liveSurface.isValid} id=${System.identityHashCode(liveSurface)}"
         if (liveSurface !== configuredSurface) {
             Logger.i("Mirror: surface ${if (liveSurface == null) "lost" else "changed"} — re-attaching decoder")
             rebuildDecoder(liveSurface)
         }
-        val d = decoder ?: return                              // need surface + SPS/PPS first
-        if (!d.isHealthy) {                                    // error state — drop, await next config
-            Logger.w("Mirror: decoder unhealthy — dropping, awaiting new SPS/PPS")
-            d.release(); decoder = null; configuredSurface = null; lastSps = null; lastPps = null
+        var d = decoder ?: run {
+            StreamStats.videoSkipped.incrementAndGet()
             return
+        }
+        if (!d.isHealthy) {                                    // error state — drop, await next config
+            if (!isKeyframe(annexB)) {
+                StreamStats.videoStage = "unhealthy: waiting IDR"
+                StreamStats.videoSkipped.incrementAndGet()
+                return
+            }
+            StreamStats.videoStage = "unhealthy: rebuilding"
+            StreamStats.videoSkipped.incrementAndGet()
+            Logger.w("Mirror: decoder unhealthy — rebuilding with cached SPS/PPS")
+            rebuildDecoder(liveSurface)
+            d = decoder ?: return
         }
         if (awaitingKeyframe) {
             // After a dropped frame the stream is reference-broken; skip until the next IDR so we
             // don't feed the decoder predicted frames with missing references (which smear/blocky).
-            if (!isKeyframe(annexB)) return
+            if (!isKeyframe(annexB)) {
+                StreamStats.videoStage = "waiting IDR"
+                StreamStats.videoSkipped.incrementAndGet()
+                return
+            }
             awaitingKeyframe = false
             Logger.i("Mirror: resynced on keyframe after a dropped frame")
         }
         if (framePtsUs == 0L) Logger.i("Mirror: first video frame fed to decoder (${annexB.size}B)")
-        d.decodeNalUnit(annexB, framePtsUs)
-        framePtsUs += FRAME_INTERVAL_US
+        if (d.decodeNalUnit(annexB, framePtsUs)) {
+            framePtsUs += FRAME_INTERVAL_US
+        } else {
+            awaitingKeyframe = true
+            StreamStats.videoStage = "input dropped: waiting IDR"
+            // Losing a new configuration's first IDR can freeze until the next rotation.
+            // Retry it once on a fresh codec, with the current cached configuration.
+            if (isKeyframe(annexB)) {
+                StreamStats.videoKeyframeRetries.incrementAndGet()
+                rebuildDecoder(liveSurface)
+                val fresh = decoder
+                if (fresh != null && fresh.decodeNalUnit(annexB, framePtsUs)) {
+                    awaitingKeyframe = false
+                    framePtsUs += FRAME_INTERVAL_US
+                }
+            }
+        }
     }
 
     /** True if the Annex-B frame contains an IDR NAL unit (type 5) — a decodable resync point. */
