@@ -41,6 +41,11 @@
     <!-- Start on boot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Lets the service open MainActivity when a sender connects while the app is in the
+         background (Android 10+ blocks background activity starts otherwise). Only effective
+         once the user grants "Display over other apps"; without it the old behaviour remains. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <!-- Foreground service notification (Android 13+ requires runtime grant) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

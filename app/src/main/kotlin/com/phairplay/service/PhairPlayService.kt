@@ -14,6 +14,7 @@ import android.net.NetworkRequest
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.phairplay.MainActivity
 import com.phairplay.R
@@ -341,6 +342,7 @@ class PhairPlayService : Service() {
                         _activeConnection.value =
                             ActiveConnection(pendingSenderName, Protocol.AIRPLAY)
                         updateNotification(isRunning = true, streamingSenderName = pendingSenderName)
+                        bringStreamingScreenToFront()
                     }
                     ProtocolState.ADVERTISING,
                     ProtocolState.DISABLED,
@@ -353,6 +355,30 @@ class PhairPlayService : Service() {
             }
         ).also { it.start() }
         Logger.d("AirPlay receiver started (displayName='${settings.effectiveDisplayName}')")
+    }
+
+    /**
+     * Opens [MainActivity] when a session connects while the app is in the background, so the
+     * StreamingScreen Surface exists before MirrorStreamServer.awaitSurface() gives up (5 s).
+     * Without this, a mirroring session started from the TV home screen plays audio only, and
+     * opening the app later stays black until the sender's next IDR frame.
+     *
+     * Android 10+ only allows this background start when "Display over other apps"
+     * (SYSTEM_ALERT_WINDOW) is granted; otherwise this logs and does nothing.
+     */
+    private fun bringStreamingScreenToFront() {
+        if (videoSurfaceProvider?.invoke() != null) return          // already on screen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !Settings.canDrawOverlays(this)) {
+            Logger.w("Sender connected in background; grant 'Display over other apps' to show video automatically")
+            return
+        }
+        val intent = Intent(this, MainActivity::class.java).addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        )
+        runCatching { startActivity(intent) }
+            .onFailure { Logger.e("Could not bring MainActivity to front", it) }
     }
 
     private fun startMiracast() {
