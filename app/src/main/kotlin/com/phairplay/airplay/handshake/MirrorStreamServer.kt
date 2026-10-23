@@ -59,6 +59,9 @@ class MirrorStreamServer(
     private var framePtsUs = 0L
     private var framesIn = 0
     private var framesDropped = 0
+    // Total size of the items currently held in the queue — the queue's memory budget.
+    // Touched by the reader thread (enqueue) and the decoder thread (dequeue).
+    @Volatile private var queuedBytes = 0
     private var lastStatMs = 0L
     // Set by the reader thread when a frame is dropped under load; the decoder thread then skips
     // frames until the next keyframe (IDR) so it never decodes a reference-broken, corrupt stream.
@@ -129,14 +132,38 @@ class MirrorStreamServer(
         }
     }
 
-    /** Bounded enqueue — if the decoder is behind, drop the oldest item to keep latency bounded. */
+    /**
+     * Bounded enqueue — if the decoder is behind, drop the oldest item to keep latency bounded.
+     *
+     * TWO BOUNDS ARE ENFORCED:
+     *  - the item count ([QUEUE_CAPACITY]), and
+     *  - the total number of bytes held in the queue ([MAX_QUEUE_BYTES]).
+     *
+     * WHY THE BYTE BOUND: the item count alone is not enough. A sender on the LAN may
+     * push payloads of up to [MAX_PAYLOAD] (8 MB) each; 90 such frames would keep ~720 MB
+     * alive and OOM the app process. The byte budget caps the memory a hostile or broken
+     * sender can make the receiver hold, independently of how many frames that is.
+     */
     private fun enqueue(item: Item) {
         framesIn++
+        val itemBytes = sizeOf(item)
+
+        // Make room for the new item: drop the oldest entries until it fits.
+        while (queuedBytes + itemBytes > MAX_QUEUE_BYTES) {
+            val dropped = queue.poll() ?: break
+            queuedBytes -= sizeOf(dropped)
+            framesDropped++
+            awaitingKeyframe = true      // a frame was lost — resync the decoder at the next IDR
+        }
+
         if (!queue.offer(item)) {
+            // The queue is full by count even though the byte budget allowed it.
             queue.poll()
             queue.offer(item)
             framesDropped++
             awaitingKeyframe = true        // a frame was lost — resync the decoder at the next IDR
+        } else {
+            queuedBytes += itemBytes
         }
         StreamStats.videoQueue = queue.size
         if (framesIn % 300 == 0) {
@@ -147,6 +174,12 @@ class MirrorStreamServer(
             Logger.i("Video stats: in=$framesIn dropped=$framesDropped " +
                 "(${StreamStats.videoDropPct}%) queue=${queue.size}/$QUEUE_CAPACITY ${StreamStats.videoFps}fps")
         }
+    }
+
+    /** Size of a queued item in bytes — used for the queue's memory budget. */
+    private fun sizeOf(item: Item): Int = when (item) {
+        is Config -> item.sps.size + item.pps.size
+        is Frame -> item.annexB.size
     }
 
     private fun parseConfig(payload: ByteArray): Config? = try {
@@ -169,6 +202,8 @@ class MirrorStreamServer(
                 val item = queue.poll(20, TimeUnit.MILLISECONDS)
                 decoder?.drainPendingOutput()
                 if (item == null) continue
+                // The item left the queue — release its share of the memory budget.
+                queuedBytes = (queuedBytes - sizeOf(item)).coerceAtLeast(0)
                 StreamStats.videoQueue = queue.size
                 when (item) {
                     is Config -> configureDecoder(item.sps, item.pps)
@@ -323,6 +358,17 @@ class MirrorStreamServer(
         private const val MAX_PAYLOAD = 8 * 1024 * 1024        // 8 MB sanity cap per frame
         private const val FRAME_INTERVAL_US = 1_000_000L / 60  // monotonic PTS hint (~60fps)
         private const val QUEUE_CAPACITY = 90                  // ~1.5s @60fps before dropping
+
+        /**
+         * Maximum number of bytes the frame queue may hold.
+         *
+         * The item count alone does not bound the memory: a sender on the LAN can push
+         * payloads of up to [MAX_PAYLOAD] (8 MB) each, so 90 items could keep ~720 MB
+         * alive and OOM the receiver. 64 MB is far above what a real 4K stream needs
+         * (a 1440p frame is typically 100–500 KB) and far below what would hurt the
+         * process.
+         */
+        private const val MAX_QUEUE_BYTES = 64 * 1024 * 1024    // 64 MB
         private const val SURFACE_WAIT_TRIES = 50
         private const val SURFACE_WAIT_MS = 100L
     }

@@ -3,6 +3,7 @@ package com.phairplay.airplay
 import com.phairplay.airplay.H264SpsParser.SpsBitReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -113,6 +114,75 @@ class H264SpsParserTest {
     fun `parseSpsResolution returns null for all-zeros SPS (infinite leading zeros in ue(v))`() {
         // All-zero bit stream → ue(v) leadingZeros counter overflows → ArithmeticException → null
         assertNull(H264SpsParser.parseResolution(ByteArray(32)))
+    }
+
+    // ─── ue(v) hardening against hostile input ────────────────────────────────
+    //
+    // WHY: the SPS is attacker-controlled input — any device on the LAN can send one.
+    // The plain Int formula for ue(v) overflows at 31 leading zeros (`1 shl 31` is
+    // Int.MIN_VALUE) and could return a negative or wrapped value, which would turn into
+    // a bogus picture size. The parser now computes in Long and rejects values above
+    // SpsBitReader.MAX_UE_VALUE.
+
+    @Test
+    fun `readUe rejects a value above the maximum`() {
+        // 17 leading zeros → a value far beyond MAX_UE_VALUE
+        val writer = SpsBitWriter()
+        repeat(17) { writer.writeBit(0) }
+        writer.writeBit(1)
+        repeat(17) { writer.writeBit(1) }
+
+        val reader = SpsBitReader(writer.toByteArray(), startOffset = 0)
+
+        val error = runCatching { reader.readUe() }.exceptionOrNull()
+        assertTrue(
+            "an out-of-range ue(v) must be rejected",
+            error is ArithmeticException
+        )
+    }
+
+    @Test
+    fun `readUe never returns a negative value for a long code`() {
+        // 31 leading zeros — the case where the plain Int formula overflows
+        val writer = SpsBitWriter()
+        repeat(31) { writer.writeBit(0) }
+        writer.writeBit(1)
+        repeat(31) { writer.writeBit(1) }
+
+        val reader = SpsBitReader(writer.toByteArray(), startOffset = 0)
+
+        val value = runCatching { reader.readUe() }
+        // Either rejected outright, or a sane non-negative value — never a wrapped one.
+        value.exceptionOrNull()?.let { assertTrue(it is ArithmeticException) }
+        value.getOrNull()?.let { assertTrue("ue(v) must not be negative, was $it", it >= 0) }
+    }
+
+    @Test
+    fun `readSe does not overflow for a large code`() {
+        // se(v) of a large ue(v) must stay inside the Int range.
+        // ue(v)=65534 is even → se(v) = -(65534/2) = -32767 (the sign is defined by the
+        // code, not by an overflow).
+        val writer = SpsBitWriter()
+        writer.writeUe(0xFFFE)
+
+        val reader = SpsBitReader(writer.toByteArray(), startOffset = 0)
+
+        assertEquals(-32767, reader.readSe())
+    }
+
+    @Test
+    fun `parseSpsResolution returns null for an SPS with an oversized dimension`() {
+        // A crafted SPS whose width field is far beyond any real stream must not yield
+        // a resolution — the parser rejects it and the caller falls back to its hint.
+        val writer = SpsBitWriter()
+        writer.writeByte(0x67)            // NAL header: SPS
+        writer.writeByte(66)              // profile_idc (Baseline)
+        writer.writeByte(0x1F)            // constraint flags + reserved
+        writer.writeByte(31)              // level_idc
+        writer.writeUe(0)                 // seq_parameter_set_id
+        writer.writeUe(0xFFFF)            // log2_max_frame_num_minus4 (out of range)
+
+        assertNull(H264SpsParser.parseResolution(writer.toByteArray()))
     }
 
     // ─── Known-good SPS byte arrays ───────────────────────────────────────────

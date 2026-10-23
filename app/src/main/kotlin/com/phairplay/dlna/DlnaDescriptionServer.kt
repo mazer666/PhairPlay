@@ -66,11 +66,22 @@ class DlnaDescriptionServer(
         socket.use { client ->
             client.soTimeout = READ_TIMEOUT_MS
             val reader = client.getInputStream().bufferedReader(Charsets.US_ASCII)
-            val requestLine = reader.readLine() ?: return
-            val parts = requestLine.split(' ')
+            val requestLine = readBoundedLine(reader)
+            if (requestLine.tooLong) {
+                writeResponse(client.outputStream, 414, "URI Too Long", "text/plain", "Request line too long")
+                drainQuietly(client)
+                return
+            }
+            val line = requestLine.value ?: return
+            val parts = line.split(' ')
             val method = parts.getOrNull(0).orEmpty()
             val path = parts.getOrNull(1) ?: "/"
             val headers = readHeaders(reader)
+            if (headers == null) {
+                writeResponse(client.outputStream, 431, "Request Header Fields Too Large", "text/plain", "Headers too large")
+                drainQuietly(client)
+                return
+            }
             when (method) {
                 "GET", "HEAD" -> {
                     val body = bodyFor(path)
@@ -138,19 +149,80 @@ class DlnaDescriptionServer(
         }
     }
 
-    private fun readHeaders(reader: java.io.BufferedReader): Map<String, String> {
+    /**
+     * Reads the request headers, bounded in length.
+     *
+     * @return the headers, or null when the header block exceeds its budget.
+     */
+    private fun readHeaders(reader: java.io.BufferedReader): Map<String, String>? {
         val headers = mutableMapOf<String, String>()
         var totalBytes = 0
         while (true) {
-            val line = reader.readLine() ?: break
-            totalBytes += line.length
-            require(totalBytes <= MAX_HEADER_BYTES) { "HTTP headers too large" }
-            if (line.isEmpty()) break
-            val key = line.substringBefore(':', missingDelimiterValue = "").lowercase()
-            val value = line.substringAfter(':', missingDelimiterValue = "").trim()
-            if (key.isNotEmpty()) headers[key] = value
+            val line = readBoundedLine(reader)
+            if (line.tooLong) return null
+            val value = line.value ?: break
+            totalBytes += value.length
+            if (totalBytes > MAX_HEADER_BYTES) return null
+            if (value.isEmpty()) break
+            val key = value.substringBefore(':', missingDelimiterValue = "").lowercase()
+            val headerValue = value.substringAfter(':', missingDelimiterValue = "").trim()
+            if (key.isNotEmpty()) headers[key] = headerValue
         }
         return headers
+    }
+
+    /**
+     * Reads a single line with a hard length limit.
+     *
+     * WHY NOT `BufferedReader.readLine()`: that method materialises the whole line in
+     * memory before the caller can look at it. A client on the LAN that sends a long
+     * line without a newline would make the server allocate all of it — the byte budget
+     * checked afterwards would come too late. Reading character by character (still
+     * buffered underneath) stops at [MAX_LINE_BYTES] instead.
+     *
+     * @return the line without its terminator, or null at end of stream; [tooLong] marks
+     *   a line that exceeded the limit.
+     */
+    private fun readBoundedLine(reader: java.io.BufferedReader): BoundedLine {
+        val builder = StringBuilder(128)
+        while (true) {
+            val c = reader.read()
+            if (c == -1) {
+                return if (builder.isEmpty()) BoundedLine(null) else BoundedLine(builder.toString())
+            }
+            if (c == '\n'.code) {
+                val line = builder.toString()
+                return BoundedLine(if (line.endsWith("\r")) line.dropLast(1) else line)
+            }
+            builder.append(c.toChar())
+            if (builder.length > MAX_LINE_BYTES) {
+                return BoundedLine(null, tooLong = true)
+            }
+        }
+    }
+
+    /** Result of [readBoundedLine]. */
+    private data class BoundedLine(val value: String?, val tooLong: Boolean = false)
+
+    /**
+     * Discards the request bytes the client has not sent yet.
+     *
+     * WHY: a client that is still sending when the server answers gets a TCP reset on
+     * close — the unread data in the receive buffer makes the kernel abort the
+     * connection — and the client never sees the error response it was sent. Draining a
+     * bounded amount first lets the response arrive and the connection close cleanly.
+     */
+    private fun drainQuietly(socket: Socket) {
+        runCatching {
+            val buffer = ByteArray(4096)
+            val input = socket.getInputStream()
+            var total = 0
+            while (total < MAX_DRAIN_BYTES) {
+                val read = input.read(buffer)
+                if (read <= 0) break
+                total += read
+            }
+        }
     }
 
     private fun bodyFor(path: String): String? =
@@ -219,6 +291,15 @@ class DlnaDescriptionServer(
     companion object {
         private const val READ_TIMEOUT_MS = 2_000
         private const val MAX_HEADER_BYTES = 16 * 1024
+        /**
+         * Maximum length of a single request line or header line.
+         *
+         * The total header budget is checked only after a line has been read, so without
+         * this per-line limit a single long line would be materialised in full first.
+         */
+        private const val MAX_LINE_BYTES = 8 * 1024
+        /** Maximum number of bytes discarded from a rejected request before closing. */
+        private const val MAX_DRAIN_BYTES = 256 * 1024
         private const val MAX_BODY_BYTES = 64 * 1024
     }
 }

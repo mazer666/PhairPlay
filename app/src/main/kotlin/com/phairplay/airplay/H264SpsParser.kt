@@ -161,20 +161,40 @@ internal object H264SpsParser {
             return result
         }
 
-        /** Reads an unsigned Exp-Golomb code ue(v). */
+        /**
+         * Reads an unsigned Exp-Golomb code ue(v).
+         *
+         * WHY THE `Long` ARITHMETIC: with 31 leading zeros, `1 shl 31` is `Int.MIN_VALUE`,
+         * so the plain `Int` formula overflows and can return a negative or wrapped value.
+         * The SPS is attacker-controlled input — any device on the LAN can send one — and a
+         * wrapped value would turn into a bogus picture size. Computing in `Long` and
+         * rejecting values above [MAX_UE_VALUE] keeps the result sane; a malformed SPS
+         * then yields `null` from [parseResolution] and the caller falls back to its hint.
+         */
         fun readUe(): Int {
             var leadingZeros = 0
             while (readBit() == 0) {
                 if (++leadingZeros > 31) throw ArithmeticException("ue(v) overflow")
             }
-            return if (leadingZeros == 0) 0
-                   else (1 shl leadingZeros) - 1 + readBits(leadingZeros)
+            if (leadingZeros == 0) return 0
+            val value = (1L shl leadingZeros) - 1L + readBits(leadingZeros)
+            if (value > MAX_UE_VALUE) throw ArithmeticException("ue(v) out of range: $value")
+            return value.toInt()
         }
 
-        /** Reads a signed Exp-Golomb code se(v). */
+        /**
+         * Reads a signed Exp-Golomb code se(v).
+         *
+         * The result is clamped to [Int] range: `se(v)` is derived from `ue(v)`, which is
+         * bounded by [MAX_UE_VALUE], but the negation of a large value must not overflow.
+         */
         fun readSe(): Int {
             val k = readUe()
-            return if (k == 0) 0 else if (k % 2 == 1) (k + 1) / 2 else -(k / 2)
+            return when {
+                k == 0 -> 0
+                k % 2 == 1 -> (k.toLong() + 1) / 2L
+                else -> -(k.toLong() / 2L)
+            }.toInt()
         }
 
         /** Skips a scaling list of [size] entries (High Profile SPS §7.3.2.1.1.1). */
@@ -188,6 +208,18 @@ internal object H264SpsParser {
                 }
                 lastScale = if (nextScale == 0) lastScale else nextScale
             }
+        }
+
+        companion object {
+            /**
+             * Largest value an `ue(v)` code may carry.
+             *
+             * 16 bits cover every field of a real SPS by a wide margin — the largest is
+             * `pic_width_in_mbs_minus1`, which is 511 for 8K. The bound keeps the
+             * subsequent arithmetic in [parseResolution] far away from an `Int` overflow,
+             * which a crafted SPS could otherwise trigger.
+             */
+            const val MAX_UE_VALUE = 0xFFFF
         }
     }
 }
