@@ -21,6 +21,8 @@ import com.phairplay.R
 import android.view.Surface
 import com.phairplay.airplay.AirPlayReceiver
 import com.phairplay.cast.CastReceiver
+import com.phairplay.dlna.DlnaReceiver
+import com.phairplay.media.MediaCapabilities
 import com.phairplay.miracast.MiracastReceiver
 import com.phairplay.settings.AppSettings
 import com.phairplay.settings.SettingsRepository
@@ -76,6 +78,9 @@ class PhairPlayService : Service() {
     private val _castState = MutableStateFlow(ProtocolState.DISABLED)
     val castState: StateFlow<ProtocolState> = _castState.asStateFlow()
 
+    private val _dlnaState = MutableStateFlow(ProtocolState.DISABLED)
+    val dlnaState: StateFlow<ProtocolState> = _dlnaState.asStateFlow()
+
     private val _activeConnection = MutableStateFlow<ActiveConnection?>(null)
     val activeConnection: StateFlow<ActiveConnection?> = _activeConnection.asStateFlow()
 
@@ -103,6 +108,7 @@ class PhairPlayService : Service() {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var miracastReceiver: MiracastReceiver? = null
     private var castReceiver: CastReceiver? = null
+    private var dlnaReceiver: DlnaReceiver? = null
 
     // Settings — read once when starting, re-read on restart
     private lateinit var settingsRepository: SettingsRepository
@@ -221,6 +227,10 @@ class PhairPlayService : Service() {
         airPlayReceiver?.sendRemoteCommand(command)
     }
 
+    fun sendDlnaRemoteCommand(command: String) {
+        dlnaReceiver?.sendRemoteCommand(command)
+    }
+
     override fun onDestroy() {
         Logger.i("PhairPlayService destroying")
         unregisterNetworkCallback()
@@ -239,7 +249,12 @@ class PhairPlayService : Service() {
      */
     private suspend fun startReceivers() {
         val settings = settingsRepository.settingsFlow.first()
-        Logger.i("Starting receivers: AirPlay=${settings.airPlayEnabled}, Miracast=${settings.miracastEnabled}, Cast=${settings.castEnabled}")
+        Logger.i(
+            "Starting receivers: AirPlay=${settings.airPlayEnabled}, " +
+                "Miracast=${settings.miracastEnabled}, Cast=${settings.castEnabled}, " +
+                "DLNA=${settings.dlnaEnabled}"
+        )
+        logMediaCapabilities()
 
         _serviceState.value = ServiceState.Running
         updateNotification(isRunning = true)
@@ -247,6 +262,15 @@ class PhairPlayService : Service() {
         if (settings.airPlayEnabled)   startAirPlay(settings)
         if (settings.miracastEnabled)  startMiracast()
         if (settings.castEnabled)      startCast()
+        if (settings.dlnaEnabled)      startDlna(settings)
+    }
+
+    private fun logMediaCapabilities() {
+        val capabilities = MediaCapabilities.detect(applicationContext)
+        Logger.i(
+            "Media capabilities: video=${capabilities.video}, audio=${capabilities.audio}, " +
+                "passthrough=${capabilities.passthrough}"
+        )
     }
 
     /**
@@ -399,16 +423,56 @@ class PhairPlayService : Service() {
         Logger.d("Cast receiver started")
     }
 
+    private fun startDlna(settings: AppSettings) {
+        _dlnaState.value = ProtocolState.ADVERTISING
+        dlnaReceiver = DlnaReceiver(
+            context = applicationContext,
+            displayName = settings.effectiveDisplayName,
+            surfaceProvider = { videoSurfaceProvider?.invoke() },
+            onPhotoReceived = { bytes, mimeType ->
+                _photoFrame.value = PhotoFrame(
+                    bytes = bytes.copyOf(),
+                    mimeType = mimeType
+                )
+                updateNotification(isRunning = true, streamingSenderName = "DLNA Controller")
+            },
+            onPhotoCleared = {
+                _photoFrame.value = null
+            },
+            onStateChanged = { state ->
+                _dlnaState.value = state
+                when (state) {
+                    ProtocolState.CONNECTED -> {
+                        _activeConnection.value = ActiveConnection("DLNA Controller", Protocol.DLNA)
+                        updateNotification(isRunning = true, streamingSenderName = "DLNA Controller")
+                    }
+                    ProtocolState.ADVERTISING,
+                    ProtocolState.DISABLED,
+                    ProtocolState.ERROR -> {
+                        if (_activeConnection.value?.protocol == Protocol.DLNA) {
+                            _activeConnection.value = null
+                        }
+                        updateNotification(isRunning = state == ProtocolState.ADVERTISING)
+                    }
+                }
+            }
+        ).also { it.start() }
+        Logger.d("DLNA receiver started")
+    }
+
     private fun stopAllReceiversInternal() {
         try { airPlayReceiver?.stop() } catch (e: Exception) { Logger.e("AirPlay stop error", e) }
         try { miracastReceiver?.stop() } catch (e: Exception) { Logger.e("Miracast stop error", e) }
         try { castReceiver?.stop() } catch (e: Exception) { Logger.e("Cast stop error", e) }
+        try { dlnaReceiver?.stop() } catch (e: Exception) { Logger.e("DLNA stop error", e) }
         airPlayReceiver = null
         miracastReceiver = null
         castReceiver = null
+        dlnaReceiver = null
         _airPlayState.value = ProtocolState.DISABLED
         _miracastState.value = ProtocolState.DISABLED
         _castState.value = ProtocolState.DISABLED
+        _dlnaState.value = ProtocolState.DISABLED
         _photoFrame.value = null
         _nowPlaying.value = null
         _pairingPin.value = null

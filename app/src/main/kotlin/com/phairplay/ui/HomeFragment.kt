@@ -66,6 +66,7 @@ class HomeFragment : Fragment() {
     private lateinit var cardAirPlay: View
     private lateinit var cardMiracast: View
     private lateinit var cardCast: View
+    private lateinit var cardDlna: View
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
     private lateinit var btnRestart: Button
@@ -105,6 +106,7 @@ class HomeFragment : Fragment() {
         cardAirPlay      = view.findViewById(R.id.card_airplay)
         cardMiracast     = view.findViewById(R.id.card_miracast)
         cardCast         = view.findViewById(R.id.card_cast)
+        cardDlna         = view.findViewById(R.id.card_dlna)
         btnStart         = view.findViewById(R.id.btn_start)
         btnStop          = view.findViewById(R.id.btn_stop)
         btnRestart       = view.findViewById(R.id.btn_restart)
@@ -118,6 +120,7 @@ class HomeFragment : Fragment() {
         setupCard(cardAirPlay,   R.drawable.ic_airplay,  R.string.protocol_airplay)
         setupCard(cardMiracast,  R.drawable.ic_miracast, R.string.protocol_miracast)
         setupCard(cardCast,      R.drawable.ic_cast,     R.string.protocol_cast)
+        setupCard(cardDlna,      R.drawable.ic_dlna,     R.string.protocol_dlna)
     }
 
     private fun setupCard(card: View, iconRes: Int, nameRes: Int) {
@@ -174,6 +177,9 @@ class HomeFragment : Fragment() {
         }
         viewLifecycleOwner.lifecycleScope.launch {
             svc.castState.collectLatest { state -> updateProtocolCard(cardCast, state) }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            svc.dlnaState.collectLatest { state -> updateProtocolCard(cardDlna, state) }
         }
     }
 

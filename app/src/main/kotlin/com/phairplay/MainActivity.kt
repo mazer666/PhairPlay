@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
     private var service: PhairPlayService? = null
     private var isBound = false
     private var currentAirPlayState = ProtocolState.DISABLED
+    private var currentDlnaState = ProtocolState.DISABLED
     private var currentPhotoFrame: PhotoFrame? = null
     private var currentNowPlaying: NowPlayingInfo? = null
     private var currentPin: String? = null
@@ -316,7 +317,9 @@ class MainActivity : AppCompatActivity() {
      * false for other keys so normal navigation is unaffected.
      */
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        val overlayActive = currentNowPlaying != null || currentAirPlayState == ProtocolState.CONNECTED
+        val overlayActive = currentNowPlaying != null ||
+            currentAirPlayState == ProtocolState.CONNECTED ||
+            currentDlnaState == ProtocolState.CONNECTED
         if (overlayActive) {
             val command = when (keyCode) {
                 android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
@@ -332,7 +335,16 @@ class MainActivity : AppCompatActivity() {
                 else -> null
             }
             if (command != null) {
-                service?.sendAirPlayRemoteCommand(command)
+                if (currentDlnaState == ProtocolState.CONNECTED) {
+                    val dlnaCommand = when (keyCode) {
+                        android.view.KeyEvent.KEYCODE_MEDIA_PAUSE -> com.phairplay.dlna.DlnaReceiver.COMMAND_PAUSE
+                        android.view.KeyEvent.KEYCODE_MEDIA_STOP -> com.phairplay.dlna.DlnaReceiver.COMMAND_STOP
+                        else -> com.phairplay.dlna.DlnaReceiver.COMMAND_PLAY_PAUSE
+                    }
+                    service?.sendDlnaRemoteCommand(dlnaCommand)
+                } else {
+                    service?.sendAirPlayRemoteCommand(command)
+                }
                 return true
             }
         }
@@ -380,6 +392,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
         lifecycleScope.launch {
+            svc.dlnaState.collectLatest { state ->
+                currentDlnaState = state
+                updateOverlay()
+            }
+        }
+        lifecycleScope.launch {
             svc.photoFrame.collectLatest { frame ->
                 currentPhotoFrame = frame
                 updateOverlay()
@@ -409,8 +427,9 @@ class MainActivity : AppCompatActivity() {
             // Audio-only AirPlay (system audio, Music, podcasts): show the now-playing card instead
             // of the black video surface. Set whenever audio plays without video.
             nowPlaying != null -> showNowPlayingScreen(nowPlaying)
-            currentAirPlayState == ProtocolState.CONNECTED -> showStreamingScreen()
             photoFrame != null -> showPhotoScreen(photoFrame)
+            currentAirPlayState == ProtocolState.CONNECTED -> showStreamingScreen()
+            currentDlnaState == ProtocolState.CONNECTED -> showStreamingScreen()
             else -> hideStreamingScreen()
         }
     }

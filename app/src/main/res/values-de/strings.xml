@@ -44,7 +44,7 @@
 
     <!-- ── Notification ────────────────────────────────────────── -->
     <string name="notification_channel_name">PhairPlay-Dienst</string>
-    <string name="notification_channel_description">Benachrichtigung für den AirPlay/Miracast/Cast-Empfänger-Dienst</string>
+    <string name="notification_channel_description">Benachrichtigung für den AirPlay/Miracast/Cast/DLNA-Empfänger-Dienst</string>
     <string name="notification_status_running">Empfänger aktiv — Werbung im Netzwerk</string>
     <string name="notification_status_stopped">Empfänger gestoppt</string>
 
@@ -65,6 +65,8 @@
     <string name="setting_miracast_subtitle">Verbindungen von Windows und Android akzeptieren</string>
     <string name="setting_cast_enabled">Google Cast-Empfänger</string>
     <string name="setting_cast_subtitle">Verbindungen von Chrome und Android akzeptieren</string>
+    <string name="setting_dlna_enabled">DLNA MediaRenderer</string>
+    <string name="setting_dlna_subtitle">In Windows, VLC und UPnP-Controller-Apps erscheinen</string>
     <string name="setting_mirror_audio">Spiegel-Audio</string>
     <string name="setting_mirror_audio_subtitle">Den Ton des Macs beim Spiegeln wiedergeben</string>
     <string name="setting_start_on_boot">Beim Starten automatisch starten</string>

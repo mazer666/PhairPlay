@@ -1,0 +1,54 @@
+package com.phairplay.dlna
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SsdpMessagesTest {
+
+    @Test
+    fun `recognizes MediaRenderer M-SEARCH`() {
+        val message = """
+            M-SEARCH * HTTP/1.1
+            HOST: 239.255.255.250:1900
+            MAN: "ssdp:discover"
+            MX: 1
+            ST: urn:schemas-upnp-org:device:MediaRenderer:1
+            
+        """.trimIndent().replace("\n", "\r\n")
+
+        assertTrue(SsdpMessages.isRendererSearch(message))
+    }
+
+    @Test
+    fun `recognizes ssdp all search`() {
+        val message = """
+            M-SEARCH * HTTP/1.1
+            MAN: "ssdp:discover"
+            ST: ssdp:all
+            
+        """.trimIndent().replace("\n", "\r\n")
+
+        assertTrue(SsdpMessages.isRendererSearch(message))
+    }
+
+    @Test
+    fun `rejects non search messages`() {
+        val notify = "NOTIFY * HTTP/1.1\r\nNT: upnp:rootdevice\r\n\r\n"
+
+        assertFalse(SsdpMessages.isRendererSearch(notify))
+    }
+
+    @Test
+    fun `search response includes location and USN`() {
+        val response = SsdpMessages.searchResponse(
+            location = "http://192.168.1.2:1234/description.xml",
+            udn = "uuid:test-device",
+            searchTarget = SsdpMessages.MEDIA_RENDERER
+        )
+
+        assertTrue(response.contains("HTTP/1.1 200 OK"))
+        assertTrue(response.contains("LOCATION: http://192.168.1.2:1234/description.xml"))
+        assertTrue(response.contains("USN: uuid:test-device::urn:schemas-upnp-org:device:MediaRenderer:1"))
+    }
+}
