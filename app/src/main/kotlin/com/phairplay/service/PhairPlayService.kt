@@ -1,39 +1,22 @@
 package com.phairplay.service
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
-import androidx.core.app.NotificationCompat
-import com.phairplay.MainActivity
-import com.phairplay.R
 import android.view.Surface
-import com.phairplay.airplay.AirPlayReceiver
-import com.phairplay.cast.CastReceiver
-import com.phairplay.dlna.DlnaReceiver
+import com.phairplay.MainActivity
+import com.phairplay.airplay.NowPlayingInfo
 import com.phairplay.media.MediaCapabilities
-import com.phairplay.miracast.MiracastReceiver
-import com.phairplay.settings.AppSettings
 import com.phairplay.settings.SettingsRepository
 import com.phairplay.util.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -46,6 +29,12 @@ import kotlinx.coroutines.launch
  *
  * HOW: Bind to this service from [MainActivity] to receive state updates.
  * Use [ServiceController] to send start/stop/restart commands.
+ *
+ * The service is a thin coordinator — the work is delegated to four focused helpers:
+ *   • [ServiceStateBus]        — owns the published state flows
+ *   • [ReceiverSupervisor]     — owns the four protocol receivers
+ *   • [ServiceNotificationManager] — owns the foreground notification
+ *   • [NetworkRecoveryMonitor] — re-advertises over mDNS after a network outage
  *
  * Service lifecycle:
  *   startForegroundService() → onCreate() → onStartCommand() → [running in background]
@@ -65,61 +54,39 @@ class PhairPlayService : Service() {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
-    // Observable state — Activities and Fragments observe this via the binder
-    private val _serviceState = MutableStateFlow<ServiceState>(ServiceState.Stopped)
-    val serviceState: StateFlow<ServiceState> = _serviceState.asStateFlow()
+    // Observable state — the flows themselves live in the state bus, this class publishes them.
+    private val stateBus = ServiceStateBus()
 
-    private val _airPlayState = MutableStateFlow(ProtocolState.DISABLED)
-    val airPlayState: StateFlow<ProtocolState> = _airPlayState.asStateFlow()
+    // Local aliases for the shared state flows (the service code below uses the original names).
+    private val _serviceState = stateBus.serviceStateFlow
+    private val _activeConnection = stateBus.activeConnectionFlow
 
-    private val _miracastState = MutableStateFlow(ProtocolState.DISABLED)
-    val miracastState: StateFlow<ProtocolState> = _miracastState.asStateFlow()
-
-    private val _castState = MutableStateFlow(ProtocolState.DISABLED)
-    val castState: StateFlow<ProtocolState> = _castState.asStateFlow()
-
-    private val _dlnaState = MutableStateFlow(ProtocolState.DISABLED)
-    val dlnaState: StateFlow<ProtocolState> = _dlnaState.asStateFlow()
-
-    private val _activeConnection = MutableStateFlow<ActiveConnection?>(null)
-    val activeConnection: StateFlow<ActiveConnection?> = _activeConnection.asStateFlow()
-
-    private val _photoFrame = MutableStateFlow<PhotoFrame?>(null)
-    val photoFrame: StateFlow<PhotoFrame?> = _photoFrame.asStateFlow()
-
-    // Non-null while AirPlay audio is playing WITHOUT video — drives the now-playing overlay.
-    private val _nowPlaying = MutableStateFlow<com.phairplay.airplay.NowPlayingInfo?>(null)
-    val nowPlaying: StateFlow<com.phairplay.airplay.NowPlayingInfo?> = _nowPlaying.asStateFlow()
-
-    // Non-null while a PIN should be shown on screen for SRP pair-setup (PIN access control).
-    private val _pairingPin = MutableStateFlow<String?>(null)
-    val pairingPin: StateFlow<String?> = _pairingPin.asStateFlow()
+    val serviceState: StateFlow<ServiceState> = stateBus.serviceState
+    val airPlayState: StateFlow<ProtocolState> = stateBus.airPlayState
+    val miracastState: StateFlow<ProtocolState> = stateBus.miracastState
+    val castState: StateFlow<ProtocolState> = stateBus.castState
+    val dlnaState: StateFlow<ProtocolState> = stateBus.dlnaState
+    val activeConnection: StateFlow<ActiveConnection?> = stateBus.activeConnection
+    val photoFrame: StateFlow<PhotoFrame?> = stateBus.photoFrame
+    val nowPlaying: StateFlow<NowPlayingInfo?> = stateBus.nowPlaying
+    val pairingPin: StateFlow<String?> = stateBus.pairingPin
 
     // Surface provider — supplied by MainActivity after binding (Sprint 5).
     // The lambda captures this field so it always uses the latest provider even if
     // setVideoSurfaceProvider() is called after startAirPlay().
     @Volatile private var videoSurfaceProvider: (() -> Surface?)? = null
 
-    // Receiver instances — null when not running
-    private var airPlayReceiver: AirPlayReceiver? = null
-
-    // Watches for the network coming back so mDNS can be re-registered — see
-    // [registerNetworkCallback]. Null when never registered or already unregistered.
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
-
-    // Networks currently up. Used to tell "the first network appeared" from
-    // "the network came back" — only the latter needs a re-advertisement.
-    private val knownNetworks = mutableSetOf<Network>()
-
-    // True once the last network was lost, so the next onAvailable re-advertises.
-    @Volatile private var networkWasLost = false
-
-    private var miracastReceiver: MiracastReceiver? = null
-    private var castReceiver: CastReceiver? = null
-    private var dlnaReceiver: DlnaReceiver? = null
-
     // Settings — read once when starting, re-read on restart
     private lateinit var settingsRepository: SettingsRepository
+
+    // Foreground notification — channel, status text and the Stop/Restart actions.
+    private lateinit var notifications: ServiceNotificationManager
+
+    // Protocol receivers — AirPlay, Miracast, Cast and DLNA.
+    private lateinit var receivers: ReceiverSupervisor
+
+    // Network monitor — re-advertises over mDNS after a network outage.
+    private lateinit var networkRecovery: NetworkRecoveryMonitor
 
     // ─── Service Lifecycle ───────────────────────────────────────────────────
 
@@ -127,93 +94,27 @@ class PhairPlayService : Service() {
         super.onCreate()
         Logger.i("PhairPlayService created")
         settingsRepository = SettingsRepository(applicationContext)
-        createNotificationChannel()
-        registerNetworkCallback()
-    }
-
-    /**
-     * Re-registers the mDNS advertisement whenever a network becomes available again.
-     *
-     * The TV going into standby takes its Wi-Fi interface down with it. An NsdManager
-     * registration does not survive that, and nothing in the app noticed: on wake the
-     * receiver was still listening on port 7000, still reported itself as running, and was
-     * invisible to every Apple device until the app was restarted by hand.
-     *
-     * WHY THE FIRST onAvailable IS IGNORED:
-     * [ConnectivityManager.NetworkCallback.onAvailable] also fires for the very first
-     * network, right after the callback is registered. That happens while the AirPlay
-     * receiver is still starting up, so re-advertising then unregisters an mDNS
-     * registration that is still in flight. The platform answers that with
-     * "already active" or simply drops the new registration — the receiver ends up
-     * registered nowhere, invisible to every sender, while the UI happily claims it is
-     * advertising. Every further network transition (VPN up, captive portal, Wi-Fi
-     * roaming) repeated the churn until the platform refused further registrations
-     * with "Exceeded max outstanding requests".
-     *
-     * So: re-advertise only after the last network was actually lost.
-     */
-    private fun registerNetworkCallback() {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: run {
-            Logger.w("No ConnectivityManager — mDNS will not recover automatically from a network drop")
-            return
-        }
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                val hadNetwork = synchronized(knownNetworks) { knownNetworks.isNotEmpty() }
-                synchronized(knownNetworks) { knownNetworks.add(network) }
-
-                // A second network appeared while one was already up — the existing
-                // advertisement is still valid and re-registering would only churn the
-                // platform's mDNS daemon.
-                if (hadNetwork) {
-                    Logger.d("Additional network available — keeping the existing mDNS advertisement")
-                    return
-                }
-                if (!networkWasLost) {
-                    // The first network of this process: the receiver registers on its own.
-                    Logger.d("First network available — mDNS registers on its own")
-                    return
-                }
-                networkWasLost = false
-                if (_serviceState.value != ServiceState.Running) return
-                Logger.i("Network available again — re-advertising over mDNS")
-                airPlayReceiver?.readvertise()
-            }
-
-            override fun onLost(network: Network) {
-                // The registration is gone with the interface. Remember that, so the next
-                // onAvailable re-advertises instead of being treated as the initial one.
-                val allLost = synchronized(knownNetworks) {
-                    knownNetworks.remove(network)
-                    knownNetworks.isEmpty()
-                }
-                if (allLost) networkWasLost = true
-                Logger.i("Network lost — mDNS advertisement is gone until it returns")
-            }
-        }
-        runCatching { cm.registerNetworkCallback(request, callback) }
-            .onSuccess {
-                networkCallback = callback
-                Logger.d("Network callback registered for mDNS recovery")
-            }
-            .onFailure { Logger.e("Could not register network callback", it) }
-    }
-
-    private fun unregisterNetworkCallback() {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        networkCallback?.let { cb ->
-            runCatching { cm?.unregisterNetworkCallback(cb) }
-                .onFailure { Logger.w("Could not unregister network callback: ${it.message}") }
-        }
-        networkCallback = null
+        notifications = ServiceNotificationManager(applicationContext)
+        receivers = ReceiverSupervisor(
+            context = applicationContext,
+            states = stateBus,
+            notifications = notifications,
+            // Delegate to the current provider at call time — captures the field, not a fixed value.
+            surfaceProvider = { videoSurfaceProvider?.invoke() },
+            bringToFront = { bringStreamingScreenToFront() }
+        )
+        networkRecovery = NetworkRecoveryMonitor(
+            context = applicationContext,
+            isServiceRunning = { stateBus.serviceState.value == ServiceState.Running },
+            onNetworkRestored = { receivers.readvertiseAirPlay() }
+        )
+        notifications.createNotificationChannel()
+        networkRecovery.registerNetworkCallback()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Promote to foreground immediately with a persistent notification
-        startForeground(NOTIFICATION_ID, buildNotification(isRunning = false))
+        startForeground(NOTIFICATION_ID, notifications.buildNotification(isRunning = false))
 
         when (intent?.action) {
             ACTION_START   -> serviceScope.launch { startReceivers() }
@@ -244,8 +145,9 @@ class PhairPlayService : Service() {
      * Called by [MainActivity] after it binds, to supply the [Surface] for video rendering.
      *
      * The lambda is invoked lazily — only when a stream is actually being started — so it
-     * is safe to call this before or after [startAirPlay]. The lambda should return null
-     * if the Activity's StreamingScreen is not yet available (e.g., surface not yet created).
+     * is safe to call this before or after [ReceiverSupervisor.startAirPlay]. The lambda should
+     * return null if the Activity's StreamingScreen is not yet available (e.g., surface not yet
+     * created).
      *
      * Call with `{ null }` (or simply don't call) during Activity destruction so we stop
      * holding a reference to the Activity's Surface after the window is gone.
@@ -262,17 +164,21 @@ class PhairPlayService : Service() {
      * sender has advertised a DACP identity.
      */
     fun sendAirPlayRemoteCommand(command: String) {
-        airPlayReceiver?.sendRemoteCommand(command)
+        receivers.sendAirPlayRemoteCommand(command)
     }
 
+    /**
+     * Sends a DAVP transport command (TV remote → DLNA controller), e.g. play/pause or skip.
+     * Bound Activities call this from media-key events.
+     */
     fun sendDlnaRemoteCommand(command: String) {
-        dlnaReceiver?.sendRemoteCommand(command)
+        receivers.sendDlnaRemoteCommand(command)
     }
 
     override fun onDestroy() {
         Logger.i("PhairPlayService destroying")
-        unregisterNetworkCallback()
-        stopAllReceiversInternal()
+        networkRecovery.unregisterNetworkCallback()
+        receivers.stopAllReceiversInternal()
         serviceJob.cancel()
         super.onDestroy()
     }
@@ -295,12 +201,12 @@ class PhairPlayService : Service() {
         logMediaCapabilities()
 
         _serviceState.value = ServiceState.Running
-        updateNotification(isRunning = true)
+        notifications.updateNotification(isRunning = true)
 
-        if (settings.airPlayEnabled)   startAirPlay(settings)
-        if (settings.miracastEnabled)  startMiracast()
-        if (settings.castEnabled)      startCast()
-        if (settings.dlnaEnabled)      startDlna(settings)
+        if (settings.airPlayEnabled)   receivers.startAirPlay(settings)
+        if (settings.miracastEnabled)  receivers.startMiracast()
+        if (settings.castEnabled)      receivers.startCast()
+        if (settings.dlnaEnabled)      receivers.startDlna(settings)
     }
 
     private fun logMediaCapabilities() {
@@ -317,10 +223,10 @@ class PhairPlayService : Service() {
      */
     private fun stopReceivers() {
         Logger.i("Stopping all receivers")
-        stopAllReceiversInternal()
+        receivers.stopAllReceiversInternal()
         _serviceState.value = ServiceState.Stopped
         _activeConnection.value = null
-        updateNotification(isRunning = false)
+        notifications.updateNotification(isRunning = false)
     }
 
     /**
@@ -330,117 +236,10 @@ class PhairPlayService : Service() {
     private suspend fun restartReceivers() {
         Logger.i("Restarting all receivers")
         _serviceState.value = ServiceState.Restarting
-        updateNotification(isRunning = false)
-        stopAllReceiversInternal()
+        notifications.updateNotification(isRunning = false)
+        receivers.stopAllReceiversInternal()
         kotlinx.coroutines.delay(500) // brief pause to ensure ports are released
         startReceivers()
-    }
-
-    // ─── Individual Protocol Starters ────────────────────────────────────────
-
-    /**
-     * Creates and starts the [AirPlayReceiver].
-     *
-     * The display name comes from settings — blank means use the Android device name,
-     * which [MdnsService] resolves at runtime.
-     *
-     * Surface is not available here (it lives in the Activity/Fragment).
-     * The surface provider is wired up from [MainActivity] in Sprint 5.
-     * Until then, video frames are silently discarded and only audio plays.
-     *
-     * @param settings Current app settings; read once per start/restart cycle.
-     */
-    private fun startAirPlay(settings: AppSettings) {
-        // Mirror the debug-overlay setting into the shared stats bus that StreamingScreen reads.
-        com.phairplay.airplay.StreamStats.overlayEnabled = settings.showDebugOverlay
-
-        // Report "Advertising" right away, like Miracast/Cast/DLNA do.
-        //
-        // WHY: The AirPlay receiver only announces ADVERTISING once BOTH mDNS registrations
-        // are confirmed. Until then the state stayed at its initial DISABLED value, and the
-        // Home screen rendered that as "Disabled — Enable in Settings". Users then toggled a
-        // switch that was already on, because the message told them to (issue #18).
-        //
-        // DISABLED now means exactly one thing: "the user switched this protocol off".
-        // A registration that fails ends in ERROR, which is a different message.
-        _airPlayState.value = ProtocolState.ADVERTISING
-
-        // Idempotent: a redundant ACTION_START (e.g. the activity being recreated while the
-        // foreground service is still alive) must NOT spin up a second AirPlayReceiver competing
-        // for port 7000. The existing receiver keeps running and picks up the new Surface via the
-        // surfaceProvider. A genuine restart goes through ACTION_RESTART (stop → delay → start).
-        if (airPlayReceiver != null) {
-            Logger.i("AirPlay receiver already running — skipping duplicate start")
-            return
-        }
-        // Captures the sender name reported by AirPlayReceiver before CONNECTED fires.
-        // onSenderNameChanged is called synchronously before emitState(CONNECTED), so
-        // this assignment happens-before the Main-thread read in onStateChanged.
-        var pendingSenderName = "AirPlay Sender"
-
-        // Whether the session that just started carries video (see onVideoSessionChanged).
-        var pendingHasVideo = false
-
-        airPlayReceiver = AirPlayReceiver(
-            context = applicationContext,
-            displayName = settings.effectiveDisplayName,
-            mirrorWidth = settings.mirrorWidth,
-            mirrorHeight = settings.mirrorHeight,
-            audioEnabled = settings.mirrorAudioEnabled,
-            pinAuthEnabled = settings.airPlayPinAuthEnabled,
-            // Delegate to the current provider at call time — captures the field, not a fixed value.
-            // When MainActivity calls setVideoSurfaceProvider(), future surface requests use it.
-            videoSurfaceProvider = { videoSurfaceProvider?.invoke() },
-            onSenderNameChanged = { name ->
-                pendingSenderName = name.ifEmpty { "AirPlay Sender" }
-            },
-            // Whether the session that just started carries video. Only a video session
-            // needs the streaming Surface, so only a video session may pull the app to
-            // the front — an audio-only session (Apple Music, a podcast) must not
-            // interrupt whatever the user is watching on the TV.
-            onVideoSessionChanged = { hasVideo ->
-                pendingHasVideo = hasVideo
-            },
-            onPhotoReceived = { bytes, imageType ->
-                _photoFrame.value = PhotoFrame(
-                    bytes = bytes.copyOf(),
-                    mimeType = imageType.mimeType
-                )
-                updateNotification(isRunning = true)
-            },
-            onPhotoCleared = {
-                _photoFrame.value = null
-            },
-            onNowPlayingChanged = { info ->
-                _nowPlaying.value = info
-            },
-            onPinChanged = { pin ->
-                _pairingPin.value = pin
-            },
-            onStateChanged = { state ->
-                _airPlayState.value = state
-                when (state) {
-                    ProtocolState.CONNECTED   -> {
-                        _photoFrame.value = null
-                        _activeConnection.value =
-                            ActiveConnection(pendingSenderName, Protocol.AIRPLAY)
-                        updateNotification(isRunning = true, streamingSenderName = pendingSenderName)
-                        // Only a video session needs the streaming Surface — an audio-only
-                        // session must not pull the app to the front.
-                        if (pendingHasVideo) bringStreamingScreenToFront()
-                    }
-                    ProtocolState.ADVERTISING,
-                    ProtocolState.DISABLED,
-                    ProtocolState.ERROR       -> {
-                        _activeConnection.value = null
-                        pendingHasVideo = false
-                        updateNotification(isRunning = state != ProtocolState.DISABLED &&
-                                                       state != ProtocolState.ERROR)
-                    }
-                }
-            }
-        ).also { it.start() }
-        Logger.d("AirPlay receiver started (displayName='${settings.effectiveDisplayName}')")
     }
 
     /**
@@ -467,154 +266,6 @@ class PhairPlayService : Service() {
             .onFailure { Logger.e("Could not bring MainActivity to front", it) }
     }
 
-    private fun startMiracast() {
-        _miracastState.value = ProtocolState.ADVERTISING
-        miracastReceiver = MiracastReceiver(
-            context = applicationContext,
-            onStateChanged = { state -> _miracastState.value = state }
-        ).also { it.start() }
-        Logger.d("Miracast receiver started")
-    }
-
-    private fun startCast() {
-        _castState.value = ProtocolState.ADVERTISING
-        castReceiver = CastReceiver(
-            context = applicationContext,
-            onStateChanged = { state -> _castState.value = state }
-        ).also { it.start() }
-        Logger.d("Cast receiver started")
-    }
-
-    private fun startDlna(settings: AppSettings) {
-        _dlnaState.value = ProtocolState.ADVERTISING
-        dlnaReceiver = DlnaReceiver(
-            context = applicationContext,
-            displayName = settings.effectiveDisplayName,
-            surfaceProvider = { videoSurfaceProvider?.invoke() },
-            onPhotoReceived = { bytes, mimeType ->
-                _photoFrame.value = PhotoFrame(
-                    bytes = bytes.copyOf(),
-                    mimeType = mimeType
-                )
-                updateNotification(isRunning = true, streamingSenderName = "DLNA Controller")
-            },
-            onPhotoCleared = {
-                _photoFrame.value = null
-            },
-            onStateChanged = { state ->
-                _dlnaState.value = state
-                when (state) {
-                    ProtocolState.CONNECTED -> {
-                        _activeConnection.value = ActiveConnection("DLNA Controller", Protocol.DLNA)
-                        updateNotification(isRunning = true, streamingSenderName = "DLNA Controller")
-                    }
-                    ProtocolState.ADVERTISING,
-                    ProtocolState.DISABLED,
-                    ProtocolState.ERROR -> {
-                        if (_activeConnection.value?.protocol == Protocol.DLNA) {
-                            _activeConnection.value = null
-                        }
-                        updateNotification(isRunning = state == ProtocolState.ADVERTISING)
-                    }
-                }
-            }
-        ).also { it.start() }
-        Logger.d("DLNA receiver started")
-    }
-
-    private fun stopAllReceiversInternal() {
-        try { airPlayReceiver?.stop() } catch (e: Exception) { Logger.e("AirPlay stop error", e) }
-        try { miracastReceiver?.stop() } catch (e: Exception) { Logger.e("Miracast stop error", e) }
-        try { castReceiver?.stop() } catch (e: Exception) { Logger.e("Cast stop error", e) }
-        try { dlnaReceiver?.stop() } catch (e: Exception) { Logger.e("DLNA stop error", e) }
-        airPlayReceiver = null
-        miracastReceiver = null
-        castReceiver = null
-        dlnaReceiver = null
-        _airPlayState.value = ProtocolState.DISABLED
-        _miracastState.value = ProtocolState.DISABLED
-        _castState.value = ProtocolState.DISABLED
-        _dlnaState.value = ProtocolState.DISABLED
-        _photoFrame.value = null
-        _nowPlaying.value = null
-        _pairingPin.value = null
-    }
-
-    // ─── Notification ────────────────────────────────────────────────────────
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW  // LOW: no sound, minimal visual interruption
-            ).apply {
-                description = getString(R.string.notification_channel_description)
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-        }
-    }
-
-    /**
-     * Builds the persistent notification for the ForegroundService.
-     *
-     * The notification shows the service status and provides quick actions
-     * so users can Stop or Restart without opening the app.
-     *
-     * @param isRunning            True if receivers are active; false if stopped/restarting.
-     * @param notificationContentText Override for the notification body text.
-     *   When null, the default running/stopped status string is used.
-     *   Pass the sender name here (e.g. "Streaming from MacBook Pro") when connected.
-     */
-    private fun buildNotification(
-        isRunning: Boolean,
-        notificationContentText: String? = null
-    ): Notification {
-        // Tapping the notification opens the app
-        val openAppIntent = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // "Stop" action — sends ACTION_STOP to this service
-        val stopIntent = PendingIntent.getService(
-            this, 1,
-            Intent(this, PhairPlayService::class.java).apply { action = ACTION_STOP },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // "Restart" action — sends ACTION_RESTART to this service
-        val restartIntent = PendingIntent.getService(
-            this, 2,
-            Intent(this, PhairPlayService::class.java).apply { action = ACTION_RESTART },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val statusText = if (isRunning) R.string.notification_status_running
-                         else           R.string.notification_status_stopped
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(notificationContentText ?: getString(statusText))
-            .setContentIntent(openAppIntent)
-            .setOngoing(true)                   // Prevents user from swiping away
-            .setCategory(Notification.CATEGORY_SERVICE)
-            .addAction(R.drawable.ic_stop,    getString(R.string.action_stop),    stopIntent)
-            .addAction(R.drawable.ic_restart, getString(R.string.action_restart), restartIntent)
-            .build()
-    }
-
-    private fun updateNotification(isRunning: Boolean, streamingSenderName: String? = null) {
-        val contentText = streamingSenderName?.let {
-            getString(R.string.notification_status_streaming, it)
-        }
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification(isRunning, contentText))
-    }
-
     // ─── Binder ─────────────────────────────────────────────────────────────
 
     /**
@@ -636,15 +287,3 @@ class PhairPlayService : Service() {
         const val ACTION_RESTART  = "com.phairplay.action.RESTART"
     }
 }
-
-/**
- * PhotoFrame — latest still image received via AirPlay `/photo`.
- *
- * The bytes are kept in memory only and cleared on DELETE `/photo`, streaming
- * start, receiver stop, or service destruction.
- */
-data class PhotoFrame(
-    val bytes: ByteArray,
-    val mimeType: String,
-    val receivedAtMillis: Long = System.currentTimeMillis()
-)
