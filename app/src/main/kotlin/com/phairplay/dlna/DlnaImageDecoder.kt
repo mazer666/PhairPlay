@@ -2,6 +2,7 @@ package com.phairplay.dlna
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.phairplay.util.SafeBitmapDecoder
 
 /**
  * DlnaImageDecoder — decodes a photo payload without letting the TV run out of memory.
@@ -10,7 +11,8 @@ import android.graphics.BitmapFactory
  * several hundred megabytes of pixels (1920×1080×4 bytes ≈ 8 MB per bitmap, and a
  * 12000×8000 photo is 384 MB) — enough to kill the app with an `OutOfMemoryError`.
  * The payload is therefore bounded *and* the bitmap is downsampled with
- * `inSampleSize` before it reaches the screen.
+ * `inSampleSize` before it reaches the screen. The downsampling arithmetic is
+ * shared with the AirPlay photo path — it lives in [SafeBitmapDecoder].
  *
  * Example:
  *   val bytes = DlnaImageDecoder.decode(payload, maxDimension = 1920)
@@ -30,21 +32,19 @@ object DlnaImageDecoder {
      * the pixels are allocated. A value of 4 means "decode every fourth pixel",
      * which divides the memory need by sixteen.
      *
+     * The arithmetic itself lives in [SafeBitmapDecoder] — the AirPlay photo path and
+     * the album artwork path share that one implementation, so there is a single
+     * rule to test and a single place to change it. The dependency runs from the
+     * protocol layer (dlna) down to the shared helper (util), never the other way
+     * round: `com.phairplay.util` must not know about `com.phairplay.dlna`.
+     *
      * @param width the pixel width of the image.
      * @param height the pixel height of the image.
      * @param maxDimension the largest edge length that may be kept.
      * @return the sample size (1 = no downsampling).
      */
-    fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
-        if (width <= 0 || height <= 0 || maxDimension <= 0) return 1
-        var sampleSize = 1
-        var longestEdge = maxOf(width, height)
-        while (longestEdge / 2 >= maxDimension) {
-            longestEdge /= 2
-            sampleSize *= 2
-        }
-        return sampleSize
-    }
+    fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int =
+        SafeBitmapDecoder.calculateInSampleSize(width, height, maxDimension)
 
     /** Returns true when [size] is inside the payload limit. */
     fun isWithinPayloadLimit(size: Int): Boolean = size in 0..MAX_IMAGE_BYTES
