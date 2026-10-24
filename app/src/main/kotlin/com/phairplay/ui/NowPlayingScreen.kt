@@ -1,7 +1,6 @@
 package com.phairplay.ui
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
@@ -15,6 +14,7 @@ import android.widget.TextView
 import com.phairplay.R
 import com.phairplay.airplay.NowPlayingInfo
 import com.phairplay.util.Logger
+import com.phairplay.util.SafeBitmapDecoder
 
 /**
  * NowPlayingScreen — full-screen card shown while AirPlay audio plays without video (system audio
@@ -85,7 +85,10 @@ class NowPlayingScreen @JvmOverloads constructor(
 
     /** Updates the card to reflect [info]. Falls back to a placeholder glyph when no artwork. */
     fun update(info: NowPlayingInfo) {
-        val bitmap = info.artwork?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() }
+        // The artwork comes from the sender and may announce a picture that is huge
+        // when decoded (audit finding SEC-02). SafeBitmapDecoder refuses anything
+        // outside the decode budget instead of allocating it.
+        val bitmap = info.artwork?.let { SafeBitmapDecoder.decode(it) }
         if (bitmap != null) {
             artwork.scaleType = ImageView.ScaleType.CENTER_CROP
             artwork.setImageBitmap(bitmap)
