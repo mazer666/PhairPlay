@@ -257,10 +257,12 @@ isolation an explicit safety guarantee.
 | `SecureSoapXml` | The only XML parser the control plane may use (XXE-hardened) |
 | `HttpRequestReader` | Bounded reading of one HTTP request |
 | `SoapResponses` / `SoapResult` | Construction of the success envelopes and the SOAP faults |
-| `GenaEventManager` / `GenaCallbackPolicy` / `GenaLastChange` | Event subscriptions, the SSRF guard, the `LastChange` document |
+| `GenaEventManager` / `GenaCallbackPolicy` / `GenaLastChange` | Event subscriptions, the SSRF guard for the callback address, the `LastChange` document |
+| `HostAddressPolicy` (`com.phairplay.util`) | The address rules shared by both stacks: loopback, link-local (and with it the cloud metadata address), multicast, broadcast, the reserved ranges, the obfuscated notations of an IPv4 address, the metadata host names |
 | `DlnaPlaybackController` / `DlnaMediaUri` / `DlnaMediaType` / `DlnaMediaMetadata` | The bridge from the control plane to the player and the parsing of the media announcement |
 | `DlnaImageDecoder` | Bounded decoding and downsampling of a photo |
 | `DlnaProtocolInfo` / `DlnaServiceCatalog` / `DlnaTimeFormat` / `DlnaNetworkAddress` | The advertised protocol list, the action catalogue, the UPnP time format, the choice of the LAN address |
+| `DialAppCatalog` / `DlnaHttpResponses` | The DIAL endpoints for the Samsung Smart View and the small HTTP responses they need |
 
 ### UI Layer
 
@@ -275,6 +277,10 @@ isolation an explicit safety guarantee.
 | Component | File | Responsibility |
 |---|---|---|
 | `NetworkUtils` | `util/NetworkUtils.kt` | Reads device IP, MAC address, network interface info |
+| `HostAddressPolicy` | `util/HostAddressPolicy.kt` | The address rules of both protocol stacks: loopback, link-local (and with it the cloud metadata address), multicast, broadcast, the reserved ranges, the obfuscated notations of an IPv4 address and the metadata host names |
+| `FetchableUrlPolicy` | `util/FetchableUrlPolicy.kt` | Which media URL the receiver may fetch at all — only `http` and `https`, and only an address that passes `HostAddressPolicy` |
+| `SafeBitmapDecoder` | `util/SafeBitmapDecoder.kt` | Decodes a picture with a pixel budget: the dimensions are read first, what does not fit is refused, the rest is downsampled with an `inSampleSize` |
+| `LogRedactor` / `LogRedactionMode` | `util/LogRedactor.kt`, `util/LogRedactionMode.kt` | The central reduction of addresses, MAC addresses, UUIDs and URL credentials before a message reaches the log |
 
 ---
 

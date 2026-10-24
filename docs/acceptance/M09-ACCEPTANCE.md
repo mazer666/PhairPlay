@@ -3,8 +3,8 @@
 **Feature / milestone:** M9 — Fire TV flavour
 **Requirement IDs:** FR-06, FR-09, FR-10, AC-M9.1 … AC-M9.6 (plus the legacy round
 AR-7 / `AC-7.x`)
-**Build / commit:** `51933eb` (branch `feature/quality-m6-m12`, merged into
-`feature/project-status`)
+**Build / commit:** the integrated tree (branch `main`; the earlier stand was
+`51933eb`)
 **Flavour(s) tested:** `firetv` — **built and verified at the artifact level**;
 no device
 **Device(s) tested:** **none** — no Fire TV was available
@@ -15,9 +15,12 @@ evidence
 **Update (second pass, 2026-10-24):** the team leader closed the three open
 points of the previous round — the CI quality gate, the lint and the three files
 above the line limit. The `firetv` lint, which had never been analysed before,
-now runs and is green, so AC-M9.2 is measured instead of open. The JVM suite and
-the debug APKs were **not** built again; the numbers of section 2.1 name the run
-they come from.
+now runs and is green, so AC-M9.2 is measured instead of open.
+**Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
+integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
+59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+277 tests. Both debug APKs build on that tree and the lint is green for both
+flavours.
 
 ---
 
@@ -68,17 +71,15 @@ Does the feature do what the requirement says?
 - Every new public method has a test: **partly** — `isConfigured` and
   `isAvailable` are covered by `CastReceiverTest` (3 tests, **PASSED**); `start()`
   and `stop()` are not, because they need a real `Context`.
-- Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
-  `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
-  54 test classes. Note: the JVM runner compiles the `main` source set **and the
-  `firetv` flavour** (`../app/src/firetv/kotlin` is in the `srcDirs` of
+- Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
+  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
+  0 skipped, 59 test classes. Note: the JVM runner compiles the `main` source set
+  **and the `firetv` flavour** (`../app/src/firetv/kotlin` is in the `srcDirs` of
   `test-runner/build.gradle.kts`), so the Fire TV Cast implementation is
   compiled and its shared logic is tested. The `googletv` flavour source set is
   **not** compiled by the runner, so the Google TV variant of the Cast
-  receiver has no unit test at all. **Current state (not re-run):** 469 test
-  methods in 56 test classes; the `com.phairplay.cast` package still holds its 3
-  test methods. The JVM suite was not executed again in this documentation
-  cycle.
+  receiver has no unit test at all. The `com.phairplay.cast` package still
+  holds its 3 test methods. Before this cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
   SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
@@ -103,16 +104,15 @@ $ ./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline --cons
 BUILD SUCCESSFUL
 ```
 
-**Test run output:**
+**Test run output (measured on the integrated tree):**
 
 ```
-BUILD SUCCESSFUL in 3m 27s
-457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
+BUILD SUCCESSFUL in 3m 18s
+511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
 ```
 
-The test run and the APK build above describe commit `51933eb`; the tree has
-moved on since then (the quality-gate and the lint fixes). **No APK was built
-again** in this documentation cycle.
+The test run and the APK build above describe the integrated tree. Before this
+cycle the suite had 277 tests.
 
 **Repository structure checks (measured in the second pass, current tree):**
 
@@ -336,8 +336,8 @@ API 25 device) stays open; it needs hardware.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped; the Fire TV source set is part of the compiled module. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). |
-| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`); the Fire TV source set is part of the compiled module. Before this cycle the suite had 277 tests. |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
 | 3 | **No known S4 finding** | **yes** — the Fire TV surface has no S4 finding; it has fewer attack surface than the Google TV flavour |
 | 4 | Every open S3 has a written owner decision | **yes** — the Miracast residual risk is written down in the audit §7 |
 | 5 | The device scenarios ran on both flavours | **no** — the Fire TV column of the result sheet is empty |

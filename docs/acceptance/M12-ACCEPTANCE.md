@@ -3,8 +3,8 @@
 **Feature / milestone:** M12 — UPnP / DLNA MediaRenderer (ADR-004 phases D1 … D4)
 **Requirement IDs:** FR-44 … FR-57, FR-64 … FR-67, NFR-13, NFR-22, NFR-26 … NFR-31,
 AC-M12.1 … AC-M12.20
-**Build / commit:** `51933eb` (branch `feature/quality-m6-m12`, merged into
-`feature/project-status`)
+**Build / commit:** the integrated tree (branch `main`; the earlier stand was
+`51933eb`)
 **Flavour(s) tested:** `googletv` and `firetv` — both compile; the DLNA code is in the
 shared `main` source set
 **Device(s) tested:** **none** — no television was available
@@ -17,9 +17,14 @@ points of the previous round — the CI quality gate, the lint and the three fil
 above the line limit — and the media URI got an **address policy**
 (`HostAddressPolicy`), which closes SEC-04 partly. The statements about the
 red gate, the lint finding, the missing KDoc header and the missing address
-policy were brought up to date in the same commit. The JVM suite and the debug
-APKs were **not** built again; the numbers of section 2.1 name the run they come
-from.
+policy were brought up to date in the same commit.
+**Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
+integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
+59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+277 tests. Both debug APKs build on that tree and the lint is green for both
+flavours. The three High findings of the audit — SEC-01, SEC-02 and SEC-03 —
+are closed and measured; **SEC-04** stays open and needs a written owner
+decision.
 
 ---
 
@@ -76,7 +81,8 @@ Does the feature do what the requirement says?
 ## 2. Technical
 
 - Architecture boundaries respected (the protocol stacks stay independent): **yes** —
-  all DLNA logic is in `com.phairplay.dlna` (29 production files). The AirPlay 2
+  all DLNA logic is in `com.phairplay.dlna` (28 production files; the shared
+  address policy moved to `com.phairplay.util` with the SEC-01 fix). The AirPlay 2
   stack is untouched by it — the only cross-package call is
   `DlnaReceiver.onPlay` → `AirPlayVideoPlayer`, which reuses the *player* and
   does not couple the protocol stacks. This is the guarantee of ADR-001 and
@@ -93,21 +99,16 @@ Does the feature do what the requirement says?
   line(s) in between)`) is closed. The KDoc gate is green on the whole tree:
   `bash scripts/check-kdoc-headers.sh` → exit 0, `OK: KDoc header check passed —
   227 class declaration(s) checked, all of them have a KDoc header.`
-- Every new public method has a test: **largely yes** — 169 DLNA test methods in
-  the current tree (157 in the measured run of `51933eb`, plus the 12 new ones
-  of the address policy). The two known gaps: no test opens two concurrent
+- Every new public method has a test: **largely yes** — 158 DLNA test methods in
+  the measured run of the integrated tree; the 12 test methods of the address
+  policy (11 in `HostAddressPolicyTest`, 1 in `DlnaMediaUriTest`) are part of
+  that number. The two known gaps: no test opens two concurrent
   clients against the description server, and no test asserts that the media URI
   is refused for a non-HTTP scheme (scenario 17).
-- Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
-  `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
-  54 test classes. The DLNA package alone accounts for **157** of them.
-  **Current state (measured in the SEC-01 run of 2026-10-24):** 490 test methods
-  in 58 test classes, of which **158** are in `com.phairplay.dlna` and **59** in
-  `com.phairplay.util`. The eleven methods of the address policy moved with the
-  class from `com.phairplay.dlna` to `com.phairplay.util` (11 in
-  `HostAddressPolicyTest`, 1 in `DlnaMediaUriTest`), and the SEC-01 fix added 21
-  methods (16 in `FetchableUrlPolicyTest`, 5 in `RtspVideoUrlHandlerTest`). The
-  measured run: `BUILD SUCCESSFUL`, 490 tests, 0 failures, 0 errors, 0 skipped.
+- Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
+  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
+  0 skipped, 59 test classes. The DLNA package alone accounts for **158** of
+  them. Before this cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
   SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
@@ -126,48 +127,40 @@ Does the feature do what the requirement says?
 
 ### 2.1 Measured outputs
 
-**JVM suite** (measured on `51933eb`; **not** re-run in this cycle)
+**JVM suite** (measured on the integrated tree)
 
 ```
 $ source /workspace/toolchain/env.sh
 $ ./gradlew :test-runner:test --offline --console=plain
 ...
-BUILD SUCCESSFUL in 3m 27s
-457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
+BUILD SUCCESSFUL in 3m 18s
+511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
 ```
 
 **Package split of the measured run**
 
 ```
-com.phairplay.airplay:          167
+com.phairplay.airplay:          177
 com.phairplay.airplay.handshake: 35
 com.phairplay.cast:               3
-com.phairplay.dlna:             157
+com.phairplay.dlna:             158
 com.phairplay.media:              4
 com.phairplay.miracast:           5
 com.phairplay.service:           35
 com.phairplay.settings:          19
-com.phairplay.util:              32
-```
-
-**Package split today** (static count of the `@Test` annotations of the same
-source set — the suite was not executed again)
-
-```
-com.phairplay.airplay:          167
-com.phairplay.airplay.handshake: 35
-com.phairplay.cast:               3
-com.phairplay.dlna:             169   (+12: the address policy)
-com.phairplay.media:              4
-com.phairplay.miracast:           5
-com.phairplay.service:           35
-com.phairplay.settings:          19
-com.phairplay.util:              32
+com.phairplay.util:              75
                                     ---
-                                    469   (56 test classes)
+                                    511   (59 test classes)
 ```
 
-**Both debug APKs** (measured on `51933eb`; **not** rebuilt in this cycle)
+The eleven methods of the address policy moved with the class from
+`com.phairplay.dlna` to `com.phairplay.util` (11 in `HostAddressPolicyTest`,
+1 in `DlnaMediaUriTest`), and the SEC-01 fix added 21 methods (16 in
+`FetchableUrlPolicyTest`, 5 in `RtspVideoUrlHandlerTest`); the SEC-02 fix added
+16 (`SafeBitmapDecoderTest`) and the SEC-03 fix added the negative cases of
+`RtpInterleavedTest`. Before this cycle the suite had 277 tests.
+
+**Both debug APKs** (measured on the integrated tree)
 
 ```
 $ ./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline --console=plain
@@ -320,8 +313,7 @@ adb shell dumpsys meminfo com.phairplay.googletv
   8 are negative), `DlnaMediaUriTest` (8, of which 7 are negative),
   `DlnaSoapDispatcherTest` (16), and — new in the second pass —
   `HostAddressPolicyTest` (11, all negative for the refused addresses).
-  All **PASSED** in the measured run; the twelve new ones are part of the
-  current static count (section 2.1).
+  All **PASSED** in the measured run (section 2.1).
 - The log reduction still applies to every new log statement (SEC-07)? **yes** —
   every message goes through `com.phairplay.util.Logger`, which reduces IP
   addresses, MAC halves, UUIDs and URL credentials before writing.
@@ -409,9 +401,9 @@ adb shell dumpsys meminfo com.phairplay.googletv
 The **code** for M12 is complete to the letter of ADR-004: D1 (SSDP + description
 server), D2 (hardened SOAP dispatcher, three services), D3 (playback, audio-only,
 photo with a 20 MB limit, remote control) and D4 (GENA eventing, SSRF hardening,
-bounded HTTP). 157 tests cover it, all green in the measured run, including the
-Samsung Smart View extension with its 29 further tests; the current tree adds
-**12** more test methods for the address policy (169 in the package).
+bounded HTTP). 158 tests cover it, all green in the measured run, including the
+Samsung Smart View extension with its 29 further tests; the 12 test methods of
+the address policy are part of that number.
 
 What is **not** true of this milestone is the **end-to-end behaviour on a
 television**. No control point has ever talked to the running renderer, and two
@@ -430,11 +422,13 @@ concrete gaps stand between the code and a working media path:
 
 The second one is the **same defect class as SEC-01**: an arbitrary-URL fetch
 that turns the television into a request proxy — that is the wording of the S4
-definition in `docs/quality/QUALITY.md` §0. The **audit grades SEC-04 as
-Medium**, and the fixed mapping Medium → **S3** turns it into a major finding:
+definition in `docs/quality/QUALITY.md` §0. SEC-01 itself was **closed on
+2026-10-24** — the AirPlay media URL is now checked before the fetch — so what
+is compared here is the defect class, not an open finding. The **audit grades
+SEC-04 as Medium**, and the fixed mapping Medium → **S3** turns it into a major finding:
 formally it needs a **written owner decision** in the release notes, not a fix
 before the release. The owner therefore has to decide explicitly: treat the
-DLNA media URI like SEC-01 (S4 → no release with it) or accept SEC-04 as an S3
+DLNA media URI like SEC-01 was treated (S4 → no release with it) or accept SEC-04 as an S3
 with a written reason. Either way it has to be named in the release notes. The
 second pass moved the finding from "no protection at all" to "the dangerous
 addresses are refused, the compatibility decisions are deliberate and
@@ -471,9 +465,9 @@ four sub-phases unchecked; it has been **corrected in this cycle** to "🟠 Part
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Current static count: 469 test methods in 56 classes, 169 of them in the DLNA package (the suite was not re-run in this cycle). |
-| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
-| 3 | **No known S4 finding** | **yes for this milestone** — the DLNA surface has no S4 finding. SEC-04 (the arbitrary-URL fetch through `SetAVTransportURI`) is graded *Medium* in the audit and therefore **S3** in the quality model (`docs/quality/QUALITY.md` §0, Medium → S3); the second pass closed the dangerous part of it (the address policy), the scheme list and the two residual points stay open — so it still needs a written owner decision rather than a fix before the release (see gate 4). The two open S4 findings (SEC-01, SEC-02) belong to the AirPlay and the UI track; SEC-03 (the unbounded FU-A reassembly buffer) was closed on 2026-10-24 by the AirPlay track. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`), 158 of them in the DLNA package. Before this cycle the suite had 277 tests. |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
+| 3 | **No known S4 finding** | **yes for this milestone** — the DLNA surface has no S4 finding. SEC-04 (the arbitrary-URL fetch through `SetAVTransportURI`) is graded *Medium* in the audit and therefore **S3** in the quality model (`docs/quality/QUALITY.md` §0, Medium → S3); the second pass closed the dangerous part of it (the address policy), the scheme list and the two residual points stay open — so it still needs a written owner decision rather than a fix before the release (see gate 4). The three High findings of the audit (SEC-01, SEC-02, SEC-03) belong to the AirPlay and the UI track and are now **closed and measured**. |
 | 4 | Every open S3 has a written owner decision | **partly** — SEC-04 (S3, the DLNA media URI) is **partly closed**: the address policy refuses the loopback, the link-local, the metadata, the multicast, the broadcast and the obfuscated addresses; the **scheme list**, the **public addresses** and the **un-resolved host names** are still open and need either the CR-01 change or a written owner decision in the release notes; SEC-09 (S2, the GENA TOCTOU) is an accepted residual risk; the `RenderingControl` gap is an open point with a proposed decision (O-4) |
 | 5 | The device scenarios ran on both flavours | **no** — DT-08, DT-09, DT-10 and DT-11 have not been executed |
 | 6 | The file-size rule holds for the touched files | **yes** — the largest file of the package is 385 lines; `bash scripts/check-file-size.sh` → exit 0 with `0 warning(s) above the soft limit of 400 lines` |

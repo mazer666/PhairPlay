@@ -14,10 +14,11 @@ and are marked below with their measurement. Everything else stands as it was.
 
 ## 0. The one-paragraph version
 
-The code is in good shape: the JVM suite is green (457 tests at the measured
-run, 469 test methods in the tree today), both debug flavours build, the four
-protocol stacks are separated, the DLNA renderer exists with 169 test methods,
-the security documentation is complete, and — since the second pass — **the CI
+The code is in good shape: the JVM suite is green (**511 tests, 0 failures, 0 errors,
+0 skipped**, 59 test classes at the measured run), both debug flavours build, the four
+protocol stacks are separated, the DLNA renderer exists, the security documentation is
+complete, the three High findings of the security audit are **closed and measured**, and
+— since the second pass — **the CI
 quality gate is green and the lint is green for both flavours** (the `firetv`
 flavour was analysed for the first time: `No issues found.`). What is missing
 is **evidence** and **three decisions**. No device test of any kind has been
@@ -41,7 +42,7 @@ security findings are closed or carry a written owner decision.
 
 | # | Fact | How it was measured |
 |---|---|---|
-| 1 | The JVM protocol suite is green: **457 tests, 0 failures, 0 errors, 0 skipped**, 54 test classes | `./gradlew :test-runner:test --offline` → `BUILD SUCCESSFUL in 3m 27s`, exit 0 (commit `51933eb`). **Current tree:** 469 test methods in 56 classes — a static count of the `@Test` annotations of the same source set; the suite was **not** re-run in the second pass. |
+| 1 | The JVM protocol suite is green: **511 tests, 0 failures, 0 errors, 0 skipped**, 59 test classes | `./gradlew :test-runner:test` → `BUILD SUCCESSFUL in 3m 18s`, exit 0 (measured on the integrated tree). Before this cycle the suite had 277 tests. |
 | 2 | Both debug flavours build | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline` → `BUILD SUCCESSFUL` (commit `51933eb`) |
 | 3 | The file-size check is green **and warning-free** | `bash scripts/check-file-size.sh` → exit 0, `OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.` |
 | 4 | The documentation-link check is green | `bash scripts/check-docs-links.sh` → exit 0, `192 internal link(s) resolve` |
@@ -80,13 +81,14 @@ decision from the owner and nothing else. **R7 → R9** are the release mechanic
 |---|---|---|---|---|
 | **R6a** | Reduce the DLNA media URI allowlist to `http`/`https` and reverse the test `SetAVTransportURI accepts a file URI and an rtsp URI` | AC-M12.15 | a new negative test: `file:///etc/passwd` → SOAP fault `402`; `DlnaMediaUri.ALLOWED_SCHEMES` no longer contains `file`. **Partly done in the second pass:** the *address* of the media URI is now checked (`HostAddressPolicy`: loopback, link-local / metadata, multicast, broadcast, obfuscated notations, user info — 11 test methods). What is still missing is the scheme reduction and the owner decision on the residual points (the scheme list itself, the accepted public addresses, the un-resolved host names) | DLNA track · Owner (decision) |
 | **R6b** | Decide on the network security configuration (CR-02) | either a `network_security_config.xml` that permits cleartext only for private LAN ranges, **or** a documented statement that the DLNA media path requires `https` | the decision is written down; `app/src/main/res/xml/network_security_config.xml` exists **or** the limitation is in `README.md` and in the guides | Owner |
-| **R6c** | Close SEC-03 (the unbounded FU-A reassembly buffer) | a bound in `RtpInterleaved.handleFuaFragment` plus a negative test | `MAX_FUA_BYTES` and the test `a FU-A stream that never ends does not grow without bound` | AirPlay track |
-| **R6d** | Close SEC-01 (the arbitrary-URL fetch through `POST /play`) or get a written owner decision | a scheme check in `RtspVideoUrlHandler.handleVideoPlay` plus a negative test | `file://` and `content://` are refused with `400` | AirPlay track |
-| **R6e** | Close SEC-02 (the image decompression bomb in `PhotoScreen` / `NowPlayingScreen`) or get a written owner decision | a `SafeBitmapDecoder` with a maximum edge, plus a negative test | the negative test `rejects a picture whose dimensions exceed the limit` | UI track |
+| **R6c** | ~~Close SEC-03 (the unbounded FU-A reassembly buffer)~~ | a bound in `RtpInterleaved.handleFuaFragment` plus a negative test | **closed and measured:** `RtpInterleaved.MAX_FUA_BYTES` (8 MB), the check runs before the append, and the tests `a FU-A stream that never ends does not grow without bound`, `the incomplete FU-A unit is dropped when the limit is exceeded` and `a new FU-A start fragment works again after the limit was exceeded` are green | AirPlay track |
+| **R6d** | ~~Close SEC-01 (the arbitrary-URL fetch through `POST /play`)~~ | a scheme check in `RtspVideoUrlHandler.handleVideoPlay` plus a negative test | **closed and measured:** `FetchableUrlPolicy` accepts only `http` and `https`, the address has to pass `HostAddressPolicy`, and `file://` and `content://` are refused with `400` without the player being asked to fetch anything. Tests: `FetchableUrlPolicyTest` and `RtspVideoUrlHandlerTest` | AirPlay track |
+| **R6e** | ~~Close SEC-02 (the image decompression bomb in `PhotoScreen` / `NowPlayingScreen`)~~ | a `SafeBitmapDecoder` with a maximum edge, plus a negative test | **closed and measured:** `SafeBitmapDecoder` reads the dimensions first, refuses what does not fit into the pixel budget and downsamples the rest; `PhotoScreen` and `NowPlayingScreen` use it. Tests: `SafeBitmapDecoderTest` (16 cases) | UI track |
 
 > The quality model (`docs/quality/QUALITY.md` §7) says: **no release may ship
-> with a known S4 finding.** SEC-01, SEC-02 and SEC-03 are all S4. Until they
-> are fixed or carry a written owner decision, the release is a beta.
+> with a known S4 finding.** SEC-01, SEC-02 and SEC-03 were all S4 — all three are
+> **closed and measured** now. What still blocks the stable claim is the hardware
+> block below and the two written owner decisions R6a and R6b.
 
 ### Block 3 — the hardware (blocks the "stable" claim)
 
@@ -136,9 +138,9 @@ The gate is defined in [`../quality/QUALITY.md`](../quality/QUALITY.md) §7.
 
 | # | Gate | Status | Blocking? |
 |---|---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — 457 tests, 0 failures (measured on `51933eb`); 469 test methods in the tree today (static count, not re-run) | — |
-| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, both reports `No issues found.`); the APKs build (measured on `51933eb`) | — (R2 done) |
-| 3 | No known S4 finding | **no** — SEC-01, SEC-02, SEC-03 | **yes** (R6c–R6e) |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (measured on the integrated tree, `BUILD SUCCESSFUL in 3m 18s`) | — |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, both reports `No issues found.`); both APKs build (measured) | — (R2 done) |
+| 3 | No known S4 finding | **yes** — SEC-01, SEC-02 and SEC-03 are closed and measured | — (R6c–R6e done) |
 | 4 | Every open S3 has a written owner decision | **partly** — SEC-04 (S3, the DLNA media URI) is *partly closed* by the address policy and still needs the scheme decision; SEC-10 (S2, cleartext) is open; SEC-09 (S2) is accepted | **yes** (R6a, R6b) |
 | 5 | The device scenarios ran on both flavours | **no** — 0 of 15 | **yes** (R4) |
 | 6 | The file-size rule holds for the touched files | **yes** — no file above 550, **and none above 400**; `0 warning(s) above the soft limit of 400 lines` | — (R3b done; R3 is a wording decision) |

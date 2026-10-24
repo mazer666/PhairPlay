@@ -86,6 +86,12 @@ In PhairPlay it lives in `app/src/main/kotlin/com/phairplay/dlna/` —
 `SsdpAdvertiser` (the announcements), `SsdpResponder` (the answers to
 `M-SEARCH`) and `SsdpMessages` (the text of the messages).
 
+Since the Samsung Smart View work, the responder answers **two** search
+targets: the UPnP one and `urn:samsung.com:service:MultiScreenService:1`
+(`SsdpMessages.SAMSUNG_MULTI_SCREEN`). A Samsung television does not ask for
+a UPnP renderer — it asks for a MultiScreen service, and only then reads the
+DIAL documents.
+
 ### GENA
 
 **General Event Notification Architecture.** The UPnP mechanism for *push*:
@@ -98,6 +104,11 @@ the renderer will later send data to it. If that URL is not checked, the
 television can be talked into contacting the internet. PhairPlay therefore
 restricts callbacks to private IPv4 addresses in the local subnet — see
 `GenaCallbackPolicy` and finding SEC-09.
+
+**The event goes out over a raw socket.** `HttpURLConnection` refuses the HTTP
+method `NOTIFY` (it only allows GET, POST, HEAD, OPTIONS, PUT, DELETE and
+TRACE), so the `LastChange` event would never have reached the control point.
+`GenaEventManager` therefore writes the HTTP request into a `Socket` itself.
 
 ### SOAP
 
@@ -139,6 +150,26 @@ independently switchable* option — it does not replace Miracast or Cast
 > cannot read that disk. Rendering a local file therefore works only for
 > network-reachable `http` / `https` URLs. This is a property of the
 > protocol, not a bug.
+
+### DIAL
+
+**Discovery And Launch.** The small half of the **Samsung Smart View**
+discovery: a Samsung television does not look for a UPnP renderer, it looks for
+a *MultiScreen* service and then asks it which apps it offers.
+
+The dialogue has three steps: the television sends the SSDP search
+`urn:samsung.com:service:MultiScreenService:1`, it reads the
+`Application-Url` header of the device description, and it asks that URL for
+two XML documents — `GET /dial/` (the app list) and `GET /dial/<AppId>` (the
+details of one app).
+
+**Why it is important here:** without the DIAL answer the television finds
+PhairPlay and then shows an **empty app list** — the user never sees the
+entry and cannot pick it. The implementation is in
+`app/src/main/kotlin/com/phairplay/dlna/DialAppCatalog.kt`; the renderer
+offers exactly one app, itself, so the answers are static documents and the
+app id from the request is only compared, never used as a file name or as part
+of a URL.
 
 ### RTSP
 
@@ -241,8 +272,49 @@ cannot afford the CPU cost (FR-33).
 A raw H.264 frame is split into **NAL units**. A frame that is too big for one
 network packet is split into **fragments**; on the wire that is the **FU-A**
 format, and the receiver has to put the fragments back together
-(`RtpInterleaved`, and the open finding SEC-03 about the size of that
-buffer).
+(`RtpInterleaved`). The size of that reassembly buffer was the finding
+SEC-03; it is closed, see [NAL unit and FU-A](#nal-unit-and-fu-a).
+
+### NAL unit and FU-A
+
+**NAL unit** (Network Abstraction Layer) — the smallest self-contained piece of
+an H.264 stream. A whole picture is not one NAL unit: the picture data is
+split into units, and the units that carry the picture can be far larger than
+one network packet.
+
+**FU-A** (Fragmentation Unit, A) — the way a *too large* NAL unit is spread
+over several RTP packets: the first packet carries the header and the start
+bit, the following packets only the payload, the last one the end bit. The
+receiver has to collect the fragments again before it can hand the unit to the
+decoder.
+
+**Why it is important here:** a peer on the network can open a fragmented unit
+and then never send the end bit. Without a bound the receiver would keep
+appending fragments until the process died. `RtpInterleaved.MAX_FUA_BYTES`
+(8 MB) caps the reassembled unit, the check runs **before** the append, and a
+fragment that would cross the cap is discarded together with the incomplete
+unit — so the next start fragment begins a clean unit again. The same rule
+applies to the payload of a single RTP packet (2 MB).
+
+### H.264 SPS
+
+**SPS** — the **Sequence Parameter Set**, the small NAL unit that describes
+the *shape* of the stream: the picture size, the profile and the level. The
+**PPS** (Picture Parameter Set) describes how the pictures are coded.
+
+**Why it is important here:** the AirPlay SDP does **not** contain a width and
+a height. The real resolution is only encoded inside the SPS, so the receiver
+has to parse it before it can configure the hardware decoder
+(`H264SpsParser`).
+
+The SPS is attacker-controlled input — every device in the network may send
+one — so it is treated as untrusted: the Exp-Golomb values are bounded, the
+geometry is computed in 64-bit arithmetic so that no intermediate value can
+overflow, and the resulting size is checked against a plausible range
+(64 … 8192 px) before it leaves the parser. A hostile SPS therefore ends up as
+`null` (the caller falls back to the hint from the SDP), never as a negative
+or absurd picture size. The parser accepts raw and Annex-B-prefixed input
+through one shared implementation.
 
 ### HEVC / H.265
 
@@ -433,6 +505,22 @@ allowed to go places the attacker cannot.
 This is why the DLNA GENA callback is restricted to the local subnet, and why
 the URL the receiver fetches on a sender's behalf needs a scheme allow-list.
 
+**The two rules that implement it** live in
+`app/src/main/kotlin/com/phairplay/util/`:
+
+| Rule | What it decides |
+|---|---|
+| `HostAddressPolicy` | Whether the **host** of a URL may be fetched: loopback, link-local (and with it the cloud metadata service `169.254.169.254`), multicast, broadcast, the reserved range, the obfuscated notations of an IPv4 address (decimal, octal, hexadecimal) and every URI that hides the real host behind a user info part are refused. |
+| `FetchableUrlPolicy` | Whether the **whole URL** may be fetched: the scheme must be `http` or `https`, the URL must be free of control characters and at most 4096 characters long, and the host must pass `HostAddressPolicy`. |
+
+Both rules are used by both protocol stacks — the AirPlay URL mode
+(`POST /play`) and the DLNA renderer (`SetAVTransportURI`) — because in both
+cases the *television* opens the connection, not the sender.
+
+A **host name** is deliberately not resolved: resolving it would send a DNS
+query from the television, and a name can still point anywhere. That stays a
+documented residual risk.
+
 ---
 
 ## 4. Android and the build
@@ -493,6 +581,27 @@ rather than decoded slowly (FR-33).
 
 Android's audio output: a stream of PCM samples that the TV's speakers play.
 
+### Bitmap and inSampleSize
+
+A **Bitmap** is the decoded picture in memory. A JPEG that is 200 KB on the
+wire can announce 20 000 × 20 000 pixels — 1.6 GB of pixel memory. The size
+of the *file* says nothing about the size of the *bitmap*, and that gap was
+the finding SEC-02.
+
+**inSampleSize** is the knob that prevents it: it is a power of two, and the
+decoder applies it **before** the pixels are allocated. A value of 4 means
+"keep every fourth pixel in each direction" — a 4000 × 3000 picture becomes
+1000 × 750 and costs a sixteenth of the memory. The picture is a little less
+sharp, and on a television nobody can tell.
+
+**Why it is important here:** `SafeBitmapDecoder`
+(`app/src/main/kotlin/com/phairplay/util/SafeBitmapDecoder.kt`) reads the
+header first, refuses a picture outside the budget (longest edge 4096 px,
+total 4096 × 4096 pixels) and downsamples the rest with an `inSampleSize`. It
+also asks for 16 bits per pixel (`RGB_565`) instead of 32, because the alpha
+channel of a photo is not worth half of the memory. `PhotoScreen` and the
+album artwork of `NowPlayingScreen` use it.
+
 ### SurfaceView / TextureView
 
 The two ways to put video on an Android screen. A `SurfaceView` is a separate
@@ -514,6 +623,30 @@ instead of Jetpack Compose (ADR-003).
 The arrow keys on a television remote. On a TV there is no touch screen, so
 every control has to be reachable and visible with the arrow keys. NFR-06 and
 NFR-07 make this a requirement, not a preference.
+
+### tools:targetApi
+
+An attribute in `AndroidManifest.xml` that tells the Android tooling: "this
+element uses an attribute or a feature that only exists from API level X".
+The `tools` namespace is removed again when the manifest is merged, so the
+annotation never reaches the APK.
+
+**Why it is important here:** the manifest declares
+`NEARBY_WIFI_DEVICES` with `android:usesPermissionFlags="neverForLocation"`.
+That attribute was introduced with API 31, but PhairPlay supports API 25
+(Fire TV). Android Lint therefore reported *"Attribute usesPermissionFlags is
+only used in API level 31 and higher"* — and the build treats warnings as
+errors (`warningsAsErrors = true`).
+
+The finding was closed with `tools:targetApi="31"` on the permission element.
+That is not a way to hide a real problem: it is the documented way to say "yes,
+this needs API 31, and on an older system the attribute is simply ignored".
+On an older Android the permission is declared without the flag — only the
+"never for location" promise is missing there, which is exactly what the
+annotation is for.
+
+The Miracast feature itself has a different, unresolved problem on Android 10
+and newer — see the entry on **WFD** above and finding SEC-06 in the audit.
 
 ### Gradle flavour
 
@@ -600,3 +733,32 @@ commit, in the same pull request. The full rule is in
 One fact, one place. A number that appears in five documents becomes a
 number that is wrong in at least one of them. The other documents link
 instead of repeating.
+
+### Byte budget — the MirrorFrameQueue example
+
+A **byte budget** is the rule that limits how much *memory* a remote peer can
+make the receiver hold. The classic mistake is to limit only the **number of
+items** in a queue: 90 frames is harmless, 90 frames of 8 MB each is 720 MB —
+and the app process dies.
+
+**The example in this repository:** the mirroring queue
+(`app/src/main/kotlin/com/phairplay/airplay/handshake/MirrorFrameQueue.kt`)
+has **two independent bounds**:
+
+| Bound | Value | What it protects |
+|---|---|---|
+| item count (`DEFAULT_MAX_ITEMS`) | 90 frames ≈ 1.5 s at 60 fps | the **latency** — the decoder is never more than 1.5 s behind |
+| byte budget (`DEFAULT_MAX_BYTES`) | 32 MB | the **memory** — the queue can never eat more than a fifth of the 150 MB process budget (NFR-03) |
+
+**Why it is important here:** every queue, buffer and accumulator that a peer
+on the network can influence needs a byte budget, not only an item count.
+The budget has to be checked **before** the data is appended, and the counter
+has to be exact — with a plain `volatile int`, the reader thread and the
+decoder thread can lose each other's increment, and a counter that reports
+less than the real occupancy silently disables the cap. That is why the
+accounting in `MirrorFrameQueue` happens under one lock.
+
+The same rule appears in other places: the reassembled FU-A unit (8 MB), the
+payload of a single RTP packet (2 MB), the mirror payload (8 MB), the RTSP
+message (1 MB), the photo payload (25 MB) and the SOAP body (64 KB).
+

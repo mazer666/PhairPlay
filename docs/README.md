@@ -7,7 +7,8 @@ need something. Only files that exist are listed here.
 is and how to install it · [`../AGENTS.md`](../AGENTS.md) → how the team works ·
 [`CONTRIBUTING.md`](CONTRIBUTING.md) → how to get a pull request merged ·
 [`WHERE_TO_CHANGE.md`](WHERE_TO_CHANGE.md) → where the code for *your* idea
-lives.
+lives · [`project/RELEASE_READINESS.md`](project/RELEASE_READINESS.md) → what
+is still missing before `v1.0.0`.
 
 ---
 
@@ -35,6 +36,28 @@ The product track owns this folder. It answers *what* the product does, not
 | [`spec/PROJECT_PLAN.md`](spec/PROJECT_PLAN.md) | The phased roadmap M0–M12 with the status of each milestone, its task list and its definition of done. |
 | [`spec/ACCEPTANCE_CRITERIA.md`](spec/ACCEPTANCE_CRITERIA.md) | The measurable acceptance criteria per milestone — each with a "How to Verify" and a "Pass Condition" — and the performance benchmark table. |
 
+## Acceptance records — `docs/acceptance/`
+
+One record per milestone. Each one walks through the same sections — functional,
+technical, performance, usability, accessibility, security and privacy,
+interoperability, known limitations, decision, release gate — and states for
+every criterion whether it is **proven by a test**, **proven only by the code**
+or **still open**, and why.
+
+| Document | What it owns |
+|---|---|
+| [`acceptance/M06-ACCEPTANCE.md`](acceptance/M06-ACCEPTANCE.md) | Whether the Miracast receiver meets FR-13 … FR-18 — and what the Wi-Fi Direct advertisement and the RTSP control plane already prove without a device. |
+| [`acceptance/M07-ACCEPTANCE.md`](acceptance/M07-ACCEPTANCE.md) | Whether the Google Cast receiver degrades gracefully without a registered app ID, and what still separates it from an end-to-end Cast session. |
+| [`acceptance/M08-ACCEPTANCE.md`](acceptance/M08-ACCEPTANCE.md) | Whether the running receiver stays stable: the bounded queues, the mDNS recovery, the resource budgets — and which endurance numbers are still unmeasured. |
+| [`acceptance/M09-ACCEPTANCE.md`](acceptance/M09-ACCEPTANCE.md) | Whether the Fire TV flavour is usable: the build, the D-pad navigation and the honest gap between "it compiles" and "it ran on a device". |
+| [`acceptance/M10-ACCEPTANCE.md`](acceptance/M10-ACCEPTANCE.md) | Whether the interface is really translated: the completeness of English, German and French, and what is still open (right-to-left, formatting). |
+| [`acceptance/M11-ACCEPTANCE.md`](acceptance/M11-ACCEPTANCE.md) | What a `v1.0.0` release still needs: the CI gate, the signed artefacts, the version bump and the device validation. |
+| [`acceptance/M12-ACCEPTANCE.md`](acceptance/M12-ACCEPTANCE.md) | Whether the UPnP/DLNA MediaRenderer works: every criterion AC-M12.1 … AC-M12.20 with its evidence, and the open media path. |
+| [`acceptance/QA-QUALITY-GATE-ACCEPTANCE.md`](acceptance/QA-QUALITY-GATE-ACCEPTANCE.md) | The acceptance record of the quality gate: what each of the four structure checks and the CI workflow must prove, and what was actually measured. |
+| [`acceptance/QA-I18N-ACCEPTANCE.md`](acceptance/QA-I18N-ACCEPTANCE.md) | The acceptance record of the language coverage: the key table of `en`/`de`/`fr`, the missing entries and the rule that keeps them complete. |
+| [`acceptance/QA-DEVICE-TEST-ACCEPTANCE.md`](acceptance/QA-DEVICE-TEST-ACCEPTANCE.md) | The acceptance record of the device test plan: whether every one of the 15 cases is copy-pasteable, has a time limit and has an evidence rule. |
+| [`acceptance/ACCEPTANCE_TEMPLATE.md`](acceptance/ACCEPTANCE_TEMPLATE.md) | The template for a new acceptance record: functional, technical, performance, usability, accessibility, security/privacy, interoperability, known limitations, decision. |
+
 ## How the product works
 
 | Document | What it owns |
@@ -50,7 +73,6 @@ The product track owns this folder. It answers *what* the product does, not
 | [`WHERE_TO_CHANGE.md`](WHERE_TO_CHANGE.md) | The navigation table "I want to change X → that is here", with the real package paths. Read this before you edit anything. |
 | [`DOCUMENTATION_POLICY.md`](DOCUMENTATION_POLICY.md) | The same-change rule, the single-source-of-truth rule and the archive rule — what has to be updated together with a change, and where a document goes when it is replaced. |
 | [`quality/QUALITY.md`](quality/QUALITY.md) | The six-dimensional quality model with the measurement method, the current state and the target value per dimension, plus the severity grades S0–S4. |
-| [`acceptance/ACCEPTANCE_TEMPLATE.md`](acceptance/ACCEPTANCE_TEMPLATE.md) | The template for an acceptance record: functional, technical, performance, usability, accessibility, security/privacy, interoperability, known limitations, decision. |
 | [`adr/ADR_TEMPLATE.md`](adr/ADR_TEMPLATE.md) | The template for a new architecture decision record. |
 | [`cr/CR_TEMPLATE.md`](cr/CR_TEMPLATE.md) | The template for a change request against an accepted requirement or an accepted decision. |
 
@@ -78,7 +100,8 @@ a pull request.
 | [`guides/INSTALLATION.md`](guides/INSTALLATION.md) | Every installation path: ADB, the sideloading apps, both flavours, and the developer options that have to be enabled first. |
 | [`guides/TROUBLESHOOTING.md`](guides/TROUBLESHOOTING.md) | The failure catalogue: the device does not appear in the picker, the TV sleeps during streaming, no audio, no video, and the router settings that cause each. |
 | [`guides/CAST_APP_ID.md`](guides/CAST_APP_ID.md) | How to register a Google Cast receiver app ID, which is required to test the Cast stack end to end. |
-| [`guides/CASTING_TO_A_TV.md`](guides/CASTING_TO_A_TV.md) | The step-by-step guide for getting a picture onto the television — from macOS, from Windows, from VLC and from a mobile UPnP controller — including the honest `file:///` limitation and the HTTP workaround. *Added by the parallel docs-guides track; if that file is not part of the merged tree, remove this row.* |
+| [`guides/CASTING_TO_A_TV.md`](guides/CASTING_TO_A_TV.md) | The step-by-step guide for getting a picture onto the television — from macOS, from Windows, from VLC and from a mobile UPnP controller — including the honest `file:///` limitation and the HTTP workaround. |
+| [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) | The 15 copy-pasteable hardware cases DT-01 … DT-15: the exact commands, the expected result, the time limit and the evidence per case — plus the result sheet for the Google TV and the Fire TV. |
 
 > **One honest limitation applies to every user-facing guide:** a UPnP renderer
 > fetches the media itself. A `file:///` URI points at the *sender's* disk and
@@ -86,12 +109,20 @@ a pull request.
 > network-reachable `http`/`https` URLs. This is a property of the protocol,
 > not a bug.
 
+## Project status and risk — `docs/project/`
+
+| Document | What it owns |
+|---|---|
+| [`project/RELEASE_READINESS.md`](project/RELEASE_READINESS.md) | What is still missing before `v1.0.0`: what is proven, what is open, in which order it has to be closed, and which points genuinely need real hardware. |
+| [`project/RISKS.md`](project/RISKS.md) | The maintained risk register: every known risk with likelihood, impact, countermeasure, owner and status — the list of what could still go wrong. |
+
 ## Reviews and audits — `docs/reviews/`, `docs/audit/`
 
 | Document | What it owns |
 |---|---|
 | [`reviews/2026-10-24-pr19-pr17-issue18-review.md`](reviews/2026-10-24-pr19-pr17-issue18-review.md) | The review of pull request #19, pull request #17 and issue #18, including the "wrong state on the screen" defect class that came out of it. |
 | [`audit/2026-10-24-security-audit.md`](audit/2026-10-24-security-audit.md) | The full security and privacy audit of 1.0.0-beta.3: threat model, attack surface table, 14 findings with severity, attack path, concrete fix and negative test, the permission audit and the accepted residual risks. The single source of truth for the security state of the release. |
+| [`audit/qa-quality-gate-negative-test.md`](audit/qa-quality-gate-negative-test.md) | The raw protocol of the negative test of the four check scripts — the proof that each one turns red on a real violation and green again when it is removed (22 cases, green → red → green). |
 
 ## Planning material — `docs/superpowers/`
 

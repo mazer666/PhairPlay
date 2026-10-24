@@ -72,12 +72,11 @@ Does the feature do what the requirement says?
 - Every new public method has a test: **yes** for the two testable units
   (`MdnsRegistrationTracker`, `MirrorFrameQueue`); the device-dependent paths
   (`NetworkRecoveryMonitor`) have none and cannot have any on the JVM.
-- Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
-  `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
-  54 test classes. This includes the 10 `MdnsRegistrationTrackerTest` and the 13
-  `MirrorFrameQueueTest` cases. **Current state (not re-run):** 469 test methods
-  in 56 test classes; the `com.phairplay.service` package still holds its 35 test
-  methods. The JVM suite was not executed again in this documentation cycle.
+- Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
+  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors, 0 skipped,
+  59 test classes. This includes the 10 `MdnsRegistrationTrackerTest` and the 13
+  `MirrorFrameQueueTest` cases. The `com.phairplay.service` package still holds its
+  35 test methods. Before this cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
   SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
@@ -104,13 +103,13 @@ BUILD SUCCESSFUL
 **Test run output:**
 
 ```
-BUILD SUCCESSFUL in 3m 27s
-457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
+BUILD SUCCESSFUL in 3m 18s
+511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
 ```
 
-The test run and the APK build above describe commit `51933eb`; the tree has
-moved on since then (the quality-gate and the lint fixes). **No APK was built
-again** in this documentation cycle.
+The test run and the APK build above describe the integrated tree (the merge of
+all eight work streams plus the three security fixes). Before this cycle the
+suite had 277 tests.
 
 **Repository structure checks (measured in the second pass, current tree):**
 
@@ -312,9 +311,9 @@ distance.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). |
-| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
-| 3 | **No known S4 finding** | **yes for this milestone** — the M8 surface has no S4 finding. SEC-03 (unbounded FU-A buffer) touches the AirPlay RTP path and is **still open**; see the risk register and the M8-adjacent note in `docs/audit/2026-10-24-security-audit.md` |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured) |
+| 3 | **No known S4 finding** | **yes for this milestone** — the M8 surface has no S4 finding. SEC-03 (the unbounded FU-A buffer) touched the AirPlay RTP path and is now **closed and measured** (`RtpInterleaved.MAX_FUA_BYTES`, 8 MB, plus negative tests); see the risk register and the status block in `docs/audit/2026-10-24-security-audit.md` |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-07 has a written decision (audit §7) |
 | 5 | The device scenarios ran on both flavours | **no** — DT-02, DT-13 and DT-15 have not been executed |
 | 6 | The file-size rule holds for the touched files | **yes** — all touched files are well below 400 lines; `bash scripts/check-file-size.sh` → exit 0 with `0 warning(s) above the soft limit of 400 lines` |

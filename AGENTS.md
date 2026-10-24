@@ -8,11 +8,12 @@ receiver for Android TV and Fire TV.
 requirements in [`docs/spec/REQUIREMENTS.md`](docs/spec/REQUIREMENTS.md) and the
 accepted decisions in [`docs/decisions/`](docs/decisions/) outrank an agent's
 preference. If you think the product direction is wrong, write a **CR**
-(`docs/cr/CR_TEMPLATE.md`) — do not quietly implement your own opinion.
+([`docs/cr/CR_TEMPLATE.md`](docs/cr/CR_TEMPLATE.md)) — do not quietly implement
+your own opinion.
 
 **All content in this repository is English.** Code, KDoc, comments, commit
-messages, tests, identifiers and documentation. The only exception is the
-`deliverable.md` that an agent hands to the project lead.
+messages, tests, test names, identifiers and documentation. The only exception
+is the `deliverable.md` that an agent hands to the project lead.
 
 ---
 
@@ -44,7 +45,8 @@ Every agent, in every role, must:
    behaviour, and the relevant section of
    [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before changing structure.
 2. **Write English.** Code, KDoc, comments, commit messages, test names,
-   identifiers and documentation are English.
+   identifiers and documentation are English — there is no exception inside
+   the repository.
 3. **Keep source files small.** A hand-written Kotlin file is a *soft* maximum
    of **400 lines** (NFR-23) and a *hard* maximum of **550 lines**. The soft
    limit is the target; the hard limit blocks the merge.
@@ -88,7 +90,7 @@ Every agent, in every role, must:
     the app sandbox, and is described in [`PRIVACY.md`](PRIVACY.md).
 20. **Report honestly.** If you could not run the build, say so and name the
     exact command that has to be run. A believable "partly done" beats a
-    shiny "done". Never invent test output, counts or measurements.
+    shiny "done". **Never invent test output, counts or measurements.**
 
 ---
 
@@ -138,7 +140,7 @@ them.
   [`docs/spec/REQUIREMENTS.md`](docs/spec/REQUIREMENTS.md)
 - the codec matrix and the protocol scope
 - the scope protection: what is *now*, what is *optional*, what is *later*
-- the change-request discipline (`docs/cr/`)
+- the change-request discipline ([`docs/cr/`](docs/cr/))
 
 **Must review**
 
@@ -161,8 +163,12 @@ them.
 
 - the threat model and the security guarantees
 - the hardening of every network-facing parser
+- the address and URL policies of the two protocol stacks:
+  `util/HostAddressPolicy` and `util/FetchableUrlPolicy`
+- the decode budget of the picture path: `util/SafeBitmapDecoder`
 - the permission set of `app/src/main/AndroidManifest.xml`
-- the central log reduction (`util/LogRedactor`, `util/Logger`)
+- the central log reduction (`util/LogRedactor`, `util/LogRedactionMode`,
+  `util/Logger`)
 - the data-protection statement
 
 **Must review**
@@ -179,6 +185,8 @@ them.
 - [`PRIVACY.md`](PRIVACY.md) — what leaves the television and what is stored
 - [`docs/audit/2026-10-24-security-audit.md`](docs/audit/2026-10-24-security-audit.md)
   — the current finding list, with severity, attack path and negative test
+- the state of the findings is reported in
+  [`docs/quality/QUALITY.md`](docs/quality/QUALITY.md) §2
 
 **May block a change** when it would weaken a guarantee that is already
 published in `SECURITY.md`.
@@ -192,7 +200,8 @@ published in `SECURITY.md`.
 - the milestone state in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md)
 - the changelog ([`CHANGELOG.md`](CHANGELOG.md))
 - the release checklist and the release notes
-- the blocker list and the risk register
+  ([`docs/project/RELEASE_READINESS.md`](docs/project/RELEASE_READINESS.md))
+- the blocker list and the risk register ([`docs/project/RISKS.md`](docs/project/RISKS.md))
 - the issue templates under `.github/ISSUE_TEMPLATE/`
 
 **Must review**
@@ -240,8 +249,8 @@ Engineers own the code. The streams and their areas:
 | Stream | Area | Owns |
 |---|---|---|
 | AirPlay | `com.phairplay.airplay`, `com.phairplay.airplay.handshake` | RTSP session control, SDP parsing, pairing, FairPlay, H.264 mirroring, AAC/ALAC audio, NTP timing, DACP reverse remote, the `/photo` endpoint |
-| DLNA | `com.phairplay.dlna` | SSDP discovery, the device description server, the SOAP dispatcher, GENA eventing, the AVTransport state machine, the image decoder |
-| Platform | `com.phairplay.service`, `com.phairplay.settings`, `com.phairplay.util`, `app/src/main/AndroidManifest.xml` | Foreground service, boot receiver, DataStore settings, logging and redaction, network utilities, permissions |
+| DLNA | `com.phairplay.dlna` | SSDP discovery, the device description server, the SOAP dispatcher, GENA eventing, the DIAL documents for Samsung Smart View, the AVTransport state machine, the image decoder |
+| Platform | `com.phairplay.service`, `com.phairplay.settings`, `com.phairplay.util`, `app/src/main/AndroidManifest.xml` | Foreground service, boot receiver, DataStore settings, logging and redaction, the address and URL policies, the picture decoder, network utilities, permissions |
 | UI | `com.phairplay.ui`, `app/src/main/res/` | Home screen, waiting screen, streaming screen, now-playing overlay, PIN screen, settings screen, layouts and strings |
 | Native | `app/src/main/cpp/` | The FairPlay (`libplayfair`) and ALAC C/C++ code and its JNI bridges |
 
@@ -254,6 +263,7 @@ Engineers own the code. The streams and their areas:
   matching lifecycle method
 - a new public method comes with a test
 - a new class comes with a KDoc header
+- a new queue or buffer comes with a **byte** budget, not only an item count
 
 ---
 
@@ -265,17 +275,27 @@ Engineers own the code. The streams and their areas:
   `app/src/androidTest/kotlin/com/phairplay/`
 - the acceptance records under `docs/acceptance/`
 - the manual device test scripts in
-  [`docs/TESTING.md`](docs/TESTING.md)
+  [`docs/TESTING.md`](docs/TESTING.md) and
+  [`docs/guides/DEVICE_TEST_PLAN.md`](docs/guides/DEVICE_TEST_PLAN.md)
 - the release gates
 
 **May block a milestone** when the evidence for an acceptance criterion is
 missing. A criterion without a measured result is **not** passed.
 
-**The three gates that actually run in CI** (see
+**The gates that actually run in CI** (see
 `.github/workflows/ci.yml` and `.github/workflows/lint.yml`):
 
 ```bash
+# 1 — the four repository structure checks
+./scripts/check-file-size.sh
+./scripts/check-kdoc-headers.sh --skip-nested
+./scripts/check-docs-links.sh
+./scripts/check-i18n-completeness.sh
+
+# 2 — the JVM protocol suite
 ./gradlew :test-runner:test
+
+# 3 — the static analysis and the build, both flavours
 ./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug \
   :app:assembleGoogletvDebug :app:assembleFiretvDebug
 ```
@@ -285,14 +305,20 @@ touch Android framework classes that are unstable on the host JVM. Use
 `:test-runner:test` for CI-grade protocol and parser coverage, and a real
 television for the framework behaviour.
 
+The measured state of these gates is reported in
+[`docs/quality/QUALITY.md`](docs/quality/QUALITY.md) — one place, so that the
+numbers cannot drift apart.
+
 ---
 
 ### ROLE-07 — Documentation & Developer Experience Lead
 
 **Owns**
 
-- [`README.md`](README.md), [`GLOSSARY.md`](GLOSSARY.md), [`AGENTS.md`](AGENTS.md)
-- the documentation index [`docs/README.md`](docs/README.md)
+- [`GLOSSARY.md`](GLOSSARY.md), [`AGENTS.md`](AGENTS.md),
+  [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
+- [`README.md`](README.md), the documentation index
+  [`docs/README.md`](docs/README.md)
 - [`docs/DOCUMENTATION_POLICY.md`](docs/DOCUMENTATION_POLICY.md)
 - [`docs/quality/QUALITY.md`](docs/quality/QUALITY.md)
 - [`docs/WHERE_TO_CHANGE.md`](docs/WHERE_TO_CHANGE.md)
@@ -305,7 +331,8 @@ television for the framework behaviour.
 > the project lead?
 
 **Must check** that every path, every command and every link in a document
-actually exists, before the document is handed over.
+actually exists, before the document is handed over. A document that names a
+file that was renamed is worse than no document.
 
 ---
 
@@ -317,6 +344,8 @@ actually exists, before the document is handed over.
 | A new port, socket or network input | Security + Architect + QA |
 | A new permission or a new stored value | Security + Product |
 | The outbound URL / SSRF policy | Security + Architect |
+| A new buffer, queue or accumulator | Security + the owning engineer (byte budget) |
+| The log output or the redaction | Security + Docs |
 | A new package or a cross-package dependency | Architect + the affected engineers |
 | A change to the foreground service or the receiver lifecycle | Architect + Platform + QA |
 | The UI, the strings or the focus order | UI engineer + Product (TV accessibility) |
@@ -324,6 +353,7 @@ actually exists, before the document is handed over.
 | A performance-sensitive path (decode, decrypt, reassembly) | The owning engineer + QA (measured, not asserted) |
 | A change to a requirement, a codec or the scope | Product + Project (CR required) |
 | A change to the file-size rule, the test gate or the quality model | Architect + QA + Docs |
+| A new or changed document | Docs (links, paths, commands, no invented numbers) |
 | A release | Project + QA + Security (no open S4) |
 
 ---
@@ -334,25 +364,36 @@ An agent may say **"done"** only when *all* of the following hold:
 
 1. The implementation is complete. **No stubs, no dummy returns, no deleted or
    `@Ignore`d tests presented as a finished feature.**
-2. The behaviour is covered by a test that runs in CI
+2. The four repository structure checks are green:
+   `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`
+   (CI runs it with `--skip-nested`), `scripts/check-docs-links.sh` and
+   `scripts/check-i18n-completeness.sh`.
+3. The JVM suite is green: `./gradlew :test-runner:test` — **0 failures, 0
+   errors, 0 skipped**. A skipped test is a gap that has to be written down,
+   not a green checkmark.
+4. The Android lint is green for **both** flavours
+   (`:app:lintGoogletvDebug`, `:app:lintFiretvDebug`) and both debug APKs
+   build (`:app:assembleGoogletvDebug`, `:app:assembleFiretvDebug`).
+5. The behaviour is covered by a test that runs in CI
    (`:test-runner:test`) or by a documented device script with a measured
-   result.
-3. Every acceptance criterion of the change has a **How to Verify** and a
+   result. **A device test that was not executed is reported as "not
+   measured", never as "passed"** — with the reason.
+6. Every acceptance criterion of the change has a **How to Verify** and a
    **Pass Condition**, and the pass condition is met.
-4. The documentation that the change made stale is updated **in the same
+7. The documentation that the change made stale is updated **in the same
    change**.
-5. Every touched file obeys the file-size rule (soft 400, hard 550 lines) and
+8. Every touched file obeys the file-size rule (soft 400, hard 550 lines) and
    every new class has a KDoc header.
-6. The security impact is considered and recorded — new network input, new
+9. The security impact is considered and recorded — new network input, new
    permission, new stored value: yes/no, with the reason.
-7. The performance impact is considered; a performance claim without a
-   measurement is not a claim, it is a guess.
-8. No requirement was silently deferred. Anything that is still open is written
-   down as *open, because …*.
-9. The remaining limitations are documented where a user will meet them — in
-   [`README.md`](README.md) or in the matching file under
-   [`docs/guides/`](docs/guides/).
-10. The handoff note is complete (see the template in section 8).
+10. The performance impact is considered; a performance claim without a
+    measurement is not a claim, it is a guess.
+11. No requirement was silently deferred. Anything that is still open is
+    written down as *open, because …*.
+12. The remaining limitations are documented where a user will meet them — in
+    [`README.md`](README.md) or in the matching file under
+    [`docs/guides/`](docs/guides/).
+13. The handoff note is complete (see the template in section 8).
 
 ---
 
@@ -377,8 +418,20 @@ Agents must not:
   is only stubbed
 - describe a pure refactoring as a feature in the changelog or in the README
 - claim that a device test passed when it was never run
-- invent a number (test counts, sizes, budgets) that was not measured
+- invent a number (test counts, sizes, budgets, measurements) that was not
+  measured
 - write a document that names a file, a command or a link that does not exist
+- write in the repository in any language other than English
+
+### The branch rule
+
+> **The owner works on `main`. An agent works on a feature branch and hands
+> the change over as a patch.**
+
+An agent does not commit to `main`, does not push, and does not tag or
+release. The change leaves the agent's branch, and the team lead merges it
+into `main`. This is not a technical limitation — it is the rule that keeps a
+merge the conscious act of one person.
 
 ---
 
@@ -392,8 +445,9 @@ Requirement IDs:            (FR-xx / NFR-xx, or "none — no behaviour change")
 Files/modules changed:
 Behaviour changed:
 Tests added/updated:        (the exact command to run them)
+Gate results:                (the exact output of the four check scripts)
 Acceptance criteria met:    (the criterion ID + the measured result)
-Performance impact:         (measured, or "none")
+Performance impact:         (measured, or "none", or "not measured — <reason>")
 Security/privacy impact:    (new input / permission / stored value: yes/no)
 Documentation updated:
 Known limitations:          (open, because …)
@@ -418,9 +472,11 @@ Command: ./gradlew :test-runner:test
 | Source file size, hard limit | 550 lines | RULE 1 in [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) |
 | Repository language | English only | this file, section 2 |
 | Test gate in CI | `./gradlew :test-runner:test` | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| Structure gate in CI | the four `scripts/check-*.sh` | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 | Lint gate in CI | `:app:lintGoogletvDebug`, `:app:lintFiretvDebug` | [`.github/workflows/lint.yml`](.github/workflows/lint.yml) |
 | Build gate in CI | `:app:assembleGoogletvDebug`, `:app:assembleFiretvDebug` | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 | Release severity levels | S0 … S4, no release with a known S4 | [`docs/quality/QUALITY.md`](docs/quality/QUALITY.md) |
+| The measured state of all gates | the tables of the six dimensions | [`docs/quality/QUALITY.md`](docs/quality/QUALITY.md) |
 | Performance budgets | RAM ≤ 150 MB, CPU ≤ 30 %, ≥ 25 fps, ≤ 100 ms latency, A/V drift ≤ 40 ms | NFR-01…NFR-04 and [`docs/spec/ACCEPTANCE_CRITERIA.md`](docs/spec/ACCEPTANCE_CRITERIA.md) |
 | Privacy promise | no ads, no analytics, no telemetry, local network only | NFR-11 and [`PRIVACY.md`](PRIVACY.md) |
 | Decision records | ADR-001 … ADR-004 | [`docs/decisions/`](docs/decisions/) |

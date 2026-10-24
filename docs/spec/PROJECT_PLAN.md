@@ -60,7 +60,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | 8 | M8 – Stability | 🟠 Partial | The frame-queue budget and the mDNS registration bookkeeping are proven by unit tests; the 30-minute session, the RAM, the CPU and the re-advertisement after a network outage are **not measured** |
 | 9 | M9 – Fire TV | 🟡 Implemented, device validation open | The flavour builds, carries no Play Services and degrades honestly; it has never been run on a Fire TV |
 | 10 | M10 – i18n | 🟠 Partial | EN / DE / FR are complete (80 keys each) and proven by `scripts/check-i18n-completeness.sh`; the RTL baseline and the locale-aware formatting are still open; the texts have never been seen on a device |
-| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | The JVM suite is green (457 tests, 0 failures at the measured run; 469 test methods in the tree today) and both debug APKs build. **The CI quality gate is green** (all four structure checks exit 0) and **the lint is green for both flavours** (the `firetv` variant was analysed for the first time). Still open: no signed APK was cut, no device test was executed, three S4 findings are open, the README contradicts the code |
+| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | The JVM suite is green (**511 tests, 0 failures, 0 errors, 0 skipped**, 59 test classes) and both debug APKs build. **The CI quality gate is green** (all four structure checks exit 0) and **the lint is green for both flavours** (the `firetv` variant was analysed for the first time). The three High findings of the security audit are closed and measured. Still open: no signed APK was cut, no device test was executed, and SEC-04 needs a written owner decision |
 | 12 | M12 – DLNA | 🟠 Partial — control plane delivered, media path open | SSDP, description server, hardened SOAP dispatcher, GENA eventing, the Samsung DIAL extension and the playback wiring are implemented with 169 test methods; the media URI now has an **address policy** (loopback, link-local / metadata, multicast, broadcast, obfuscated notations and user info are refused) — still open: the **scheme list** of the media URI, the accepted **public addresses** and the **un-resolved host names** (finding SEC-04, S3 — it needs a written owner decision), no cleartext configuration exists, and no control point has ever talked to the renderer |
 
 The per-milestone acceptance records live in
@@ -361,13 +361,13 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [x] Documentation updated (README, TROUBLESHOOTING, INSTALLATION, PROJECT_PLAN)
 - [x] Community bug fixes merged (screen awake, mDNS standby recovery, iOS 17+ RTSP limit, IPv4 wildcard binding)
 - [x] CI quality gate with four repository structure checks (`.github/workflows/ci.yml`, job `quality-gate`)
-- [x] JVM test suite green — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. The tree holds 469 test methods in 56 test classes today (static count; the suite was not re-run in the second pass)
-- [x] Both debug flavours build — measured: `BUILD SUCCESSFUL`
-- [x] Make the quality gate green — **closed and measured**: all four structure checks exit 0 (`check-file-size.sh`: `184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh`: `227 class declaration(s) checked, all of them have a KDoc header`; `check-docs-links.sh` and `check-i18n-completeness.sh` green as well). Risk R-07 is closed
-- [x] Make the lint green for both flavours — **closed and measured**: `:app:lintGoogletvDebug` → `BUILD SUCCESSFUL` (5m 12s), `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s), both reports say `No issues found.` The finding was `android:usesPermissionFlags` without `tools:targetApi="31"`. Risk R-16 is closed
+- [x] JVM test suite green — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle it was 277 tests
+- [x] Both debug flavours build — measured: `BUILD SUCCESSFUL` (Google TV 1m 40s, Fire TV 1m 13s)
+- [x] Make the quality gate green — **closed and measured**: all four structure checks exit 0 (`check-file-size.sh`: `189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh`: `233 class declaration(s) checked, all of them have a KDoc header`; `check-docs-links.sh`: `192 internal link(s) resolve`; `check-i18n-completeness.sh`: `80 key(s) … complete in 2 language(s)`). Risk R-07 is closed
+- [x] Make the lint green for both flavours — **closed and measured**: `:app:lintGoogletvDebug` and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (8m 50s), both reports say `No issues found.` The finding was `android:usesPermissionFlags` without `tools:targetApi="31"`. Risk R-16 is closed
 - [ ] Produce and verify the signed v1.0.0 APKs (`apksigner verify`) — **open: the keystore is the owner's**
 - [ ] Real-device A/V validation on Google TV and Fire TV hardware — **open: no device; 0 of 15 device test cases executed**
-- [ ] Close the three open S4 findings (SEC-01, SEC-02, SEC-03) or get a written owner decision for each
+- [x] Close the three S4 findings of the security audit — **closed and measured**: SEC-01 (the AirPlay media URL is checked before the player fetches it), SEC-02 (the picture decoder reads the dimensions first and has a pixel budget), SEC-03 (the reassembled FU-A unit is bounded to 8 MB). SEC-04 stays open as an S3 with a written owner decision (the scheme list of the media URI)
 - [ ] Stable v1.0.0 release
 
 **Definition of Done (2026-10-24):** AC-M11.1 … AC-M11.8 (plus the legacy round AR-8 / `AC-8.x`). Acceptance record: [`../acceptance/M11-ACCEPTANCE.md`](../acceptance/M11-ACCEPTANCE.md).
@@ -382,9 +382,9 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 **Goal:** Provide native media streaming for Windows ("Cast to Device"), VLC, BubbleUPnP, and Android UPnP controllers via an incremental, secure, and fully unit-tested DLNA MediaRenderer stack.
 
 > **Note (2026-10-24, second pass).** The sub-phases below were unchecked in this plan
-> although the code exists: `app/src/main/kotlin/com/phairplay/dlna/` holds 29
-> production files and 169 of the 469 test methods in the tree (157 of the 457
-> green tests of the measured run). The boxes now reflect the code. What is
+> although the code exists: `app/src/main/kotlin/com/phairplay/dlna/` holds 28
+> production files and a large part of the 511 green test methods of the measured
+> run. The boxes now reflect the code. What is
 > **not** done is stated explicitly in each box.
 
 ### Sub-Phase D1: Discovery & Receiver Foundation

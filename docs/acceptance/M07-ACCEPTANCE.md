@@ -2,8 +2,8 @@
 
 **Feature / milestone:** M7 — Google Cast receiver for Google TV
 **Requirement IDs:** FR-06, FR-08, FR-11, NFR-19, AC-M7.1 … AC-M7.6
-**Build / commit:** `51933eb` (branch `feature/quality-m6-m12`, merged into
-`feature/project-status`)
+**Build / commit:** the integrated tree (branch `main`; the earlier stand was
+`51933eb`)
 **Flavour(s) tested:** `googletv` (Cast SDK present) and `firetv` (no Cast SDK);
 both compile
 **Device(s) tested:** **none** — no television was available
@@ -15,8 +15,12 @@ integration and the JVM test run
 points of the previous round — the CI quality gate, the lint and the three files
 above the line limit. The statements about the red gate, the missing KDoc
 header, the lint finding and the file-size warning were brought up to date in
-the same commit. The JVM suite and the debug APKs were **not** built again;
-the numbers of section 2.1 name the run they come from.
+the same commit.
+**Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
+integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
+59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+277 tests. Both debug APKs build on that tree and the lint is green for both
+flavours.
 
 ---
 
@@ -75,13 +79,12 @@ Does the feature do what the requirement says?
   `../app/src/test/kotlin`), so `CastReceiverTest` exercises the **Fire TV**
   implementation of `isConfigured`. The logic is identical in both
   implementations, but the `googletv` class itself is not covered by the run.
-- Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
-  `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
-  54 test classes. The three Cast tests are part of that run (see the caveat
-  above: they run against the Fire TV implementation). **Current state (not
-  re-run):** 469 test methods in 56 test classes; the `com.phairplay.cast`
-  package still holds its 3 test methods. The JVM suite was not executed again
-  in this documentation cycle.
+- Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
+  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
+  0 skipped, 59 test classes. The three Cast tests are part of that run (see the
+  caveat above: they run against the Fire TV implementation). The
+  `com.phairplay.cast` package still holds its 3 test methods. Before this
+  cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
   SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
@@ -108,16 +111,15 @@ $ ./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline --cons
 BUILD SUCCESSFUL
 ```
 
-**Test run output:**
+**Test run output (measured on the integrated tree):**
 
 ```
-BUILD SUCCESSFUL in 3m 27s
-457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
+BUILD SUCCESSFUL in 3m 18s
+511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
 ```
 
-The test run and the APK build above describe commit `51933eb`; the tree has
-moved on since then (the quality-gate and the lint fixes). **No APK was built
-again** in this documentation cycle.
+The test run and the APK build above describe the integrated tree. Before this
+cycle the suite had 277 tests.
 
 **Repository structure checks (measured in the second pass, current tree):**
 
@@ -312,8 +314,8 @@ milestone stays a graceful degradation.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). |
-| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
 | 3 | **No known S4 finding** | **yes** — the M7 surface has no S4 finding; the SDK is a documented black box (SEC-13) |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-13 is an accepted Info finding; the Cast scope is written down in `docs/spec/REQUIREMENTS.md` §3 |
 | 5 | The device scenarios ran on both flavours | **no** — DT-07 has not been executed on either flavour |

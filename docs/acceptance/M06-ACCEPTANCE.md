@@ -3,8 +3,8 @@
 **Feature / milestone:** M6 — Miracast / Wi-Fi Display receiver
 **Requirement IDs:** FR-13 … FR-18 (status "not implemented" for the media path),
 FR-58 … FR-60 (scope exclusion), AC-M6.1 … AC-M6.8
-**Build / commit:** `51933eb` (branch `feature/quality-m6-m12`, merged into
-`feature/project-status`)
+**Build / commit:** the integrated tree (branch `main`; the earlier stand was
+`51933eb`)
 **Flavour(s) tested:** `googletv` and `firetv` — both compile; the Miracast code is
 in the shared `main` source set, so both flavours carry the identical implementation
 **Device(s) tested:** **none** — no television was available
@@ -16,8 +16,12 @@ implementation and the JVM test run
 points of the previous round — the CI quality gate, the lint and the three files
 above the line limit. The statements about the red gate, the missing KDoc
 headers, the 439-line file and the single lint finding were brought up to date
-in the same commit. The JVM suite and the debug APKs were **not** built again;
-the numbers of section 2.1 name the run they come from.
+in the same commit.
+**Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
+integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
+59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+277 tests. Both debug APKs build on that tree and the lint is green for both
+flavours.
 
 ---
 
@@ -69,15 +73,11 @@ Does the feature do what the requirement says?
   now lives in its own file, `WfdRtspServer.kt`, with its own KDoc header.
 - Every new public method has a test: **partly** — five tests exist in
   `MiracastReceiverTest`; the `503` path (AC-M6.5) has none.
-- Tests green — `./gradlew :test-runner:test`: **yes** — measured on
-  `51933eb`: `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors,
-  0 skipped, across 54 test classes. The five Miracast tests are part of that
-  run. **Current state (not re-run):** the runner's source set now holds **469**
-  test methods in **56** test classes — a static count of the `@Test`
-  annotations after excluding the 38 methods of the six excluded files. The
-  `com.phairplay.miracast` package still holds its 5 test methods. The JVM
-  suite was not executed again in this documentation cycle, so the number is a
-  static count and not a fresh run result.
+- Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
+  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
+  0 skipped, across 59 test classes. The five Miracast tests are part of that
+  run. Before this cycle the suite had 277 tests. The
+  `com.phairplay.miracast` package still holds its 5 test methods.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
   SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
@@ -105,16 +105,14 @@ $ ./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline --cons
 BUILD SUCCESSFUL
 ```
 
-Both debug APKs are produced from the same commit the JVM suite was run on
-(`51933eb`). The tree has moved on since then (the quality-gate and the lint
-fixes); **no APK was built again** in this documentation cycle, so the two
-measurements above describe `51933eb`, not the current head.
+Both debug APKs are produced from the integrated tree — the same tree the JVM
+suite was run on.
 
-**Test run output:**
+**Test run output (measured on the integrated tree):**
 
 ```
-BUILD SUCCESSFUL in 3m 27s
-457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
+BUILD SUCCESSFUL in 3m 18s
+511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
 ```
 
 **Repository structure checks (measured in the second pass, current tree):**
@@ -335,9 +333,9 @@ defined in [`../quality/QUALITY.md`](../quality/QUALITY.md) §7.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). |
-| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
-| 3 | **No known S4 finding** | **yes for this milestone** — the M6 surface has no S4 finding; the open S4 findings (SEC-01, SEC-02, SEC-03) belong to AirPlay and the UI track, not to M6 |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured) |
+| 3 | **No known S4 finding** | **yes for this milestone** — the M6 surface has no S4 finding; the three S4 findings of the audit (SEC-01, SEC-02, SEC-03) belonged to the AirPlay and the UI track and are now **closed and measured** |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-06 and SEC-07 are the findings that touch M6; both carry a written decision in `docs/audit/2026-10-24-security-audit.md` §7 |
 | 5 | The device scenarios ran on both flavours | **no** — DT-06 has not been executed on either flavour |
 | 6 | The file-size rule holds for the touched files | **yes** — `MiracastReceiver.kt` 260 lines and `WfdRtspServer.kt` 205 lines, both below the soft limit of 400. `bash scripts/check-file-size.sh` → exit 0 with `0 warning(s) above the soft limit of 400 lines`. Risk R-17. |
