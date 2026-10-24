@@ -69,10 +69,23 @@ object RtpInterleaved {
     private const val MAX_RTP_FRAME_BYTES = 2 * 1024 * 1024  // 2 MB
 
     /**
+     * Maximum size of a reassembled FU-A NAL unit.
+     *
+     * WHY 8 MB: the cap on a single frame ([MAX_RTP_FRAME_BYTES]) only bounds one RTP
+     * packet, not the NAL unit that is assembled from many of them. A peer that opens a
+     * fragmented NAL unit and never sends the end bit would therefore grow the
+     * accumulator until the process dies with an `OutOfMemoryError` (security audit
+     * 2026-10-24, SEC-03). A real IDR slice of a 4K frame is a few hundred kilobytes,
+     * so 8 MB leaves a wide margin and never touches a legitimate stream.
+     */
+    private const val MAX_FUA_BYTES = 8 * 1024 * 1024  // 8 MB
+
+    /**
      * Reads RTP interleaved frames from [inputStream] until the connection ends.
      *
      * SECURITY: Frame length is capped at [MAX_RTP_FRAME_BYTES]. Oversized frames
      * are rejected to prevent heap exhaustion via malicious AirPlay senders.
+     * A reassembled FU-A NAL unit is capped at [MAX_FUA_BYTES] for the same reason.
      *
      * @param inputStream   The raw TCP InputStream from the RTSP socket, positioned
      *                      immediately after the 200 OK response to RECORD was sent.
@@ -218,6 +231,10 @@ object RtpInterleaved {
      * ```
      * The original NAL unit header is reconstructed from NRI + original NAL type.
      *
+     * SECURITY: the assembled unit is capped at [MAX_FUA_BYTES]. A fragment that would
+     * cross the cap is discarded together with the incomplete unit, so a peer that never
+     * sends the end bit cannot grow the buffer without limit (audit SEC-03).
+     *
      * @return Updated accumulator, or null when the NAL unit is complete or on error.
      */
     private fun handleFuaFragment(
@@ -256,8 +273,26 @@ object RtpInterleaved {
 
         // Append the fragment data (skip FU indicator byte + FU header byte)
         val fragmentStart = payloadOffset + 2
-        if (fragmentStart < rtpFrame.size) {
-            accumulator.write(rtpFrame, fragmentStart, rtpFrame.size - fragmentStart)
+        val fragmentBytes = if (fragmentStart < rtpFrame.size) rtpFrame.size - fragmentStart else 0
+
+        // SECURITY (security audit 2026-10-24, SEC-03): the reassembled NAL unit is
+        // bounded. The frame cap above only bounds a single RTP packet — a peer that
+        // opens an FU-A unit and never sends the end bit would otherwise grow the
+        // accumulator without limit and kill the process with an OutOfMemoryError.
+        // The check happens BEFORE the append, so the buffer never exceeds the limit.
+        // Only the size is logged, never the content.
+        if (accumulator.size().toLong() + fragmentBytes > MAX_FUA_BYTES) {
+            Logger.w(
+                "RtpInterleaved: FU-A unit exceeds the limit of $MAX_FUA_BYTES B " +
+                    "(${accumulator.size()} B assembled + $fragmentBytes B fragment) — discarding"
+            )
+            // Drop the fragment AND the incomplete unit. The next FU-A start fragment
+            // therefore begins a clean unit instead of continuing a truncated one.
+            return null
+        }
+
+        if (fragmentBytes > 0) {
+            accumulator.write(rtpFrame, fragmentStart, fragmentBytes)
         }
 
         return if (isEnd) {

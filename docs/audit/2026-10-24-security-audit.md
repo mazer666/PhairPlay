@@ -290,6 +290,34 @@ fun `a FU-A stream that never ends does not grow without bound`() {
 }
 ```
 
+**Status as of 2026-10-24 (implemented by the AirPlay track):**
+the reassembled FU-A NAL unit is bounded. `RtpInterleaved.MAX_FUA_BYTES` (8 MB) caps
+the accumulator, and the check runs **before** the append, so the buffer never exceeds
+the limit — not even for a moment. A fragment that would cross the cap is discarded
+together with the incomplete unit, a warning with the two sizes is logged (never the
+content), and nothing is handed to the decoder. Because the incomplete unit is dropped
+as well, the next FU-A start fragment begins a clean unit again.
+
+Tests: `RtpInterleavedTest` — `a FU-A stream that never ends does not grow without
+bound`, `the incomplete FU-A unit is dropped when the limit is exceeded`, `a new FU-A
+start fragment works again after the limit was exceeded`, `a normal FU-A stream is
+reassembled completely` and `a large but legitimate FU-A unit below the limit is still
+reassembled`.
+
+One detail of the proposed test above had to be corrected: the interleaved frame header
+carries a **16-bit** length field (RFC 2326 §10.12), so one RTP packet on the TCP
+channel is at most 65 535 bytes — a 1 MB fragment cannot be sent that way. The
+implementation therefore drives the limit with 129 fragments of the maximum size
+(≈ 8.4 MB of traffic), which is the cheapest way for an attacker to reach the cap. For
+the same reason `MAX_RTP_FRAME_BYTES` (2 MB) can never be exceeded on this path: the
+effective frame limit is the 64 KB of the framing itself.
+
+**Still open:** nothing that belongs to this finding. The buffer lives in the read loop
+of one mirroring session, and the receiver accepts one session at a time, so the worst
+case is 8 MB per session. A peer that keeps sending fragments after its unit was
+discarded produces one warning per fragment — that is a logging nuisance, not a memory
+one.
+
 ---
 
 ### 3.2 Medium
