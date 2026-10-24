@@ -104,14 +104,31 @@ class SsdpAdvertiser(
         }
     }
 
+    /**
+     * Announces the device to the network.
+     *
+     * WHY the Samsung target is announced as well: a Samsung TV does not only send
+     * an `M-SEARCH`, it also listens for the passive announcement of a receiver.
+     * The announcement is cheap and does not change the answers of a search.
+     */
     private fun sendAlive() {
-        listOf(SsdpMessages.ROOT_DEVICE, SsdpMessages.MEDIA_RENDERER, udn).forEach { nt ->
+        listOf(
+            SsdpMessages.ROOT_DEVICE,
+            SsdpMessages.MEDIA_RENDERER,
+            udn,
+            SsdpMessages.SAMSUNG_MULTI_SCREEN
+        ).forEach { nt ->
             send(SsdpMessages.notifyAlive(location, udn, nt), groupAddress, SsdpMessages.PORT)
         }
     }
 
     private fun sendByebye() {
-        listOf(SsdpMessages.ROOT_DEVICE, SsdpMessages.MEDIA_RENDERER, udn).forEach { nt ->
+        listOf(
+            SsdpMessages.ROOT_DEVICE,
+            SsdpMessages.MEDIA_RENDERER,
+            udn,
+            SsdpMessages.SAMSUNG_MULTI_SCREEN
+        ).forEach { nt ->
             send(SsdpMessages.notifyByebye(udn, nt), groupAddress, SsdpMessages.PORT)
         }
     }

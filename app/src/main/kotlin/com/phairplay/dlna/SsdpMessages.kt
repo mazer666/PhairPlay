@@ -18,6 +18,17 @@ object SsdpMessages {
     const val MEDIA_RENDERER = "urn:schemas-upnp-org:device:MediaRenderer:1"
 
     /**
+     * The search target a Samsung TV and the Samsung Smart View app use to find a
+     * receiver.
+     *
+     * WHY: they do not search for a UPnP MediaRenderer. They send an `M-SEARCH`
+     * with this target and expect a 200 OK that names the location of the device
+     * description. The DIAL documents behind that location are built by
+     * [DialAppCatalog].
+     */
+    const val SAMSUNG_MULTI_SCREEN = "urn:samsung.com:service:MultiScreenService:1"
+
+    /**
      * Returns true when [message] is an `M-SEARCH` this device has to answer.
      *
      * @param message the raw datagram payload.
@@ -32,6 +43,7 @@ object SsdpMessages {
         return target.equals("ssdp:all", ignoreCase = true) ||
             target.equals(ROOT_DEVICE, ignoreCase = true) ||
             target.equals(MEDIA_RENDERER, ignoreCase = true) ||
+            target.equals(SAMSUNG_MULTI_SCREEN, ignoreCase = true) ||
             (udn != null && target.equals(udn, ignoreCase = true))
     }
 

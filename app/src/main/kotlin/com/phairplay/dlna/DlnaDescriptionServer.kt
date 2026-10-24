@@ -7,7 +7,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.OutputStream
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ArrayBlockingQueue
@@ -42,6 +41,7 @@ class DlnaDescriptionServer(
     @Volatile private var running = false
     private val genaScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val genaEvents = GenaEventManager(localHost, genaScope)
+    private val dialCatalog = DialAppCatalog()
     private val soapDispatcher = DlnaSoapDispatcher(
         playbackController = playbackController,
         onLastChange = { eventPath, lastChange -> genaEvents.publish(eventPath, lastChange) }
@@ -63,6 +63,16 @@ class DlnaDescriptionServer(
     /** The URL a control point has to fetch to learn about this renderer. */
     val descriptionUrl: String
         get() = "http://$localHost:$port/description.xml"
+
+    /**
+     * The DIAL application URL a Samsung control point fetches after the discovery.
+     *
+     * WHY: the device description carries this URL in its `Application-Url` header.
+     * The control point then reads the DIAL app list and the app info behind it
+     * (see [DialAppCatalog]).
+     */
+    val applicationUrl: String
+        get() = "http://$localHost:$port/dial"
 
     /** Starts the server. */
     fun start(scope: CoroutineScope) {        if (running) return
@@ -110,7 +120,7 @@ class DlnaDescriptionServer(
             } catch (e: java.util.concurrent.RejectedExecutionException) {
                 // Too many clients — answer with a fixed text and close the socket.
                 runCatching {
-                    writeResponse(client.outputStream, 503, "Service Unavailable", "text/plain", "Server busy")
+                    DlnaHttpResponses.write(client.outputStream, 503, "Service Unavailable", "text/plain", "Server busy")
                 }
                 runCatching { client.close() }
             }
@@ -128,11 +138,11 @@ class DlnaDescriptionServer(
                 return
             }
             when (request.method) {
-                "GET", "HEAD" -> serveDescription(client, request.path)
+                "GET", "HEAD" -> serveRead(client, request.path)
                 "POST" -> serveControl(client, request)
                 "SUBSCRIBE" -> handleSubscribe(client, request)
                 "UNSUBSCRIBE" -> handleUnsubscribe(client, request)
-                else -> writeResponse(
+                else -> DlnaHttpResponses.write(
                     client.outputStream,
                     405,
                     "Method Not Allowed",
@@ -146,32 +156,102 @@ class DlnaDescriptionServer(
     /** Answers a failed request with a status that says nothing about the internals. */
     private fun respondToFailure(client: Socket, failure: HttpFailure?) {
         when (failure) {
-            HttpFailure.REQUEST_LINE_TOO_LONG -> writeResponse(
+            HttpFailure.REQUEST_LINE_TOO_LONG -> DlnaHttpResponses.write(
                 client.outputStream, 414, "URI Too Long", "text/plain", "Request line too long"
             )
-            HttpFailure.HEADERS_TOO_LARGE -> writeResponse(
+            HttpFailure.HEADERS_TOO_LARGE -> DlnaHttpResponses.write(
                 client.outputStream, 431, "Request Header Fields Too Large", "text/plain", "Headers too large"
             )
-            HttpFailure.BODY_TOO_LARGE -> writeResponse(
+            HttpFailure.BODY_TOO_LARGE -> DlnaHttpResponses.write(
                 client.outputStream, 413, "Payload Too Large", "text/plain", "Request body too large"
             )
-            HttpFailure.TIMEOUT -> writeResponse(
+            HttpFailure.TIMEOUT -> DlnaHttpResponses.write(
                 client.outputStream, 408, "Request Timeout", "text/plain", "Request timeout"
             )
-            else -> writeResponse(
+            else -> DlnaHttpResponses.write(
                 client.outputStream, 400, "Bad Request", "text/plain", "Bad request"
             )
+        }
+    }
+
+    /**
+     * Serves a read request.
+     *
+     * WHY the DIAL documents come first: a Samsung control point asks for `/dial/`
+     * and `/dial/<AppId>` before it asks for the device description. Every other
+     * path belongs to the UPnP description.
+     */
+    private fun serveRead(client: Socket, path: String) {
+        val cleanPath = path.substringBefore('?')
+        val dialPath = DialAppCatalog.BASE_PATH
+        if (cleanPath == dialPath || cleanPath == "$dialPath/") {
+            DlnaHttpResponses.write(
+                client.outputStream,
+                200,
+                "OK",
+                DIAL_CONTENT_TYPE,
+                dialCatalog.appsListXml()
+            )
+            return
+        }
+        if (cleanPath.startsWith("$dialPath/")) {
+            serveDialApp(client, cleanPath.removePrefix("$dialPath/"))
+            return
+        }
+        serveDescription(client, cleanPath)
+    }
+
+    /**
+     * Serves the DIAL app info of one app.
+     *
+     * WHY an unknown id is answered with 404: the app id is the only value that
+     * comes from the request. An id that is not the app of this renderer has no
+     * document — and the answer says so instead of returning an empty one.
+     */
+    private fun serveDialApp(client: Socket, appId: String) {
+        val body = dialCatalog.appInfoXml(appId)
+        if (body == null) {
+            DlnaHttpResponses.write(
+                client.outputStream,
+                404,
+                "Not Found",
+                "text/plain",
+                "Not Found"
+            )
+        } else {
+            DlnaHttpResponses.write(client.outputStream, 200, "OK", DIAL_CONTENT_TYPE, body)
         }
     }
 
     private fun serveDescription(client: Socket, path: String) {
         val body = bodyFor(path)
         if (body == null) {
-            writeResponse(client.outputStream, 404, "Not Found", "text/plain", "Not Found")
+            DlnaHttpResponses.write(client.outputStream, 404, "Not Found", "text/plain", "Not Found")
         } else {
-            writeResponse(client.outputStream, 200, "OK", "text/xml; charset=\"utf-8\"", body)
+            DlnaHttpResponses.write(
+                client.outputStream,
+                200,
+                "OK",
+                "text/xml; charset=\"utf-8\"",
+                body,
+                descriptionHeaders(path)
+            )
         }
     }
+
+    /**
+     * Returns the headers of the device description.
+     *
+     * WHY the `Application-Url` header: a Samsung control point learns from it
+     * where the DIAL documents are. Without the header the TV finds the renderer
+     * but opens an empty app list.
+     */
+    private fun descriptionHeaders(path: String): Map<String, String> =
+        if (path == "/" || path == "/description.xml") {
+            mapOf("Application-Url" to applicationUrl)
+        } else {
+            emptyMap()
+        }
 
     private fun serveControl(client: Socket, request: HttpRequest) {
         val result = soapDispatcher.dispatch(
@@ -179,7 +259,7 @@ class DlnaDescriptionServer(
             soapAction = request.headers["soapaction"],
             body = request.body
         )
-        writeResponse(
+        DlnaHttpResponses.write(
             client.outputStream,
             result.statusCode,
             result.statusMessage,
@@ -197,7 +277,7 @@ class DlnaDescriptionServer(
             )
         }
         subscription.onSuccess { created ->
-            writeHeaders(
+            DlnaHttpResponses.writeHeaders(
                 client.outputStream,
                 200,
                 "OK",
@@ -211,7 +291,7 @@ class DlnaDescriptionServer(
                 )
             )
         }.onFailure {
-            writeResponse(
+            DlnaHttpResponses.write(
                 client.outputStream,
                 412,
                 "Precondition Failed",
@@ -223,9 +303,9 @@ class DlnaDescriptionServer(
 
     private fun handleUnsubscribe(client: Socket, request: HttpRequest) {
         if (genaEvents.unsubscribe(request.headers["sid"])) {
-            writeHeaders(client.outputStream, 200, "OK", emptyMap())
+            DlnaHttpResponses.writeHeaders(client.outputStream, 200, "OK", emptyMap())
         } else {
-            writeResponse(
+            DlnaHttpResponses.write(
                 client.outputStream,
                 412,
                 "Precondition Failed",
@@ -262,51 +342,6 @@ class DlnaDescriptionServer(
             else -> null
         }
 
-    private fun writeResponse(
-        output: OutputStream,
-        statusCode: Int,
-        statusMessage: String,
-        contentType: String,
-        body: String
-    ) {
-        val bytes = body.toByteArray(Charsets.UTF_8)
-        val header = listOf(
-            "HTTP/1.1 $statusCode $statusMessage",
-            "Connection: close",
-            "Content-Type: $contentType",
-            "Content-Length: ${bytes.size}",
-            "",
-            ""
-        ).joinToString("\r\n")
-        runCatching {
-            output.write(header.toByteArray(Charsets.US_ASCII))
-            output.write(bytes)
-            output.flush()
-        }.onFailure { Logger.w("DLNA response write failed: ${it.javaClass.simpleName}") }
-    }
-
-    private fun writeHeaders(
-        output: OutputStream,
-        statusCode: Int,
-        statusMessage: String,
-        headers: Map<String, String>
-    ) {
-        val baseHeaders = mutableMapOf(
-            "Connection" to "close",
-            "Content-Length" to "0"
-        )
-        baseHeaders.putAll(headers)
-        val header = buildString {
-            append("HTTP/1.1 $statusCode $statusMessage\r\n")
-            baseHeaders.forEach { (key, value) -> append("$key: $value\r\n") }
-            append("\r\n")
-        }
-        runCatching {
-            output.write(header.toByteArray(Charsets.US_ASCII))
-            output.flush()
-        }.onFailure { Logger.w("DLNA response write failed: ${it.javaClass.simpleName}") }
-    }
-
     /**
      * Discards the request bytes the client has not sent yet.
      *
@@ -329,6 +364,9 @@ class DlnaDescriptionServer(
     }
 
     companion object {
+        /** The content type of the DIAL documents. */
+        private const val DIAL_CONTENT_TYPE = "text/xml; charset=\"utf-8\""
+
         /** Time a single socket read may block. */
         private const val READ_TIMEOUT_MS = 2_000
 
