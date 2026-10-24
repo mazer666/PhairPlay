@@ -14,8 +14,23 @@ package com.phairplay.dlna
  */
 object DlnaDescriptionBuilder {
 
+    /** The page of the project — the manufacturer of the device. */
+    const val MANUFACTURER_URL = "https://github.com/mazer666/PhairPlay"
+
+    /** The page that describes the model — a Samsung TV reads this field. */
+    const val MODEL_URL = "https://github.com/mazer666/PhairPlay"
+
+    /** The serial number of a device whose UDN carries no usable characters. */
+    private const val DEFAULT_SERIAL_NUMBER = "PhairPlay"
+
     /**
      * Builds the device description document.
+     *
+     * WHY the extra fields: a Samsung TV does not read the device description the
+     * same way a UPnP control point does. It expects a complete set of device
+     * fields — among them `serialNumber` and `modelURL` — and skips a device whose
+     * description is incomplete. `friendlyName` is the name the TV shows in its
+     * device list, so it has to be the name of the television.
      *
      * @param friendlyName the name shown in the control point's device list.
      * @param udn the unique device identifier, e.g. `uuid:…`.
@@ -29,6 +44,7 @@ object DlnaDescriptionBuilder {
         val name = friendlyName.xmlEscaped()
         val escapedUdn = udn.xmlEscaped()
         val escapedUrl = presentationUrl.xmlEscaped()
+        val serial = serialNumberFor(udn).xmlEscaped()
         return """
             <?xml version="1.0"?>
             <root xmlns="urn:schemas-upnp-org:device-1-0">
@@ -40,10 +56,12 @@ object DlnaDescriptionBuilder {
                 <deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
                 <friendlyName>$name</friendlyName>
                 <manufacturer>PhairPlay</manufacturer>
-                <manufacturerURL>https://github.com/mazer666/PhairPlay</manufacturerURL>
+                <manufacturerURL>$MANUFACTURER_URL</manufacturerURL>
                 <modelDescription>PhairPlay DLNA MediaRenderer</modelDescription>
                 <modelName>PhairPlay</modelName>
                 <modelNumber>1</modelNumber>
+                <modelURL>$MODEL_URL</modelURL>
+                <serialNumber>$serial</serialNumber>
                 <UDN>$escapedUdn</UDN>
                 <presentationURL>$escapedUrl</presentationURL>
                 <serviceList>
@@ -54,6 +72,37 @@ object DlnaDescriptionBuilder {
               </device>
             </root>
         """.trimIndent()
+    }
+
+    /**
+     * Derives the serial number of the device from its UDN.
+     *
+     * WHY: the device description wants a serial number that stays the same over
+     * the lifetime of the device. The UDN is already a stable and unique id, so
+     * its uuid part is used — with every character that does not belong in a
+     * serial number replaced by a dash.
+     *
+     * @param udn the unique device identifier, e.g. `uuid:…`.
+     * @return the serial number, for example `550e8400-e29b-41d4-a716-446655440000`.
+     */
+    internal fun serialNumberFor(udn: String): String {
+        val uuidPart = udn.trim()
+            .removePrefix("uuid:")
+            .removePrefix("uuid-")
+        val serial = buildString {
+            uuidPart.forEach { character ->
+                if (character in 'a'..'z' ||
+                    character in 'A'..'Z' ||
+                    character in '0'..'9' ||
+                    character == '-'
+                ) {
+                    append(character)
+                } else {
+                    append('-')
+                }
+            }
+        }.trim('-')
+        return serial.ifBlank { DEFAULT_SERIAL_NUMBER }
     }
 
     /**

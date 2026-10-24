@@ -11,6 +11,12 @@ package com.phairplay.dlna
  *   others (VLC uses the rootdevice answer to build its renderer list).
  * - Every other search target is answered with exactly one datagram.
  *
+ * The Samsung search target `urn:samsung.com:service:MultiScreenService:1` also
+ * gets exactly one datagram. A Samsung TV asks with it, and the answer carries
+ * the same location as every other answer — the device description of this
+ * server. The DIAL documents behind that location are served by
+ * [DialAppCatalog].
+ *
  * The class is deliberately free of sockets: the advertiser owns the network, this
  * class owns the protocol. That makes the answer set testable without multicast.
  *
@@ -41,6 +47,8 @@ class SsdpResponder(
             requested.equals(SsdpMessages.MEDIA_RENDERER, ignoreCase = true) ->
                 listOf(SsdpMessages.MEDIA_RENDERER)
             requested.equals(udn, ignoreCase = true) -> listOf(udn)
+            requested.equals(SsdpMessages.SAMSUNG_MULTI_SCREEN, ignoreCase = true) ->
+                listOf(SsdpMessages.SAMSUNG_MULTI_SCREEN)
             else -> emptyList()
         }
     }
