@@ -59,12 +59,49 @@ object PhotoHandler {
     }
 }
 
+/**
+ * PhotoImageType — the image formats the AirPlay photo endpoint accepts.
+ *
+ * WHY: the payload is classified by its magic bytes and not by its file name, so the
+ * detected format has to carry the MIME type that belongs to it — the sender is
+ * answered with that type and the decoder is picked from it.
+ *
+ * Example:
+ *   PhotoImageType.JPEG.mimeType // "image/jpeg"
+ */
 enum class PhotoImageType(val mimeType: String) {
     JPEG("image/jpeg"),
     PNG("image/png")
 }
 
+/**
+ * PhotoValidation — the result of validating an AirPlay photo payload.
+ *
+ * WHY: the caller has to distinguish "this is a usable image" from "this is not", and
+ * it has to be able to say why a payload was rejected. A sealed class names both
+ * cases, so the compiler forces every caller to handle them.
+ *
+ * Example:
+ *   when (PhotoHandler.validatePhoto(bytes, "image/jpeg")) {
+ *       is PhotoValidation.Valid -> show(bytes)
+ *       is PhotoValidation.Invalid -> reject(validation.reason)
+ *   }
+ */
 sealed class PhotoValidation {
+    /**
+     * Valid — the payload is an image of a supported format.
+     *
+     * WHY: the caller needs the detected [PhotoImageType] to pick the decoder and to
+     * log the format, a plain yes/no answer would not carry it.
+     */
     data class Valid(val imageType: PhotoImageType) : PhotoValidation()
+
+    /**
+     * Invalid — the payload was rejected, [reason] says why.
+     *
+     * WHY: the reason is logged to explain the rejection and to tell a broken sender
+     * apart from an attack, so it has to travel with the result instead of staying
+     * inside the validation.
+     */
     data class Invalid(val reason: String) : PhotoValidation()
 }

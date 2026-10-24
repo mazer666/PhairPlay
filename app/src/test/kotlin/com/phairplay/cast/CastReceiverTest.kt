@@ -4,6 +4,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * CastReceiverTest — proves when the Google Cast receiver counts as configured.
+ *
+ * WHY: the Cast application ID is a build-time constant. If the placeholder value is
+ * treated as a real ID, the cast app shows up in the sender list and every session
+ * dies with an authentication error.
+ *
+ * Example:
+ *   CastReceiver.isConfigured("ABCD1234")
+ */
 class CastReceiverTest {
 
     @Test

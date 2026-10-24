@@ -4,6 +4,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * DlnaMediaTypeTest — proves how a DLNA URL is classified into media kind and MIME
+ * type.
+ *
+ * WHY: the renderer advertises what it can play and answers a play request with the
+ * matching MIME type. A URL that is classified wrongly is offered to the decoder and
+ * fails there, with a much harder to read error message.
+ *
+ * Example:
+ *   DlnaMediaType.kindFromUrl("http://host/movie.mp4")
+ */
 class DlnaMediaTypeTest {
 
     @Test

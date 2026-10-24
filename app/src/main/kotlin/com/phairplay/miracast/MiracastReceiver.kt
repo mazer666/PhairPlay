@@ -267,6 +267,17 @@ class MiracastReceiver(
     }
 }
 
+/**
+ * WfdRtspServer — the RTSP endpoint a Miracast sender opens after the WFD handshake.
+ *
+ * WHY: the Wi-Fi Display handshake only negotiates the connection; the session itself
+ * (OPTIONS, GET_PARAMETER, SETUP, PLAY, TEARDOWN) runs over RTSP. Without this server
+ * the sender has no session to stream into and the Miracast connection dies right
+ * after the handshake.
+ *
+ * Example:
+ *   WfdRtspServer(onSessionStarted = { ... }, onSessionStopped = { ... }).start(scope)
+ */
 internal class WfdRtspServer(
     private val onSessionStarted: () -> Unit,
     private val onSessionStopped: () -> Unit

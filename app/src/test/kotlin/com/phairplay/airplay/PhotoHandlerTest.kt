@@ -3,6 +3,16 @@ package com.phairplay.airplay
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * PhotoHandlerTest — proves which payloads the AirPlay photo endpoint accepts.
+ *
+ * WHY: the photo endpoint takes bytes straight from the network, so the magic-byte
+ * check and the content-type check are the only barrier between an attacker and the
+ * image decoder. A payload that slips through is decoded by the TV.
+ *
+ * Example:
+ *   PhotoHandler.validatePhoto(jpegBytes, "image/jpeg")
+ */
 class PhotoHandlerTest {
 
     @Test

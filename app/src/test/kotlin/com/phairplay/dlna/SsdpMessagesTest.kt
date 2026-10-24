@@ -5,6 +5,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * SsdpMessagesTest — proves which SSDP messages are answered and what an answer
+ * contains.
+ *
+ * WHY: SSDP is the first contact between a control point and the renderer. A search
+ * that is not recognised leaves the device invisible, and an answer without LOCATION
+ * or USN makes the control point drop it again.
+ *
+ * Example:
+ *   SsdpMessages.isRendererSearch(mSearchMessage)
+ */
 class SsdpMessagesTest {
 
     @Test

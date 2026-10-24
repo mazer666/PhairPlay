@@ -5,6 +5,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * PlistCodecTest — proves the binary property list codec of the AirPlay handshake.
+ *
+ * WHY: the handshake exchanges its setup information as a binary plist. If a value
+ * does not survive the round trip, the sender and the receiver disagree about the
+ * session and the stream never starts.
+ *
+ * Example:
+ *   PlistCodec.decode(PlistCodec.encode(mapOf("name" to "PhairPlay")))
+ */
 class PlistCodecTest {
 
     @Test

@@ -4,6 +4,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * DlnaDescriptionBuilderTest — proves the device and service description the DLNA
+ * renderer hands to a control point.
+ *
+ * WHY: the description document is the entry point of every DLNA session. A missing
+ * service, a wrong control URL or an unescaped friendly name keeps the renderer out
+ * of the control point's device list.
+ *
+ * Example:
+ *   DlnaDescriptionBuilder.deviceDescription("Living Room TV", "uuid:…", "http://…")
+ */
 class DlnaDescriptionBuilderTest {
 
     @Test

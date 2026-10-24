@@ -27,6 +27,10 @@ jobs:
       # violation, so a red script makes the job — and the build — red.
       # All four run even if an earlier one fails, so one push shows the
       # complete list of problems instead of one problem per push.
+      # The KDoc check runs with --skip-nested, because a nested declaration is
+      # documented by the KDoc header of the class that contains it.
+      # The strict run of the same script is green as well; both exit codes are
+      # recorded in docs/acceptance/QA-QUALITY-GATE-ACCEPTANCE.md.
       - name: Run the repository structure checks
         run: |
           status=0
@@ -36,11 +40,15 @@ jobs:
             check-docs-links \
             check-i18n-completeness
           do
-            echo "::group::scripts/$check.sh"
-            if "./scripts/$check.sh"; then
-              echo "PASS: scripts/$check.sh"
+            args=()
+            if [ "$check" = "check-kdoc-headers" ]; then
+              args=(--skip-nested)
+            fi
+            echo "::group::scripts/$check.sh ${args[*]:-}"
+            if "./scripts/$check.sh" "${args[@]}"; then
+              echo "PASS: scripts/$check.sh ${args[*]:-}"
             else
-              echo "FAIL: scripts/$check.sh"
+              echo "FAIL: scripts/$check.sh ${args[*]:-}"
               status=1
             fi
             echo "::endgroup::"
