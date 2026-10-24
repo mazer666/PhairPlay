@@ -8,6 +8,26 @@ import com.phairplay.util.Logger
  * Call parseResolution(sps) before configuring MediaCodec; malformed input returns null.
  */
 internal object H264SpsParser {
+
+    /** Side length of a macroblock in pixels (H.264 §3.3). */
+    private const val MACROBLOCK_SIZE = 16L
+
+    /**
+     * Smallest plausible picture dimension in pixels.
+     *
+     * Mirrors the plausibility check of the decoder (`VideoDecoder.isPlausibleSize`): a stream
+     * smaller than this is either broken or crafted, and the caller has a better answer (the
+     * resolution hint from the SDP).
+     */
+    private const val MIN_DIMENSION = 64L
+
+    /**
+     * Largest plausible picture dimension in pixels.
+     *
+     * 8192 px covers 8K (7680×4320) with room to spare. A larger coded size cannot come from a
+     * real screen and is refused instead of being handed to the decoder.
+     */
+    private const val MAX_DIMENSION = 8192L
     /**
      * Parses the H.264 SPS NAL unit to extract the actual video resolution.
      *
@@ -23,6 +43,13 @@ internal object H264SpsParser {
      * Handles Baseline (66), Main (77), and High profile (100+) SPS formats.
      * Returns null (graceful fallback) if the SPS is too short, malformed, or uses
      * an unsupported bitstream feature.
+     *
+     * SECURITY: the SPS is attacker-controlled input — every device on the LAN may send one.
+     * Every field is therefore treated as untrusted: the Exp-Golomb values are bounded
+     * ([SpsBitReader.MAX_UE_VALUE]), the geometry is computed in `Long` so that no intermediate
+     * value can overflow, and the resulting size is checked against [MIN_DIMENSION] /
+     * [MAX_DIMENSION] before it leaves this method. A hostile SPS therefore ends up as `null`
+     * (the caller falls back to its hint), never as a negative or absurd picture size.
      *
      * Exposed as `internal` for unit testing without an Android runtime.
      *
@@ -54,6 +81,9 @@ internal object H264SpsParser {
             val highProfiles = setOf(100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135)
             if (profileIdc in highProfiles) {
                 chromaFormatIdc = reader.readUe()
+                // The spec defines chroma_format_idc 0..3 only. A larger value means the SPS is
+                // inconsistent — continuing would desynchronise the bit reader.
+                if (chromaFormatIdc !in 0..3) return null
                 if (chromaFormatIdc == 3) {
                     separateColorPlaneFlag = reader.readBits(1)  // separate_colour_plane_flag
                 }
@@ -80,6 +110,10 @@ internal object H264SpsParser {
                     reader.readSe()     // offset_for_top_to_bottom_field
                     repeat(reader.readUe()) { reader.readSe() }
                 }
+                2 -> Unit   // no further syntax elements for this type
+                // The spec defines 0, 1 and 2 only. Any other value is a crafted SPS and would
+                // shift every following field — reject it instead of guessing.
+                else -> return null
             }
 
             reader.readUe()     // max_num_ref_frames
@@ -93,19 +127,22 @@ internal object H264SpsParser {
             }
             reader.readBits(1)  // direct_8x8_inference_flag
 
-            var cropLeft = 0
-            var cropRight = 0
-            var cropTop = 0
-            var cropBottom = 0
+            // The crop offsets are ue(v) values; they are kept in Long until the geometry is
+            // checked, so that no combination of them can overflow an Int.
+            var cropLeft = 0L
+            var cropRight = 0L
+            var cropTop = 0L
+            var cropBottom = 0L
             if (reader.readBits(1) == 1) {  // frame_cropping_flag
-                cropLeft = reader.readUe()
-                cropRight = reader.readUe()
-                cropTop = reader.readUe()
-                cropBottom = reader.readUe()
+                cropLeft = reader.readUe().toLong()
+                cropRight = reader.readUe().toLong()
+                cropTop = reader.readUe().toLong()
+                cropBottom = reader.readUe().toLong()
             }
 
-            val codedWidth = (picWidthInMbsMinus1 + 1) * 16
-            val codedHeight = (picHeightInMapUnitsMinus1 + 1) * 16 * (2 - frameMbsOnlyFlag)
+            val codedWidth = (picWidthInMbsMinus1.toLong() + 1L) * MACROBLOCK_SIZE
+            val codedHeight = (picHeightInMapUnitsMinus1.toLong() + 1L) * MACROBLOCK_SIZE *
+                (2L - frameMbsOnlyFlag)
 
             val chromaArrayType = if (separateColorPlaneFlag == 1) 0 else chromaFormatIdc
 
@@ -122,12 +159,21 @@ internal object H264SpsParser {
             val cropUnitX = if (chromaArrayType == 0) 1 else subWidthC
             val cropUnitY = if (chromaArrayType == 0) (2 - frameMbsOnlyFlag) else subHeightC * (2 - frameMbsOnlyFlag)
 
+            // The crop must fit inside the coded frame — a larger crop is an inconsistent SPS
+            // and would otherwise be subtracted into a negative size.
+            if (cropLeft + cropRight > codedWidth / cropUnitX) return null
+            if (cropTop + cropBottom > codedHeight / cropUnitY) return null
+
             val width = codedWidth - (cropLeft + cropRight) * cropUnitX
             val height = codedHeight - (cropTop + cropBottom) * cropUnitY
-            if (width <= 0 || height <= 0) return null
+
+            // Explicit bounds, mirroring the plausibility check of the decoder. A crafted SPS
+            // must not be able to talk the receiver into a bogus picture size.
+            if (width < MIN_DIMENSION || width > MAX_DIMENSION) return null
+            if (height < MIN_DIMENSION || height > MAX_DIMENSION) return null
 
             Logger.d("SPS parsed: ${width}x${height} (profile=$profileIdc)")
-            return Pair(width, height)
+            return Pair(width.toInt(), height.toInt())
 
         } catch (e: Exception) {
             Logger.w("SPS resolution parsing failed: ${e.message} — will use hint dimensions")
@@ -174,7 +220,9 @@ internal object H264SpsParser {
         fun readUe(): Int {
             var leadingZeros = 0
             while (readBit() == 0) {
-                if (++leadingZeros > 31) throw ArithmeticException("ue(v) overflow")
+                if (++leadingZeros > MAX_UE_LEADING_ZEROS) {
+                    throw ArithmeticException("ue(v): more than $MAX_UE_LEADING_ZEROS leading zeros")
+                }
             }
             if (leadingZeros == 0) return 0
             val value = (1L shl leadingZeros) - 1L + readBits(leadingZeros)
@@ -220,6 +268,14 @@ internal object H264SpsParser {
              * which a crafted SPS could otherwise trigger.
              */
             const val MAX_UE_VALUE = 0xFFFF
+
+            /**
+             * Largest number of leading zeros an `ue(v)` code may have.
+             *
+             * 31 is the point where the plain `Int` formula (`1 shl 31`) would overflow, so
+             * anything beyond that is refused before the value is even assembled.
+             */
+            const val MAX_UE_LEADING_ZEROS = 31
         }
     }
 }

@@ -22,7 +22,7 @@ import org.junit.Test
  * - senderName flows through ANNOUNCE → RECORD into [SessionDescription]
  * - [SessionDescription.senderName] defaults to "" when not set
  *
- * HOW: We use [TestableRtspHandler] (defined in RtspHandlerTest.kt) to exercise
+ * HOW: We use [TestableRtspHandler] (defined in TestableRtspHandler.kt) to exercise
  * the full ANNOUNCE → RECORD path and inspect the [SessionDescription] delivered
  * to [onStreamingStarted].
  */

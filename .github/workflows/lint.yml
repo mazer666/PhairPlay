@@ -1,5 +1,11 @@
 # Lint Workflow — runs Android Lint on every push and pull request.
 # Helps maintain code quality and catch potential bugs early.
+#
+# The matrix below runs Android Lint for BOTH product flavours:
+#   googletv -> :app:lintGoogletvDebug
+#   firetv   -> :app:lintFiretvDebug
+# A lint error in either flavour fails its own matrix job, and with
+# fail-fast: false both results are always reported.
 
 name: Lint
 
@@ -9,10 +15,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   android-lint:
     name: Android Lint (${{ matrix.flavor }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -47,10 +57,24 @@ jobs:
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
       # Run Android Lint — checks for correctness, security, and performance issues.
-      # The lint configuration in app/build.gradle.kts controls what is reported.
+      # The lint configuration in app/build.gradle.kts controls what is reported:
+      # abortOnError = true and warningsAsErrors = true, so a finding fails the task.
       # See: https://developer.android.com/studio/write/lint
       - name: Run Android Lint
         run: ./gradlew ${{ matrix.lint_task }} --stacktrace
+
+      # A lint run that produced no report must not look like a clean run.
+      # Without this step the job would stay green even if the report was missing.
+      - name: Verify a lint report was produced
+        run: |
+          shopt -s nullglob
+          reports=(app/build/reports/lint-results-*.xml)
+          if [ "${#reports[@]}" -eq 0 ]; then
+            echo "::error::Android Lint produced no XML report for ${{ matrix.flavor }}."
+            exit 1
+          fi
+          echo "Lint reports found:"
+          printf '  %s\n' "${reports[@]}"
 
       # Upload the lint report so it's easy to review in GitHub
       - name: Upload Lint report
@@ -60,3 +84,4 @@ jobs:
           name: lint-report-${{ matrix.flavor }}
           path: app/build/reports/lint-results-*.html
           retention-days: 30
+          if-no-files-found: error

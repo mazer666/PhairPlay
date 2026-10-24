@@ -1,0 +1,83 @@
+package com.phairplay.dlna
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * DlnaMediaUriTest — proves the validation of the media URI.
+ *
+ * WHY: `SetAVTransportURI` must accept everything a real control point sends — a
+ * renderer that refuses ordinary URIs is useless. At the same time the value is
+ * untrusted network input and has to be bounded, and the renderer fetches the URI
+ * itself, so the address behind it has to be checked as well.
+ */
+class DlnaMediaUriTest {
+
+    @Test
+    fun `accepts the URIs a control point sends`() {
+        listOf(
+            "http://192.168.1.5:8080/video.mp4",
+            "https://192.168.1.5/video.mp4",
+            "rtsp://192.168.1.5:554/live",
+            "file:///C:/Users/test/movie.mkv",
+            "smb://192.168.1.5/share/movie.mkv",
+            "ftp://192.168.1.5/movie.mp4"
+        ).forEach { uri ->
+            assertTrue("must be accepted: $uri", DlnaMediaUri.isAcceptable(uri))
+        }
+    }
+
+    @Test
+    fun `rejects an empty URI`() {
+        assertFalse(DlnaMediaUri.isAcceptable(""))
+        assertFalse(DlnaMediaUri.isAcceptable("   "))
+        assertFalse(DlnaMediaUri.isAcceptable(null))
+    }
+
+    @Test
+    fun `rejects a URI without a scheme`() {
+        assertFalse(DlnaMediaUri.isAcceptable("192.168.1.5/video.mp4"))
+        assertFalse(DlnaMediaUri.isAcceptable("/local/video.mp4"))
+    }
+
+    @Test
+    fun `rejects a URI with control characters`() {
+        assertFalse(DlnaMediaUri.isAcceptable("http://192.168.1.5/a\nb.mp4"))
+        // The NUL character is written as an escape on purpose: a raw NUL byte in the
+        // source would make the file look like a binary file to git.
+        assertFalse(DlnaMediaUri.isAcceptable("http://192.168.1.5/a\u0000b.mp4"))
+    }
+
+    @Test
+    fun `rejects an oversized URI`() {
+        val uri = "http://192.168.1.5/" + "a".repeat(DlnaMediaUri.MAX_URI_LENGTH)
+
+        assertFalse(DlnaMediaUri.isAcceptable(uri))
+    }
+
+    @Test
+    fun `rejects an unknown scheme`() {
+        assertFalse(DlnaMediaUri.isAcceptable("javascript:alert(1)"))
+        assertFalse(DlnaMediaUri.isAcceptable("intent://scan/#Intent;scheme=zxing;end"))
+    }
+
+    @Test
+    fun `rejects a URI that points at the cloud metadata service`() {
+        // The renderer fetches the URI itself, so this address must never be accepted.
+        assertFalse(DlnaMediaUri.isAcceptable("http://169.254.169.254/latest/meta-data/"))
+        assertFalse(DlnaMediaUri.isAcceptable("http://127.0.0.1:8080/movie.mp4"))
+    }
+
+    @Test
+    fun `the accepted result carries the trimmed URI`() {
+        val result = DlnaMediaUri.validate("  http://192.168.1.5/video.mp4  ")
+
+        assertTrue(result is DlnaMediaUri.Result.Accepted)
+        assertEquals(
+            "http://192.168.1.5/video.mp4",
+            (result as DlnaMediaUri.Result.Accepted).uri
+        )
+    }
+}

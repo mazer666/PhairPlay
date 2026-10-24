@@ -5,6 +5,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * MediaCapabilitiesTest — proves which codecs the device reports as supported.
+ *
+ * WHY: the reported capabilities decide what a sender is allowed to stream. A codec
+ * that is claimed but not decodable breaks the session in the middle of the stream,
+ * a codec that is missing is never offered in the first place.
+ *
+ * Example:
+ *   MediaCapabilities.from(decoderMimeTypes = setOf("video/avc")).supports(VideoCodec.H264)
+ */
 class MediaCapabilitiesTest {
 
     @Test

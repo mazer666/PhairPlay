@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+> **Scope of this entry.** This entry describes the cycle that produced the
+> milestone status audit M0 … M12, the acceptance records, the risk register and
+> the quality gate, plus the three points the team leader closed afterwards: the
+> **CI quality gate**, the **Android lint** and the **address policy of the
+> DLNA media URI**. Everything listed here is **in the tree**; nothing is
+> announced as working on a device, because no device test has been executed
+> (0 of 15 cases of `docs/guides/DEVICE_TEST_PLAN.md`).
+
+### Added
+- `SECURITY.md` — the security policy: threat model, the hardening guarantees the code enforces, the supported versions, and how to report a vulnerability privately.
+- `PRIVACY.md` — the data protection statement: what leaves the television, what is stored on it, the permissions and their justification, and the explicit zero-telemetry commitment.
+- `docs/audit/2026-10-24-security-audit.md` — the security and privacy review of 1.0.0-beta.3 with 14 findings, each with its attack path, a concrete fix and a negative test.
+- `docs/project/RISKS.md` — the maintained risk register: 17 entries with likelihood, impact, countermeasure, owner and status.
+- `docs/project/RELEASE_READINESS.md` — the release readiness checklist for a stable v1.0.0: what is proven, what is open, in which order it has to be closed, and what genuinely needs real hardware.
+- `docs/acceptance/M06-ACCEPTANCE.md` … `docs/acceptance/M12-ACCEPTANCE.md` — the acceptance records of the milestones M6 … M12. Each one states, for every criterion, whether it is proven by a test, proven only on the code, or still open — and why.
+- `docs/guides/DEVICE_TEST_PLAN.md` — the device test plan with 15 copy-pasteable cases (DT-01 … DT-15), the hardware and software prerequisites, the time limits per case and a result sheet.
+- `docs/acceptance/QA-QUALITY-GATE-ACCEPTANCE.md`, `docs/acceptance/QA-I18N-ACCEPTANCE.md`, `docs/acceptance/QA-DEVICE-TEST-ACCEPTANCE.md` — the acceptance records of the quality gate, of the language coverage and of the device test plan.
+- `docs/audit/qa-quality-gate-negative-test.md` — the raw protocol of the negative test of the four check scripts (22 cases, green → red → green).
+
+### Changed
+- **The DLNA renderer is now a documented, delivered part of the product** — the milestone M12 was "planned" in the project plan; the package `com.phairplay.dlna` exists with 29 production files and 157 of the 457 green JVM tests of the measured run (169 test methods in the tree today). `docs/spec/PROJECT_PLAN.md` now says so, and the per-sub-phase boxes reflect the code.
+- **The specification documents were realigned with the code.** `docs/spec/REQUIREMENTS.md` v3.0 adds FR-44 … FR-70 and NFR-26 … NFR-31, states the implementation status of every amended requirement and removes the "DLNA / UPnP — Out of scope — Not planned" line that contradicted ADR-004 and the code. `docs/spec/ACCEPTANCE_CRITERIA.md` v2.0 introduces the `AC-M<n>.<m>` identifiers for M6 … M12 and the mapping table between the acceptance rounds and the milestones. `docs/spec/TECHNICAL_SPEC.md` v1.3 describes the fourth receiver and the DLNA hardening guarantees.
+- **The five largest source files were split.** `RtspHandler.kt` went from 1024 to 267 lines (twelve new files, the original class stays as the facade), `PhairPlayService.kt` from 650 to 289, `AirPlayReceiver.kt` from 658 to 374, `MdnsService.kt` from 527 to 338, `AudioStreamServer.kt` from 503 to 259. The public API of each class is unchanged; the moved symbols keep their signature and their visibility.
+- **The CI got a quality gate.** `.github/workflows/ci.yml` has a new job `quality-gate` that runs four repository structure checks — file size, KDoc headers, documentation links and language completeness — and fails the build on a violation. `lint.yml` additionally fails when a lint run produced no report, and the APK upload fails when no APK was built.
+- **The language coverage was completed.** `values-de/strings.xml` and `values-fr/strings.xml` now carry all 80 keys of the base file; the base file's header comment no longer allows omitting a key.
+
+### Security
+- **The DLNA media URI has an address policy.** A control point names the media URL in `SetAVTransportURI`, and the television fetches it itself — a hostile device on the network could therefore aim the TV at the cloud metadata service of the router (`169.254.169.254`) and read the answer, which contains credentials, as if the TV had asked for it. The new `DlnaMediaAddressPolicy` refuses the loopback (`127.0.0.0/8`, `::1`, `::ffff:127.0.0.1`), the reserved range `0.0.0.0/8`, the link-local range, the multicast range, the broadcast address, the reserved range `240.0.0.0/4`, the further metadata addresses (`100.100.100.200`, `192.0.0.192`, `fd00:ec2::254`), the known metadata host names, the non-standard notations of an IPv4 address (decimal `2130706433`, octal `0177.0.0.1`, hexadecimal `0x7f000001`) and every URI that hides the real host behind a user info part. It is covered by `DlnaMediaAddressPolicyTest` (11 test methods) and a new case in `DlnaMediaUriTest`.
+- **Central log reduction.** Every message that goes through `com.phairplay.util.Logger` is now reduced before it reaches the log: the host part of an IP address, the device-specific half of a MAC address, complete UUIDs, and the credentials and query string of a URL are replaced by placeholders. A logged exception is copied and sanitised as well, because exception messages repeat the value that caused them. The reduction is on by default in every build — a debug build and a release build log the same, reduced data — and can be switched off for a local debugging session with `Logger.setRedactionMode(LogRedactionMode.OFF)`.
+- **The location permissions are bounded.** `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` are now capped at API 32, and `NEARBY_WIFI_DEVICES` carries `android:usesPermissionFlags="neverForLocation"`. A television running Android 13 or newer therefore no longer declares a location permission at all. The runtime behaviour is unchanged — the permissions were never granted, because the app never requests them.
+- **The GENA event now actually reaches the control point.** `HttpURLConnection` refuses the HTTP method `NOTIFY`, so the `LastChange` event was never delivered. It now goes out over a raw socket.
+
+### Fixed
+- **The CI quality gate is green.** The KDoc check reported 16 class declarations without a KDoc header; all 16 now have one (`OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.`). The three files above the soft limit of 400 lines were split as well: `MainActivity.kt` 447 → 348 lines (the navigation and the service binding moved to `ui/FragmentNavigator.kt` and `ui/ServiceConnectionBinder.kt`), `miracast/MiracastReceiver.kt` 439 → 260 lines (the WFD RTSP server moved to `miracast/WfdRtspServer.kt`), `airplay/RtspHandlerTest.kt` 413 → `RtspHandlerHandshakeTest.kt` and `RtspHandlerSessionTest.kt` with the shared helper `TestableRtspHandler.kt`. The size check is now warning-free: `184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.`
+- **The Android lint is green for both flavours.** The only finding was `Attribute usesPermissionFlags is only used in API level 31 and higher (current min is 29)` — the attribute belongs to the promise that PhairPlay never derives a location from a Wi-Fi result, so it stays and is now marked with `tools:targetApi="31"`. Both variants are analysed: `:app:lintGoogletvDebug` and `:app:lintFiretvDebug` report `No issues found.` The Fire TV flavour was analysed for the first time in this round.
+- The manifest claimed that `ACCESS_WIFI_STATE` is used to read the IP and MAC address. It is not: both are read with `java.net.NetworkInterface`, which needs no permission. The comment and the unused `WifiManager` import are gone.
+- The mirroring frame queue is bounded by **32 MB**, not 64 MB. The 1.0.0-beta.3 entry said 64 MB; the code (`MirrorFrameQueue.DEFAULT_MAX_BYTES`) says 32 MB, and the unit test asserts 32 MB.
+
+### Known limitations of this build
+- **No device test has been executed.** The 15 cases of the device test plan have never been run; the acceptance records mark every criterion that needs hardware as open.
+- **The DLNA media URI is still not restricted to `http`/`https`.** `DlnaMediaUri` accepts `file`, `smb`, `ftp` and other schemes. That is a deliberate decision for the compatibility with real control points, but it means the scheme reduction of the change request CR-01 is still open. The *address* of the URI is now checked (see **Security**); what stays open is the scheme list, the accepted **public addresses** and the **host names**, which are not resolved — a name that points at a link-local address remains a residual risk.
+- **The cleartext `http://` media fetch is probably blocked on API 35.** The app declares no `network_security_config.xml`; the platform default refuses cleartext. Whether the DLNA media path works at all on a current device is therefore unproven.
+- **The README understates the DLNA status** ("planned") and the version. The README belongs to the docs track; the correction is proposed in the project handover and not applied here.
+
+---
+
 ## [1.0.0-beta.3] - 2026-10-24
 
 ### Added
@@ -17,10 +65,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Device description server (`DlnaDescriptionServer`): serves the UPnP device descriptor and the SCPD over a bounded, non-blocking HTTP server (2 s socket timeout, 16 KB header budget, 64 KB body budget, 8 KB per-line limit).
 - SOAP dispatcher (`DlnaSoapDispatcher`): `ConnectionManager:1`, `AVTransport:1` and `RenderingControl:1` actions, parsed with a hardened XML reader (`FEATURE_SECURE_PROCESSING`, doctype declarations and external entities disabled).
 - GENA eventing (`GenaEventManager`): `LastChange` notifications; callback URLs are restricted to private IPv4 addresses inside the local subnet (SSRF hardening).
-- `MediaCapabilities`: reports what the device can decode, so the renderer advertises a sane protocol list.
+- `MediaCapabilities`: detects what the device can decode and logs it at service start. The protocol list that the renderer advertises comes from `DlnaProtocolInfo`, a fixed list that describes what the renderer can pull.
 - Settings toggle "UPnP / DLNA Receiver" and a status card on the Home screen (en / de / fr).
 - Protocol isolation per ADR-004: all DLNA logic lives in `com.phairplay.dlna`; the AirPlay 2 stack is untouched. DLNA is an additional, independently switchable protocol — it does not replace Miracast or Google Cast.
-- Media playback (phase D3) is not part of this release.
+- Media playback (phase D3) is **not** part of this release as a published feature: the wiring exists in the code (`DlnaReceiver` hands the URI to the video player), but it has never been run on a device, and the platform blocks the cleartext `http://` fetch on API 35 until a network security configuration exists. See the known limitations of the release.
 
 **Bring the app forward when a mirroring session starts (PR #19)**
 - A mirroring session that begins while the app is in the background now opens the streaming screen instead of showing a black surface until the app is opened by hand. Requires the optional "Display over other apps" permission; without it the behaviour is unchanged.
@@ -41,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - The H.264 SPS parser computes Exp-Golomb codes in 64-bit arithmetic and rejects values above the plausible range, so a crafted SPS can no longer overflow into a bogus picture size.
-- The mirroring frame queue is now bounded by bytes (64 MB) as well as by item count (90). Previously 90 frames of the permitted 8 MB each could keep ~720 MB alive and OOM the receiver.
+- The mirroring frame queue is now bounded by bytes (32 MB) as well as by item count (90). Previously 90 frames of the permitted 8 MB each could keep ~720 MB alive and OOM the receiver.
 - The DLNA description server bounds the length of a single request and header line and drains a rejected request before closing, so a client cannot make it buffer an unbounded line.
 
 ---
@@ -121,4 +169,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 ### Removed
+### Security
+### Known limitations of this build
 -->

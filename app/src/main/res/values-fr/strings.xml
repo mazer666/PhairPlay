@@ -2,11 +2,16 @@
 <!--
     strings.xml — Français (fr)
 
-    Traduction partielle — contributions bienvenues !
-    Seules les chaînes les plus importantes sont traduites pour l'instant.
-    Les chaînes manquantes utilisent automatiquement la version anglaise.
+    Traduction complète : chaque clé de la fichier de base
+    (app/src/main/res/values/strings.xml) doit exister ici.
+    scripts/check-i18n-completeness.sh le vérifie dans la CI — sinon Android
+    revient silencieusement au texte anglais.
+    Les placeholders de format (%1$s) doivent correspondre à la base.
 -->
 <resources>
+
+    <!-- ── App-wide ────────────────────────────────────────────── -->
+    <string name="app_name">PhairPlay</string>
 
     <!-- ── Navigation ──────────────────────────────────────────── -->
     <string name="nav_home">Accueil</string>
@@ -14,33 +19,114 @@
 
     <!-- ── HomeFragment ────────────────────────────────────────── -->
     <string name="home_title">Prêt pour les connexions</string>
+    <!-- %1$s = device name shown in sender pickers -->
     <string name="home_device_visible_as">Visible sous le nom : %1$s</string>
 
-    <!-- ── Protocol states ─────────────────────────────────────── -->
+    <!-- ── Protocol names ──────────────────────────────────────── -->
+    <string name="protocol_airplay">AirPlay</string>
+    <string name="protocol_miracast">Miracast</string>
+    <string name="protocol_cast">Cast</string>
+    <string name="protocol_dlna">DLNA</string>
+
+    <!-- ── Protocol states (shown in status cards) ─────────────── -->
     <string name="protocol_state_disabled">Désactivé</string>
-    <string name="protocol_detail_service_stopped">Démarrer le service pour diffuser</string>
-    <string name="protocol_detail_restarting">Redémarrage du récepteur…</string>
     <string name="protocol_state_advertising">En attente…</string>
     <string name="protocol_state_connected">Connecté</string>
     <string name="protocol_state_error">Erreur</string>
+
+    <!-- ── Protocol card detail lines ──────────────────────────── -->
+    <string name="protocol_detail_disabled">Activez-le dans les paramètres</string>
+    <string name="protocol_detail_service_stopped">Démarrer le service pour diffuser</string>
+    <string name="protocol_detail_restarting">Redémarrage du récepteur…</string>
+    <string name="protocol_detail_waiting">En attente de l\'émetteur…</string>
+    <!-- %1$s = sender display name -->
+    <string name="protocol_detail_connected">Diffusion depuis %1$s</string>
+    <string name="protocol_detail_error">Vérifiez les paramètres Wi-Fi</string>
+
+    <!-- ── Service states (header badge) ───────────────────────── -->
+    <string name="service_state_running">En marche</string>
+    <string name="service_state_stopped">Arrêté</string>
+    <string name="service_state_restarting">Redémarrage…</string>
+    <string name="service_state_error">Erreur</string>
+
+    <!-- ── Section headers ─────────────────────────────────────── -->
+    <string name="section_protocols">Protocoles</string>
+    <string name="section_controls">Contrôle du service</string>
 
     <!-- ── Control buttons ─────────────────────────────────────── -->
     <string name="action_start">Démarrer</string>
     <string name="action_stop">Arrêter</string>
     <string name="action_restart">Redémarrer</string>
 
+    <!-- ── Notification ────────────────────────────────────────── -->
+    <string name="notification_channel_name">Service PhairPlay</string>
+    <string name="notification_channel_description">Notification persistante du service récepteur AirPlay/Miracast/Cast/DLNA</string>
+    <string name="notification_status_running">Récepteur actif — diffusion sur le réseau</string>
+    <string name="notification_status_stopped">Récepteur arrêté</string>
+    <!-- %1$s = sender device name -->
+    <string name="notification_status_streaming">Diffusion depuis %1$s</string>
+
     <!-- ── Settings section headers ────────────────────────────── -->
     <string name="settings_section_display">Affichage</string>
     <string name="settings_section_protocols">Protocoles</string>
+    <string name="settings_section_airplay">AirPlay</string>
     <string name="settings_section_service">Service</string>
+    <string name="settings_section_developer">Développeur</string>
     <string name="settings_section_about">À propos</string>
 
     <!-- ── Settings row labels ─────────────────────────────────── -->
     <string name="setting_display_name">Nom de l\'appareil</string>
+    <string name="setting_display_name_system_default">Utilisation du nom d\'appareil du système</string>
+    <string name="setting_display_name_dialog_hint">Laisser vide pour utiliser le nom d\'appareil du système</string>
+    <string name="setting_display_name_reset">Réinitialiser</string>
+    <!-- %1$s = the actual mDNS-registered name (may differ from entered name on collision) -->
+    <string name="setting_display_name_collision_note">Enregistré sous : %1$s</string>
     <string name="setting_airplay_enabled">Récepteur AirPlay</string>
+    <string name="setting_airplay_subtitle">Accepter les connexions depuis macOS</string>
     <string name="setting_miracast_enabled">Récepteur Miracast</string>
+    <string name="setting_miracast_subtitle">Accepter les connexions depuis Windows et Android</string>
     <string name="setting_cast_enabled">Récepteur Google Cast</string>
+    <string name="setting_cast_subtitle">Accepter les connexions depuis Chrome et Android</string>
     <string name="setting_dlna_enabled">MediaRenderer DLNA</string>
+    <string name="setting_dlna_subtitle">Apparaître dans Windows, VLC et les applications de contrôle UPnP</string>
+    <string name="setting_mirror_audio">Audio miroir</string>
+    <string name="setting_mirror_audio_subtitle">Diffuser le son du Mac pendant le mirroring</string>
+    <string name="setting_pin_auth">Exiger un code d\'appairage</string>
+    <string name="setting_pin_auth_subtitle">Afficher un code sur la TV à saisir pour se connecter</string>
+    <string name="setting_start_on_boot">Démarrer au démarrage</string>
+    <string name="setting_debug_overlay">Superposition de débogage</string>
+    <string name="setting_debug_overlay_subtitle">Afficher les FPS, la file d\'attente et les statistiques de perte pendant la diffusion</string>
+    <string name="setting_force_high_res">Résolution supérieure (1440p)</string>
+    <string name="setting_force_high_res_subtitle">Mirroring plus net ; utilise plus de CPU. Désactivé = 1080p</string>
+    <string name="setting_version">Version</string>
     <string name="setting_reset_defaults">Réinitialiser les paramètres</string>
+
+    <!-- ── Waiting screen (legacy, used by WaitingScreen view) ─── -->
+    <string name="waiting_title">Prêt pour AirPlay</string>
+    <string name="waiting_subtitle">Ouvrez AirPlay sur votre Mac et sélectionnez cet appareil</string>
+    <string name="waiting_device_label">Cet appareil :</string>
+    <string name="streaming_hint">Appuyez sur Retour pour arrêter la diffusion</string>
+
+    <!-- ── Now playing (audio-only screen) ─────────────────────── -->
+    <string name="now_playing_audio">Lecture audio</string>
+    <!-- %1$s = audio source -->
+    <string name="now_playing_from">Audio depuis %1$s</string>
+
+    <!-- ── Pairing PIN (access control) ─────────────────────────── -->
+    <string name="pairing_pin_title">Code d\'appairage AirPlay</string>
+    <string name="pairing_pin_hint">Saisissez ce code sur votre appareil pour vous connecter</string>
+
+    <!-- ── Error messages ──────────────────────────────────────── -->
+    <string name="error_network_unavailable">Aucune connexion Wi-Fi. Veuillez vous connecter au Wi-Fi.</string>
+    <string name="error_mdns_failed">Échec de l\'annonce réseau.</string>
+    <string name="error_wifi_p2p_unavailable">Miracast n\'est pas pris en charge sur cet appareil.</string>
+    <string name="error_cast_unavailable">Google Cast nécessite les services Google Play (indisponibles sur cet appareil).</string>
+
+    <!-- ── Accessibility ───────────────────────────────────────── -->
+    <string name="content_desc_airplay_icon">Icône du protocole AirPlay</string>
+    <string name="content_desc_miracast_icon">Icône du protocole Miracast</string>
+    <string name="content_desc_cast_icon">Icône du protocole Google Cast</string>
+    <string name="content_desc_dlna_icon">Icône du protocole DLNA</string>
+    <string name="content_desc_status_dot">Indicateur d\'état</string>
 
 </resources>

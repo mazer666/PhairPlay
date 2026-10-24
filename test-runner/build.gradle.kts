@@ -42,6 +42,10 @@ sourceSets {
                 "**/settings/SettingsRepository.kt",
                 "**/service/PhairPlayService.kt",
                 "**/service/BootReceiver.kt",
+                // Split out of PhairPlayService.kt: the foreground notification needs
+                // NotificationCompat + R, the supervisor needs the notification manager.
+                "**/service/ServiceNotificationManager.kt",
+                "**/service/ReceiverSupervisor.kt",
                 "**/MainActivityTest.kt",
                 // This test exercises the actual MediaCodec submission path, not the JVM stub.
                 "**/airplay/VideoSubmissionTest.kt",

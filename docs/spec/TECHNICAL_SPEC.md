@@ -1,8 +1,15 @@
 # PhairPlay – Technical Specification
 
-Version: 1.2
+Version: 1.3
 Status: Active
-Date: 2026-03-23
+Date: 2026-10-24
+
+> **Change log v1.3 (2026-10-24).** The UPnP / DLNA MediaRenderer is documented
+> here for the first time (§12) — the implementation exists in the package
+> `com.phairplay.dlna` (ADR-004 phases D1–D4), but the specification still
+> described a three-protocol application. §2 and §3 now show the fourth
+> receiver, §5 gained the DLNA hardening guarantees and the cleartext rule,
+> §10 gained the DLNA column.
 
 ---
 
@@ -159,21 +166,22 @@ UI behaviour: the app remains on the **HomeScreen**. The AirPlay protocol card u
 │  ┌────────────────────────────▼───────────────────────────────────┐  │
 │  │               PhairPlayService  (ForegroundService)             │  │
 │  │  serviceState / airPlayState / miracastState / castState        │  │
+│  │  dlnaState                                                      │  │
 │  └────────┬──────────────────┬───────────────────┬────────────────┘  │
 │           │                  │                   │                   │
-│  ┌────────▼──────┐  ┌────────▼──────┐  ┌────────▼──────┐           │
-│  │ AirPlayReceiver│  │MiracastReceiver│  │ CastReceiver  │           │
-│  │               │  │               │  │               │           │
-│  │ MdnsService   │  │ WifiP2pManager│  │ CastReceiver  │           │
-│  │ RtspHandler   │  │ WfdRtspHandler│  │ Context (GMS) │           │
-│  │ VideoDecoder  │  │ VideoDecoder  │  └───────────────┘           │
-│  │ AudioPlayer   │  │ AudioPlayer   │                               │
-│  └───────┬───────┘  └───────┬───────┘                               │
-│          │                  │                                        │
-│  ┌───────▼──────────────────▼────────────────────────────────────┐  │
-│  │              SettingsRepository (DataStore)                    │  │
-│  │  Flow<AppSettings> — drives enable/disable of each receiver    │  │
-│  └───────────────────────────────────────────────────────────────┘  │
+│  ┌────────▼──────┐  ┌────────▼──────┐  ┌────────▼──────┐  ┌────────▼──────┐  │
+│  │ AirPlayReceiver│  │MiracastReceiver│  │ CastReceiver  │  │ DlnaReceiver  │  │
+│  │               │  │               │  │ (per flavour) │  │               │  │
+│  │ MdnsService   │  │ WifiP2pManager│  │ CastReceiver  │  │ SsdpAdvertiser│  │
+│  │ RtspHandler   │  │ WfdRtspServer │  │ Context (GMS) │  │ DescriptionSrv│  │
+│  │ VideoDecoder  │  │ (control      │  └───────────────┘  │ SoapDispatcher│  │
+│  │ AudioPlayer   │  │  plane only)  │                     │ GenaEvents    │  │
+│  └───────┬───────┘  └───────┬───────┘                     └───────┬───────┘  │
+│          │                  │                                    │          │
+│  ┌───────▼──────────────────▼────────────────────────────────────▼──────┐  │
+│  │              SettingsRepository (DataStore)                          │  │
+│  │  Flow<AppSettings> — drives enable/disable of each receiver          │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                      │
 └──────────────────────────────────────────────────────────────────────┘
                       │ MediaCodec / AudioTrack
@@ -187,9 +195,27 @@ Data flows (sender → receiver):
 macOS/iOS  ──[mDNS]────────► MdnsService
 macOS/iOS  ──[RTSP/TCP:7000]► RtspHandler ──► VideoDecoder ──► SurfaceView
 macOS/iOS  ──[RTP/UDP]──────► AudioPlayer ──► AudioTrack
-Windows    ──[Wi-Fi P2P]────► MiracastReceiver (WFD RTSP) ──► VideoDecoder
-Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK)
+Windows    ──[Wi-Fi P2P]────► MiracastReceiver (WFD RTSP, control plane only)
+Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK, googletv flavour only)
+Windows/VLC/UPnP controller ──[SSDP/UDP:1900 + HTTP]► DlnaReceiver
+                                (discovery + control plane + GENA eventing)
 ```
+
+### Protocol isolation
+
+Each receiver lives in its own package and communicates with the service only
+through callbacks and `StateFlow`s:
+
+| Package | Receiver | Notes |
+|---|---|---|
+| `com.phairplay.airplay` | `AirPlayReceiver` | mDNS + RTSP + video/audio pipeline |
+| `com.phairplay.miracast` | `MiracastReceiver` | Wi-Fi Direct advertisement + WFD RTSP control plane |
+| `com.phairplay.cast` | `CastReceiver` | Two implementations: `app/src/googletv` (Cast Connect SDK) and `app/src/firetv` (disabled, no Play Services) |
+| `com.phairplay.dlna` | `DlnaReceiver` | SSDP + description server + SOAP control plane + GENA eventing |
+
+No protocol may import the internals of another one. The DLNA stack in particular
+must never touch the AirPlay RTSP implementation — ADR-004 makes protocol
+isolation an explicit safety guarantee.
 
 ---
 
@@ -204,7 +230,7 @@ Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK)
 | `ServiceState` | `service/ServiceState.kt` | Sealed class hierarchy: `Running`, `Stopped`, `Restarting`, `Error(msg)` |
 | `BootReceiver` | `service/BootReceiver.kt` | BOOT_COMPLETED receiver; starts service if `startOnBoot` setting is enabled |
 | `SettingsRepository` | `settings/SettingsRepository.kt` | DataStore-backed; exposes `Flow<AppSettings>`; `suspend update {}` for writes |
-| `AppSettings` | `settings/AppSettings.kt` | Immutable data class with all 7 user-configurable settings |
+| `AppSettings` | `settings/AppSettings.kt` | Immutable data class with the 10 user-configurable settings (display name, AirPlay / Miracast / Cast / DLNA switch, PIN authentication, start on boot, debug overlay, higher resolution, mirror audio) |
 
 ### Protocol Receivers
 
@@ -215,8 +241,26 @@ Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK)
 | `RtspHandler` | `airplay/RtspHandler.kt` | Full RTSP state machine (OPTIONS→ANNOUNCE→SETUP→RECORD→TEARDOWN) |
 | `VideoDecoder` | `airplay/VideoDecoder.kt` | MediaCodec H.264 hardware decode → SurfaceView |
 | `AudioPlayer` | `airplay/AudioPlayer.kt` | AES-128-CTR decrypt → AAC/ALAC decode → AudioTrack |
-| `MiracastReceiver` | `miracast/MiracastReceiver.kt` | Wi-Fi P2P discovery; WFD RTSP session (M1–M7); shares VideoDecoder/AudioPlayer |
-| `CastReceiver` | `cast/CastReceiver.kt` | Google Cast SDK receiver; GMS availability check; graceful Fire TV degradation |
+| `MiracastReceiver` | `miracast/MiracastReceiver.kt` | Wi-Fi Direct discovery + WFD RTSP control plane; **no media decode** (see §12.5) |
+| `CastReceiver` | `cast/CastReceiver.kt` (per flavour) | Google Cast Connect receiver on `googletv`; disabled stub on `firetv` (no Play Services) |
+| `DlnaReceiver` | `dlna/DlnaReceiver.kt` | Orchestrates the UPnP MediaRenderer: SSDP advertisement, description server, SOAP control plane, GENA eventing, playback and photo rendering |
+
+### DLNA package `com.phairplay.dlna`
+
+| Component | Responsibility |
+|---|---|
+| `SsdpAdvertiser` / `SsdpResponder` / `SsdpMessages` | SSDP discovery: multicast advertisement, `M-SEARCH` answering, `byebye` |
+| `DlnaDescriptionServer` | The HTTP server: device description, SCPDs, SOAP control endpoints, `SUBSCRIBE` / `UNSUBSCRIBE` |
+| `DlnaDescriptionBuilder` / `DlnaServiceCatalog` | The static XML documents and the action / argument catalogue |
+| `DlnaSoapDispatcher` / `DlnaAvTransportService` | Routing of a SOAP action to the service that owns it |
+| `DlnaTransportState` | The AVTransport state machine and the position bookkeeping |
+| `SecureSoapXml` | The only XML parser the control plane may use (XXE-hardened) |
+| `HttpRequestReader` | Bounded reading of one HTTP request |
+| `SoapResponses` / `SoapResult` | Construction of the success envelopes and the SOAP faults |
+| `GenaEventManager` / `GenaCallbackPolicy` / `GenaLastChange` | Event subscriptions, the SSRF guard, the `LastChange` document |
+| `DlnaPlaybackController` / `DlnaMediaUri` / `DlnaMediaType` / `DlnaMediaMetadata` | The bridge from the control plane to the player and the parsing of the media announcement |
+| `DlnaImageDecoder` | Bounded decoding and downsampling of a photo |
+| `DlnaProtocolInfo` / `DlnaServiceCatalog` / `DlnaTimeFormat` / `DlnaNetworkAddress` | The advertised protocol list, the action catalogue, the UPnP time format, the choice of the LAN address |
 
 ### UI Layer
 
@@ -224,7 +268,7 @@ Chrome/Android ──[Cast]─────► CastReceiver (Cast SDK)
 |---|---|---|
 | `MainActivity` | `MainActivity.kt` | Single-activity host; side nav panel; swaps Home/Settings fragments |
 | `HomeFragment` | `ui/HomeFragment.kt` | Protocol state cards; service control buttons; binds to PhairPlayService |
-| `SettingsFragment` | `ui/SettingsFragment.kt` | All 7 settings with immediate-save listeners via SettingsRepository |
+| `SettingsFragment` | `ui/SettingsFragment.kt` | The settings rows with immediate-save listeners via SettingsRepository |
 
 ### Utilities
 
@@ -284,6 +328,56 @@ No permission is requested that is not strictly required. Specifically:
 v1.0 uses **unauthenticated mode** (no PIN pairing required). The `features` TXT record bitmask is set to advertise that authentication is not required. This matches the behavior of open AirPlay receivers.
 
 Future versions may implement HAP-based SRP-6a pairing (the infrastructure in `AirPlayReceiver` is designed to support this extension).
+
+### 5.6 Hardening guarantees of the DLNA control plane
+
+The DLNA description server listens on the local network without authentication.
+The following guarantees are enforced by the code and pinned by unit tests:
+
+| Guarantee | Implementation | Test |
+|---|---|---|
+| Only `http` callback URLs with a literal private IPv4 address inside the renderer's own /24 are accepted | `GenaCallbackPolicy` | `GenaCallbackPolicyTest` |
+| No DOCTYPE, no external entity, no entity expansion, payload ≤ 64 KB, nesting ≤ 32 levels | `SecureSoapXml` | `SecureSoapXmlTest`, `DlnaSoapDispatcherSecurityTest` |
+| Request line ≤ 8 KB, header block ≤ 16 KB, body ≤ 64 KB, socket timeout 2 s, request deadline 10 s | `HttpRequestReader` | `DlnaDescriptionServerTest` |
+| At most 8 concurrent workers, 16 queued clients, further clients get `503` | `DlnaDescriptionServer` | `DlnaDescriptionServerTest` |
+| No stack trace, no exception class, no file path, no version in an answer | `SoapResponses`, `DlnaSoapDispatcher` | `DlnaDescriptionServerTest` |
+| A photo payload is capped at 20 MB and downsampled to ≤ 1920 px | `DlnaImageDecoder`, `DlnaReceiver` | `DlnaImageDecoderTest` |
+| The advertised LAN address is the one of the default route, not the first non-loopback address | `DlnaNetworkAddress` | `DlnaNetworkAddressTest` |
+
+**Open point.** A `CurrentURI` handed over by a control point is still accepted
+with a wide scheme list (`DlnaMediaUri.ALLOWED_SCHEMES` contains `file`, `smb`,
+`ftp`, `rtsp`, …). A `file:///` URI cannot be rendered by the television anyway —
+a UPnP renderer fetches the media itself and the sender's disk is not reachable
+— but accepting it lets a LAN device make the television open a local path
+(audit finding SEC-04). The target state is `http`/`https` only, with the SOAP
+fault `402` for everything else (FR-50, AC-M12.15).
+
+### 5.7 Cleartext HTTP and the network security configuration
+
+The app declares **no** `network_security_config.xml`. Because the app targets
+API 35, the platform default applies: **cleartext HTTP is refused**. This
+affects every outbound HTTP request:
+
+* the GENA `NOTIFY` to the subscriber's callback,
+* the DACP reverse-control command to the AirPlay sender,
+* the DLNA media fetch (`DlnaReceiver.fetchBounded`) and the playback URL
+  (`MediaPlayer.setDataSource`).
+
+The inbound DLNA server is unaffected — the cleartext policy applies to the
+client side of the HTTP stack.
+
+Two consequences follow, and both are documented rather than hidden:
+
+1. The target state is a network security configuration that permits cleartext
+   **only** for private LAN address ranges (NFR-28). It must not enable
+   cleartext globally, and it must not list a public domain.
+2. As long as that configuration does not exist, the DLNA media playback and the
+   GENA event delivery are **not usable** and must be reported as such — they
+   are not "implemented but untested", they are blocked by the platform.
+
+The inbound control plane (SSDP + the HTTP server) works without it, so the
+device is discoverable and controllable; only the *outbound* directions are
+affected.
 
 ---
 
@@ -468,6 +562,32 @@ val isSupported = decoderName != null
 | Miracast (WFD) | 1080p @ 60fps | 4K UHD @ 60fps | — |
 | Google Cast | 1080p @ 60fps | 4K UHD @ 60fps | HDR10+ (optional) |
 
+### 10.5 UPnP / DLNA
+
+The DLNA path is different from the three streaming protocols: the television
+**fetches a finished media file** through the Android media stack (`MediaPlayer`)
+instead of decoding a live RTP stream. What it can therefore play is decided by
+the platform, not by a protocol-specific decoder:
+
+| Kind | Handling | Limit |
+|---|---|---|
+| Video (`video/mp4`, `video/*`) | `MediaPlayer` with the streaming `Surface` | Whatever the platform decoder supports; no live stream, no re-encode |
+| Audio (`audio/*`) | `MediaPlayer` without a surface, so no black rectangle covers the screen | — |
+| Photo (`image/jpeg`, `image/png`) | `DlnaImageDecoder` → `PhotoScreen` | Payload ≤ 20 MB, downsampled to ≤ 1920 px |
+| Everything else | Not rendered | — |
+
+Two consequences are documented for the user:
+
+* **The renderer pulls.** A `file:///` URI points at the sender's disk and is not
+  readable by the television — only network-reachable `http`/`https` URLs can be
+  played (FR-57, AC-M12.20).
+* **The advertised protocol list is a constant.** `DlnaProtocolInfo.SOURCE` and
+  `DlnaProtocolInfo.SINK` list `http-get` entries for `video/mp4`, `video/*`,
+  `audio/*`, `image/jpeg` and `image/png`. They are **not** derived from the
+  runtime capability snapshot of `MediaCapabilities` — a deviation from FR-66
+  that is recorded here on purpose. The list contains no entry that the
+  renderer cannot handle, which is what FR-66 requires as the fallback.
+
 ---
 
 ## 11. DRM / Copy Protection
@@ -505,3 +625,135 @@ FairPlay Streaming (FPS) is Apple's proprietary DRM for HLS content. A full eval
 | Workaround | None within scope — users must use unprotected content for AirPlay to PhairPlay |
 
 AirPlay screen mirroring (which uses session AES-128-CTR encryption, **not** FairPlay) is fully supported. FairPlay only applies to streaming licensed premium video content directly to the receiver.
+
+---
+
+## 12. UPnP / DLNA MediaRenderer
+
+PhairPlay is a UPnP MediaRenderer (ADR-004). It lets Windows ("Cast to
+Device"), VLC and mobile UPnP control points such as BubbleUPnP send a media
+file to the television.
+
+```
+Control point (VLC, Windows, BubbleUPnP)
+   │
+   │  (1) M-SEARCH 239.255.255.250:1900        ──► SsdpAdvertiser
+   │      ◄── 3 × "HTTP/1.1 200 OK" (rootdevice, MediaRenderer, UDN)
+   │          each with LOCATION = http://<lan-ip>:<port>/description.xml
+   │
+   │  (2) GET /description.xml                  ──► DlnaDescriptionServer
+   │      ◄── device description (friendlyName, UDN, 3 services)
+   │      GET /AVTransport.xml | /ConnectionManager.xml | /RenderingControl.xml
+   │      ◄── the SCPD of the service
+   │
+   │  (3) POST /upnp/control/AVTransport        ──► DlnaSoapDispatcher
+   │      SOAPACTION: "...:AVTransport:1#SetAVTransportURI"
+   │      ◄── SOAP response or SOAP fault
+   │
+   │  (4) SUBSCRIBE /upnp/event/AVTransport      ──► GenaEventManager
+   │      CALLBACK: <http://<lan-ip>:<port>/event>
+   │      ◄── 200 OK, SID: uuid:…, TIMEOUT: Second-…, EXT:
+   │      ◄── NOTIFY with the nested LastChange document on every state change
+   │
+   │  (5) the renderer fetches the media itself ──► MediaPlayer / DlnaImageDecoder
+```
+
+### 12.1 Discovery (SSDP)
+
+The advertiser sends `NOTIFY` announcements for the root device, the MediaRenderer
+device type and the UDN, and answers `M-SEARCH`:
+
+| Search target | Answer |
+|---|---|
+| `ssdp:all` | **Three** datagrams: `upnp:rootdevice`, `urn:schemas-upnp-org:device:MediaRenderer:1`, the UDN |
+| `upnp:rootdevice` | One datagram |
+| `urn:schemas-upnp-org:device:MediaRenderer:1` | One datagram |
+| the UDN | One datagram |
+| anything else | No answer |
+
+Answering `ssdp:all` with only one datagram is the most common reason a device
+appears in some pickers but not in others — VLC builds its renderer list from
+the rootdevice answer. The answer set lives in `SsdpResponder` (pure protocol,
+no sockets) and is proven by `SsdpResponderTest`; `SsdpAdvertiserLiveTest`
+sends real datagrams through the running socket.
+
+The multicast group is optional: if it cannot be joined, the socket still
+receives the unicast `M-SEARCH` a control point sends to the device address.
+
+The advertised LAN address is **the address of the interface that carries the
+default route**, not the first non-loopback address (`DlnaNetworkAddress`). A
+VPN or a container bridge is often enumerated first, and the control point then
+tries to reach an address that does not exist on its side.
+
+### 12.2 The description server
+
+`DlnaDescriptionServer` is a small, non-blocking HTTP server on an
+OS-assigned port. It serves:
+
+| Path | Content |
+|---|---|
+| `/description.xml` | The device description |
+| `/ConnectionManager.xml`, `/AVTransport.xml`, `/RenderingControl.xml` | The SCPD of the service |
+| `/upnp/control/<Service>` | The SOAP control endpoint |
+| `/upnp/event/<Service>` | The GENA event endpoint |
+
+Every request is bounded (see §5.6): request line 8 KB, header block 16 KB,
+body 64 KB, socket timeout 2 s, request deadline 10 s, 8 workers and 16 queued
+clients.
+
+### 12.3 The control plane
+
+| Service | Actions |
+|---|---|
+| `ConnectionManager:1` | `GetProtocolInfo`, `GetCurrentConnectionIDs`, `GetCurrentConnectionInfo` |
+| `AVTransport:1` | `SetAVTransportURI`, `Play`, `Pause`, `Stop`, `Seek`, `GetTransportInfo`, `GetPositionInfo`, `GetMediaInfo`, `GetCurrentTransportActions` |
+| `RenderingControl:1` | `GetVolume`, `SetVolume`, `GetMute`, `SetMute`, `GetVolumeDB` |
+
+The transport state machine has exactly three states — `STOPPED`, `PLAYING`,
+`PAUSED_PLAYBACK` — and one owner: the `DlnaSoapDispatcher`. The TV remote
+(`DlnaReceiver.sendRemoteCommand`) goes through the same owner, so a control
+point never sees a state that differs from the screen.
+
+`GetProtocolInfo` MUST return a non-empty `Source` list. A renderer with an
+empty list is treated by control points as a device that cannot fetch anything
+and is hidden from the picker.
+
+### 12.4 Eventing (GENA)
+
+A control point subscribes with `SUBSCRIBE` and receives `LastChange`
+notifications in the nested UPnP format. The subscription answer carries `SID`,
+`TIMEOUT` and `EXT`; the subscription expires, and a control point that stops
+answering is dropped instead of being notified forever.
+
+The callback URL comes straight from the network, so it is validated before it
+is ever used: `http` only, a literal dotted-quad IPv4 address only (no host
+names, no decimal / octal / hexadecimal notations), a private range only
+(`10/8`, `172.16/12`, `192.168/16`), and the same /24 as the renderer.
+
+### 12.5 Playback and the limits of the protocol
+
+| Kind | Pipeline |
+|---|---|
+| Video / audio | `AirPlayVideoPlayer` → `MediaPlayer` on the streaming `Surface`; audio-only without a surface |
+| Photo | `DlnaReceiver.fetchBounded` → `DlnaImageDecoder` → the photo screen |
+
+Three limits are part of the protocol and are documented for the user:
+
+1. **The renderer pulls the media.** Only network-reachable `http`/`https` URLs
+   can be played. A `file:///` URI points at the sender's disk and is not
+   readable by the television.
+2. **Cleartext HTTP is refused by the platform** unless a network security
+   configuration permits it for private LAN ranges — see §5.7. Until that
+   configuration exists, the media fetch and the GENA `NOTIFY` do not work;
+   the discovery and the control plane do.
+3. **Miracast is a different protocol.** The Miracast stack implements the
+   discovery and the control plane only; no Miracast media is rendered
+   (FR-58 … FR-60). The DLNA renderer is the answer to "Windows and Android
+   want to send a file to the TV", not to "Windows wants to mirror the screen".
+
+### 12.6 Isolation
+
+All DLNA logic lives in `com.phairplay.dlna`. The package imports the shared
+utilities (`Logger`, `NetworkUtils`) and the player (`AirPlayVideoPlayer`), but
+it never touches the AirPlay RTSP implementation — ADR-004 makes that an
+explicit guarantee.

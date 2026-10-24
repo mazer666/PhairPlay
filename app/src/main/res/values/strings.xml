@@ -3,8 +3,10 @@
     strings.xml — English (base locale)
 
     ALL user-visible strings MUST be defined here (i18n RULE: never hardcode strings in Kotlin/XML).
-    To add a new language, create res/values-XX/strings.xml with the same keys.
-    Keys that are identical across all languages can be omitted in the locale-specific file.
+    Every locale file res/values-<locale>/strings.xml must contain every key of this file.
+    scripts/check-i18n-completeness.sh enforces that in CI — a missing key would
+    otherwise fall back to English on the TV screen without any build error.
+    The format placeholders (%1$s) must match the translation exactly.
 -->
 <resources>
 

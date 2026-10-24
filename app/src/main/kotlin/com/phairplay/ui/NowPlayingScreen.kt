@@ -95,7 +95,10 @@ class NowPlayingScreen @JvmOverloads constructor(
             artwork.scaleType = ImageView.ScaleType.CENTER_INSIDE
             artwork.setImageResource(R.drawable.ic_airplay)
             artwork.setColorFilter(color(R.color.text_secondary))
-            if (bitmap == null && info.artwork != null) {
+            // The artwork was there but could not be decoded — that is worth a line in
+            // the log. The bitmap is null in this branch anyway, so only the sender's
+            // bytes are checked.
+            if (info.artwork != null) {
                 Logger.w("NowPlayingScreen: artwork bytes (${info.artwork.size}B) failed to decode")
             }
         }

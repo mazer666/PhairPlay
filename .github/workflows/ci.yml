@@ -6,10 +6,62 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
+  quality-gate:
+    name: Quality gate (repository structure)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make the check scripts executable
+        run: chmod +x scripts/check-file-size.sh scripts/check-kdoc-headers.sh scripts/check-docs-links.sh scripts/check-i18n-completeness.sh
+
+      # The four scripts are the machine-readable form of the project rules in
+      # docs/CONTRIBUTING.md. Every one of them exits 1 when it finds a
+      # violation, so a red script makes the job — and the build — red.
+      # All four run even if an earlier one fails, so one push shows the
+      # complete list of problems instead of one problem per push.
+      # The KDoc check runs with --skip-nested, because a nested declaration is
+      # documented by the KDoc header of the class that contains it.
+      # The strict run of the same script is green as well; both exit codes are
+      # recorded in docs/acceptance/QA-QUALITY-GATE-ACCEPTANCE.md.
+      - name: Run the repository structure checks
+        run: |
+          status=0
+          for check in \
+            check-file-size \
+            check-kdoc-headers \
+            check-docs-links \
+            check-i18n-completeness
+          do
+            args=()
+            if [ "$check" = "check-kdoc-headers" ]; then
+              args=(--skip-nested)
+            fi
+            echo "::group::scripts/$check.sh ${args[*]:-}"
+            if "./scripts/$check.sh" "${args[@]}"; then
+              echo "PASS: scripts/$check.sh ${args[*]:-}"
+            else
+              echo "FAIL: scripts/$check.sh ${args[*]:-}"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$status" -ne 0 ]; then
+            echo "::error::At least one structure check failed. See the log above for the file and line numbers."
+          fi
+          exit "$status"
+
   jvm-tests:
     name: JVM protocol tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -40,6 +92,7 @@ jobs:
   android-build:
     name: Android lint & debug APK (${{ matrix.flavor }})
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -94,3 +147,4 @@ jobs:
           name: debug-apk-${{ matrix.flavor }}
           path: ${{ matrix.apk_path }}
           retention-days: 7
+          if-no-files-found: error

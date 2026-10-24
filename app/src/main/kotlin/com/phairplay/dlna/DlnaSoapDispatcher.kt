@@ -1,268 +1,219 @@
 package com.phairplay.dlna
 
-import org.w3c.dom.Document
-import java.io.ByteArrayInputStream
-import javax.xml.XMLConstants
-import javax.xml.parsers.DocumentBuilderFactory
+import com.phairplay.util.Logger
+import kotlin.math.log10
+import kotlin.math.roundToInt
 
 /**
- * Minimal SOAP dispatcher for DLNA D2 control-plane actions.
+ * DlnaSoapDispatcher — routes a SOAP control request to the matching UPnP service.
+ *
+ * WHY: the dispatcher is the only place that knows how a UPnP control request is
+ * built (HTTP path + `SOAPACTION` header + XML body). It parses the body with the
+ * hardened parser, hands the arguments to the service that owns the action and
+ * returns the answer the control point expects.
+ *
+ * The three services of a DLNA MediaRenderer are:
+ * - `ConnectionManager:1` — what the renderer can fetch (`GetProtocolInfo`)
+ * - `AVTransport:1` — the transport state machine
+ * - `RenderingControl:1` — volume and mute
+ *
+ * Example:
+ *   val result = DlnaSoapDispatcher().dispatch(
+ *       controlPath = "/upnp/control/ConnectionManager",
+ *       soapAction = "\"urn:schemas-upnp-org:service:ConnectionManager:1#GetProtocolInfo\"",
+ *       body = soapEnvelope
+ *   )
  */
 class DlnaSoapDispatcher(
     private val playbackController: DlnaPlaybackController = DlnaPlaybackController.NOOP,
     private val onLastChange: (String, String) -> Unit = { _, _ -> }
 ) {
     private val state = DlnaTransportState()
+    private val avTransport = DlnaAvTransportService(state, playbackController, onLastChange)
 
+    /**
+     * Handles one control request.
+     *
+     * @param controlPath the HTTP path of the control URL, e.g. `/upnp/control/AVTransport`.
+     * @param soapAction the value of the `SOAPACTION` header, may be null.
+     * @param body the SOAP envelope.
+     * @return the answer to send back to the control point.
+     */
     fun dispatch(controlPath: String, soapAction: String?, body: String): SoapResult {
-        val action = soapAction?.substringAfter('#')?.trim('"')
-            ?: SecureSoapXml.actionName(body)
-            ?: return SoapResult(400, "Bad Request", fault("Client", "Missing SOAP action"))
-
+        val requestedAction = soapAction
+            ?.substringAfter('#')
+            ?.trim('"')
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
         return try {
             val document = SecureSoapXml.parse(body)
-            val values = SecureSoapXml.directChildText(document, action)
-            val response = when (controlPath) {
-                "/upnp/control/ConnectionManager" -> connectionManager(action)
-                "/upnp/control/AVTransport" -> avTransport(action, values)
-                "/upnp/control/RenderingControl" -> renderingControl(action, values)
-                else -> SoapResult(404, "Not Found", fault("Client", "Unknown control URL"))
+            val action = requestedAction ?: SecureSoapXml.actionName(document)
+            if (action.isNullOrEmpty()) {
+                return SoapResponses.fault(
+                    SoapResponses.ERROR_INVALID_ACTION,
+                    "Missing SOAP action"
+                )
             }
-            response
+            val values = SecureSoapXml.directChildText(document, action)
+            when (controlPath.substringBefore('?')) {
+                CONNECTION_MANAGER_PATH -> connectionManager(action)
+                AV_TRANSPORT_PATH -> avTransport.handle(action, values)
+                RENDERING_CONTROL_PATH -> renderingControl(action, values)
+                else -> SoapResult(
+                    statusCode = 404,
+                    statusMessage = "Not Found",
+                    body = SoapResponses.fault(
+                        SoapResponses.ERROR_INVALID_ACTION,
+                        "Unknown control URL"
+                    ).body
+                )
+            }
         } catch (e: Exception) {
-            SoapResult(400, "Bad Request", fault("Client", e.message ?: "Malformed SOAP body"))
+            // The details stay in the log: a control point must not learn about
+            // parser internals, file paths or library versions from an error answer.
+            Logger.w("DLNA SOAP request rejected: ${e.javaClass.simpleName}")
+            SoapResult(
+                statusCode = 400,
+                statusMessage = "Bad Request",
+                body = SoapResponses.fault(
+                    SoapResponses.ERROR_INVALID_ARGS,
+                    "Malformed SOAP request"
+                ).body
+            )
+        }
+    }
+
+    /**
+     * Applies a transport command that came from the TV remote.
+     *
+     * WHY: the remote control of the TV has to move the same state machine the
+     * network control point uses. Otherwise the control point would keep showing
+     * "PLAYING" while the TV is paused, and the GENA event would carry a wrong state.
+     *
+     * @param command one of the [DlnaRemoteCommand] values.
+     */
+    fun onRemoteCommand(command: String) {
+        when (command) {
+            DlnaRemoteCommand.PLAY_PAUSE -> avTransport.remotePlayPause()
+            DlnaRemoteCommand.PAUSE -> avTransport.remotePause()
+            DlnaRemoteCommand.STOP -> avTransport.remoteStop()
         }
     }
 
     private fun connectionManager(action: String): SoapResult =
         when (action) {
-            "GetProtocolInfo" -> ok(
-                action,
-                "ConnectionManager",
-                mapOf(
-                    "Source" to "",
-                    "Sink" to SINK_PROTOCOL_INFO
+            "GetProtocolInfo" -> SoapResponses.ok(
+                action = action,
+                service = "ConnectionManager",
+                values = mapOf(
+                    // The Source list must not be empty: a control point that gets an
+                    // empty list treats the renderer as "cannot fetch anything" and
+                    // hides it from the renderer picker (this is the classic reason
+                    // a DLNA device never shows up in VLC).
+                    "Source" to DlnaProtocolInfo.SOURCE,
+                    "Sink" to DlnaProtocolInfo.SINK
                 )
             )
-            "GetCurrentConnectionIDs" -> ok(
-                action,
-                "ConnectionManager",
-                mapOf("ConnectionIDs" to "0")
+            "GetCurrentConnectionIDs" -> SoapResponses.ok(
+                action = action,
+                service = "ConnectionManager",
+                values = mapOf("ConnectionIDs" to "0")
             )
-            else -> invalidAction(action)
+            "GetCurrentConnectionInfo" -> SoapResponses.ok(
+                action = action,
+                service = "ConnectionManager",
+                values = mapOf(
+                    "RcsID" to "0",
+                    "AVTransportID" to "0",
+                    "ProtocolInfo" to DlnaProtocolInfo.SOURCE,
+                    "PeerConnectionManager" to "",
+                    "PeerConnectionID" to "0",
+                    "Direction" to "Input",
+                    "Status" to "OK"
+                )
+            )
+            else -> SoapResponses.fault(
+                SoapResponses.ERROR_INVALID_ACTION,
+                "Invalid action: $action"
+            )
         }
 
-    private fun avTransport(action: String, values: Map<String, String>): SoapResult =
-        when (action) {
-            "SetAVTransportURI" -> {
-                state.currentUri = values["CurrentURI"].orEmpty()
-                state.transportState = "STOPPED"
-                playbackController.onSetTransportUri(state.currentUri)
-                publishTransportState()
-                ok(action, "AVTransport", emptyMap())
-            }
-            "Play" -> {
-                state.transportState = "PLAYING"
-                playbackController.onPlay(state.currentUri)
-                publishTransportState()
-                ok(action, "AVTransport", emptyMap())
-            }
-            "Pause" -> {
-                state.transportState = "PAUSED_PLAYBACK"
-                playbackController.onPause()
-                publishTransportState()
-                ok(action, "AVTransport", emptyMap())
-            }
-            "Stop" -> {
-                state.transportState = "STOPPED"
-                playbackController.onStop()
-                publishTransportState()
-                ok(action, "AVTransport", emptyMap())
-            }
-            "GetTransportInfo" -> ok(
-                action,
-                "AVTransport",
-                mapOf(
-                    "CurrentTransportState" to state.transportState,
-                    "CurrentTransportStatus" to "OK",
-                    "CurrentSpeed" to "1"
-                )
-            )
-            "GetPositionInfo" -> ok(
-                action,
-                "AVTransport",
-                mapOf(
-                    "Track" to "1",
-                    "TrackDuration" to "00:00:00",
-                    "TrackMetaData" to "",
-                    "TrackURI" to state.currentUri,
-                    "RelTime" to "00:00:00",
-                    "AbsTime" to "00:00:00",
-                    "RelCount" to "0",
-                    "AbsCount" to "0"
-                )
-            )
-            else -> invalidAction(action)
-        }
-
-    private fun renderingControl(action: String, values: Map<String, String>): SoapResult =
-        when (action) {
-            "GetVolume" -> ok(
-                action,
-                "RenderingControl",
-                mapOf("CurrentVolume" to state.volume.toString())
+    private fun renderingControl(action: String, values: Map<String, String>): SoapResult {
+        return when (action) {
+            "GetVolume" -> SoapResponses.ok(
+                action = action,
+                service = "RenderingControl",
+                values = mapOf("CurrentVolume" to state.volume.toString())
             )
             "SetVolume" -> {
-                values["DesiredVolume"]?.toIntOrNull()?.coerceIn(0, 100)?.let { state.volume = it }
-                onLastChange("/upnp/event/RenderingControl", "Volume=${state.volume}")
-                ok(action, "RenderingControl", emptyMap())
+                val desired = values["DesiredVolume"]?.trim()?.toIntOrNull()
+                if (desired == null || desired !in 0..100) {
+                    return SoapResponses.fault(
+                        SoapResponses.ERROR_INVALID_ARGS,
+                        "Invalid DesiredVolume"
+                    )
+                }
+                state.volume = desired
+                publishRenderState()
+                SoapResponses.ok(action = action, service = "RenderingControl", values = emptyMap())
             }
-            "GetMute" -> ok(
-                action,
-                "RenderingControl",
-                mapOf("CurrentMute" to if (state.muted) "1" else "0")
+            "GetMute" -> SoapResponses.ok(
+                action = action,
+                service = "RenderingControl",
+                values = mapOf("CurrentMute" to if (state.muted) "1" else "0")
             )
             "SetMute" -> {
-                state.muted = values["DesiredMute"] == "1" || values["DesiredMute"].equals("true", ignoreCase = true)
-                onLastChange("/upnp/event/RenderingControl", "Mute=${if (state.muted) 1 else 0}")
-                ok(action, "RenderingControl", emptyMap())
+                val desired = values["DesiredMute"]?.trim()
+                if (desired != "0" && desired != "1" &&
+                    !desired.equals("true", ignoreCase = true) &&
+                    !desired.equals("false", ignoreCase = true)
+                ) {
+                    return SoapResponses.fault(
+                        SoapResponses.ERROR_INVALID_ARGS,
+                        "Invalid DesiredMute"
+                    )
+                }
+                state.muted = desired == "1" || desired.equals("true", ignoreCase = true)
+                publishRenderState()
+                SoapResponses.ok(action = action, service = "RenderingControl", values = emptyMap())
             }
-            else -> invalidAction(action)
+            "GetVolumeDB" -> SoapResponses.ok(
+                action = action,
+                service = "RenderingControl",
+                values = mapOf("CurrentVolume" to volumeToDecibel(state.volume).toString())
+            )
+            else -> SoapResponses.fault(
+                SoapResponses.ERROR_INVALID_ACTION,
+                "Invalid action: $action"
+            )
         }
+    }
 
-    private fun ok(action: String, service: String, values: Map<String, String>): SoapResult {
-        val escapedValues = values.entries.joinToString("") { (key, value) ->
-            "<$key>${value.xmlEscaped()}</$key>"
-        }
-        return SoapResult(
-            statusCode = 200,
-            statusMessage = "OK",
-            body = envelope(
-                """<u:${action}Response xmlns:u="urn:schemas-upnp-org:service:$service:1">$escapedValues</u:${action}Response>"""
+    /** Publishes the render state to the GENA subscribers. */
+    private fun publishRenderState() {
+        onLastChange(
+            "/upnp/event/RenderingControl",
+            GenaLastChange.renderingControl(
+                "Volume" to state.volume.toString(),
+                "Mute" to if (state.muted) "1" else "0"
             )
         )
     }
 
-    private fun invalidAction(action: String): SoapResult =
-        SoapResult(500, "Internal Server Error", fault("Client", "Invalid action: $action"))
-
-    private fun publishTransportState() {
-        onLastChange("/upnp/event/AVTransport", "TransportState=${state.transportState}")
+    /**
+     * Converts a volume in percent into the decibel value the UPnP specification
+     * uses (hundredths of a decibel, -10240 = silence).
+     */
+    private fun volumeToDecibel(volume: Int): Int {
+        if (volume <= 0) return MIN_DECIBEL
+        val decibel = 20 * log10(volume / 100.0)
+        return (decibel * 100).roundToInt().coerceIn(MIN_DECIBEL, 0)
     }
-
-    private fun fault(code: String, message: String): String =
-        envelope(
-            """
-            <s:Fault>
-              <faultcode>s:$code</faultcode>
-              <faultstring>UPnPError</faultstring>
-              <detail>
-                <UPnPError xmlns="urn:schemas-upnp-org:control-1-0">
-                  <errorCode>401</errorCode>
-                  <errorDescription>${message.xmlEscaped()}</errorDescription>
-                </UPnPError>
-              </detail>
-            </s:Fault>
-            """.trimIndent()
-        )
-
-    private fun envelope(content: String): String =
-        """<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>$content</s:Body></s:Envelope>"""
-
-    private fun String.xmlEscaped(): String =
-        replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&apos;")
 
     companion object {
-        private const val SINK_PROTOCOL_INFO =
-            "http-get:*:video/mp4:*,http-get:*:audio/mpeg:*,http-get:*:image/jpeg:*,http-get:*:image/png:*"
+        private const val CONNECTION_MANAGER_PATH = "/upnp/control/ConnectionManager"
+        private const val AV_TRANSPORT_PATH = "/upnp/control/AVTransport"
+        private const val RENDERING_CONTROL_PATH = "/upnp/control/RenderingControl"
+        private const val MIN_DECIBEL = -10240
     }
-}
-
-interface DlnaPlaybackController {
-    fun onSetTransportUri(uri: String)
-    fun onPlay(uri: String)
-    fun onPause()
-    fun onStop()
-
-    companion object {
-        val NOOP = object : DlnaPlaybackController {
-            override fun onSetTransportUri(uri: String) = Unit
-            override fun onPlay(uri: String) = Unit
-            override fun onPause() = Unit
-            override fun onStop() = Unit
-        }
-    }
-}
-
-data class SoapResult(
-    val statusCode: Int,
-    val statusMessage: String,
-    val body: String
-)
-
-private class DlnaTransportState {
-    var currentUri: String = ""
-    var transportState: String = "STOPPED"
-    var volume: Int = 50
-    var muted: Boolean = false
-}
-
-private object SecureSoapXml {
-    fun parse(body: String): Document {
-        require(body.length <= MAX_SOAP_CHARS) { "SOAP body too large" }
-        val factory = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-            setFeature("http://xml.org/sax/features/external-general-entities", false)
-            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-            runCatching { setAttribute("http://javax.xml.XMLConstants/property/accessExternalDTD", "") }
-            runCatching { setAttribute("http://javax.xml.XMLConstants/property/accessExternalSchema", "") }
-            isExpandEntityReferences = false
-        }
-        val document = factory.newDocumentBuilder()
-            .parse(ByteArrayInputStream(body.toByteArray(Charsets.UTF_8)))
-        require(depth(document.documentElement) <= MAX_XML_DEPTH) { "XML nesting too deep" }
-        return document
-    }
-
-    fun actionName(body: String): String? {
-        return parse(body)
-            .getElementsByTagNameNS("*", "Body")
-            .item(0)
-            ?.childNodes
-            ?.let { nodes ->
-                (0 until nodes.length)
-                    .asSequence()
-                    .map { nodes.item(it) }
-                    .firstOrNull { it.nodeType == org.w3c.dom.Node.ELEMENT_NODE }
-                    ?.localName
-            }
-    }
-
-    fun directChildText(document: Document, action: String): Map<String, String> {
-        val actionNode = document.getElementsByTagNameNS("*", action).item(0) ?: return emptyMap()
-        return (0 until actionNode.childNodes.length)
-            .asSequence()
-            .map { actionNode.childNodes.item(it) }
-            .filter { it.nodeType == org.w3c.dom.Node.ELEMENT_NODE }
-            .associate { it.localName to (it.textContent ?: "") }
-    }
-
-    private fun depth(node: org.w3c.dom.Node?): Int {
-        if (node == null) return 0
-        val children = node.childNodes
-        var maxChildDepth = 0
-        for (i in 0 until children.length) {
-            maxChildDepth = maxOf(maxChildDepth, depth(children.item(i)))
-        }
-        return 1 + maxChildDepth
-    }
-
-    private const val MAX_SOAP_CHARS = 64 * 1024
-    private const val MAX_XML_DEPTH = 32
 }

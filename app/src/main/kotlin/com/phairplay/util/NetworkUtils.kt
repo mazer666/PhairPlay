@@ -1,9 +1,7 @@
 package com.phairplay.util
 
 import android.content.Context
-import android.net.wifi.WifiManager
 import android.provider.Settings
-import timber.log.Timber
 import java.net.NetworkInterface
 import java.util.UUID
 
@@ -66,6 +64,13 @@ object NetworkUtils {
      * NOTE: On Android 10+, direct MAC access is restricted. We use NetworkInterface
      * instead of WifiManager.getConnectionInfo() which is deprecated.
      *
+     * PRIVACY: the MAC address is a persistent device identifier and it leaves the device in
+     * cleartext — the AirPlay protocol puts it into the mDNS TXT record and into `GET /info`.
+     * That is required by the protocol and cannot be avoided while speaking AirPlay; it is
+     * never written to disk and never sent off the local network. The value is not logged
+     * (see [LogRedactor]), because a log excerpt with a MAC address identifies a household
+     * device.
+     *
      * @return MAC address in "aa:bb:cc:dd:ee:ff" format (lowercase, colon-separated).
      */
     fun getMacAddress(): String {
@@ -84,7 +89,7 @@ object NetworkUtils {
 
             mac ?: FALLBACK_MAC_ADDRESS
         } catch (e: Exception) {
-            Timber.w(e, "Could not read MAC address — using fallback")
+            Logger.e("Could not read MAC address — using fallback", e)
             FALLBACK_MAC_ADDRESS
         }
     }

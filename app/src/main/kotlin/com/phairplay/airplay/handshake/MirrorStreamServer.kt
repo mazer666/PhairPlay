@@ -10,8 +10,6 @@ import kotlinx.coroutines.launch
 import java.io.InputStream
 import java.net.ServerSocket
 import java.net.Socket
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeUnit
 
 /**
  * MirrorStreamServer — receives and decodes the AirPlay 2 mirroring video stream.
@@ -28,6 +26,9 @@ import java.util.concurrent.TimeUnit
  * audio codec competes for resources), frames are dropped from the queue instead of stalling the
  * socket, which previously caused macOS to drop the whole session.
  *
+ * The queue is bounded twice: by item count (latency) and by total bytes (memory) — see
+ * [MirrorFrameQueue] and the security review 2026-10-24, §3.3, finding 2.
+ *
  * Reference: RPiPlay lib/raop_rtp_mirror.c (raop_rtp_mirror_thread).
  */
 class MirrorStreamServer(
@@ -37,15 +38,13 @@ class MirrorStreamServer(
     private val surfaceProvider: () -> Surface?,
     private val width: Int = 1920,
     private val height: Int = 1080,
+    private val maxQueueBytes: Long = DEFAULT_MAX_QUEUE_BYTES,
+    private val maxQueueItems: Int = DEFAULT_MAX_QUEUE_ITEMS,
 ) {
-    private sealed class Item
-    private class Config(val sps: ByteArray, val pps: ByteArray) : Item()
-    private class Frame(val annexB: ByteArray) : Item()
-
     private val cipher = MirrorCrypto.streamCipher(aesKey, ecdhSecret, streamConnectionId)
     // OS-assigned free port, explicit IPv4 wildcard — see RtspHandler.bindRtspSocket() for why.
     private val serverSocket = ServerSocket(0, 50, java.net.InetAddress.getByName("0.0.0.0"))
-    private val queue = ArrayBlockingQueue<Item>(QUEUE_CAPACITY)
+    private val queue = MirrorFrameQueue(maxItems = maxQueueItems, maxBytes = maxQueueBytes)
 
     @Volatile private var running = false
     @Volatile private var client: Socket? = null
@@ -59,9 +58,6 @@ class MirrorStreamServer(
     private var framePtsUs = 0L
     private var framesIn = 0
     private var framesDropped = 0
-    // Total size of the items currently held in the queue — the queue's memory budget.
-    // Touched by the reader thread (enqueue) and the decoder thread (dequeue).
-    @Volatile private var queuedBytes = 0
     private var lastStatMs = 0L
     // Set by the reader thread when a frame is dropped under load; the decoder thread then skips
     // frames until the next keyframe (IDR) so it never decodes a reference-broken, corrupt stream.
@@ -112,7 +108,7 @@ class MirrorStreamServer(
                         // skipping any packet desyncs the keystream and corrupts all later frames.
                         val annexB = MirrorCrypto.avccToAnnexB(cipher.update(payload))
                         if (annexB.isNotEmpty()) {
-                            enqueue(Frame(annexB))
+                            enqueue(MirrorFrameQueue.Frame(annexB))
                         } else {
                             StreamStats.videoInvalid.incrementAndGet()
                         }
@@ -133,37 +129,32 @@ class MirrorStreamServer(
     }
 
     /**
-     * Bounded enqueue — if the decoder is behind, drop the oldest item to keep latency bounded.
+     * Enqueues an item for the decoder thread.
      *
-     * TWO BOUNDS ARE ENFORCED:
-     *  - the item count ([QUEUE_CAPACITY]), and
-     *  - the total number of bytes held in the queue ([MAX_QUEUE_BYTES]).
+     * TWO BOUNDS ARE ENFORCED BY THE QUEUE (see [MirrorFrameQueue]):
+     *  - the item count (latency: ~1.5 s of video), and
+     *  - the total number of bytes held in the queue (memory).
      *
-     * WHY THE BYTE BOUND: the item count alone is not enough. A sender on the LAN may
-     * push payloads of up to [MAX_PAYLOAD] (8 MB) each; 90 such frames would keep ~720 MB
-     * alive and OOM the app process. The byte budget caps the memory a hostile or broken
-     * sender can make the receiver hold, independently of how many frames that is.
+     * WHY THE BYTE BOUND: the item count alone is not enough. A sender on the LAN may push
+     * payloads of up to [MAX_PAYLOAD] (8 MB) each; 90 such frames would keep ~720 MB alive and
+     * OOM the app process. The byte budget caps the memory a hostile or broken sender can make
+     * the receiver hold, independently of how many frames that is.
+     *
+     * The reader thread NEVER blocks here: if the decoder is behind, the oldest frames are
+     * dropped so that the socket keeps being drained (macOS would drop the whole session
+     * otherwise).
      */
-    private fun enqueue(item: Item) {
+    private fun enqueue(item: MirrorFrameQueue.Item) {
         framesIn++
-        val itemBytes = sizeOf(item)
-
-        // Make room for the new item: drop the oldest entries until it fits.
-        while (queuedBytes + itemBytes > MAX_QUEUE_BYTES) {
-            val dropped = queue.poll() ?: break
-            queuedBytes -= sizeOf(dropped)
+        val outcome = queue.offer(item)
+        if (!outcome.accepted) {
+            // The item alone is bigger than the whole memory budget — it can never be queued.
             framesDropped++
+            awaitingKeyframe = true
+            Logger.w("Mirror: dropped an oversized item (${item.sizeBytes} B > queue budget)")
+        } else if (outcome.dropped > 0) {
+            framesDropped += outcome.dropped
             awaitingKeyframe = true      // a frame was lost — resync the decoder at the next IDR
-        }
-
-        if (!queue.offer(item)) {
-            // The queue is full by count even though the byte budget allowed it.
-            queue.poll()
-            queue.offer(item)
-            framesDropped++
-            awaitingKeyframe = true        // a frame was lost — resync the decoder at the next IDR
-        } else {
-            queuedBytes += itemBytes
         }
         StreamStats.videoQueue = queue.size
         if (framesIn % 300 == 0) {
@@ -172,24 +163,22 @@ class MirrorStreamServer(
             lastStatMs = now
             StreamStats.videoDropPct = framesDropped * 100 / framesIn
             Logger.i("Video stats: in=$framesIn dropped=$framesDropped " +
-                "(${StreamStats.videoDropPct}%) queue=${queue.size}/$QUEUE_CAPACITY ${StreamStats.videoFps}fps")
+                "(${StreamStats.videoDropPct}%) queue=${queue.size}/$maxQueueItems " +
+                "${queue.byteSize}B/${maxQueueBytes}B ${StreamStats.videoFps}fps")
         }
     }
 
-    /** Size of a queued item in bytes — used for the queue's memory budget. */
-    private fun sizeOf(item: Item): Int = when (item) {
-        is Config -> item.sps.size + item.pps.size
-        is Frame -> item.annexB.size
-    }
-
-    private fun parseConfig(payload: ByteArray): Config? = try {
+    private fun parseConfig(payload: ByteArray): MirrorFrameQueue.Config? = try {
         StreamStats.videoConfigs.incrementAndGet()
         val spsSize = ((payload[6].toInt() and 0xFF) shl 8) or (payload[7].toInt() and 0xFF)
         val sps = payload.copyOfRange(8, 8 + spsSize)
         val ppsLenOffset = 8 + spsSize + 1                   // skip the 1-byte PPS count
         val ppsSize = ((payload[ppsLenOffset].toInt() and 0xFF) shl 8) or
             (payload[ppsLenOffset + 1].toInt() and 0xFF)
-        Config(sps, payload.copyOfRange(ppsLenOffset + 2, ppsLenOffset + 2 + ppsSize))
+        MirrorFrameQueue.Config(
+            sps,
+            payload.copyOfRange(ppsLenOffset + 2, ppsLenOffset + 2 + ppsSize)
+        )
     } catch (e: Exception) {
         StreamStats.videoError("config parse failed", e)
         Logger.e("Mirror: failed to parse SPS/PPS", e); null
@@ -199,15 +188,13 @@ class MirrorStreamServer(
     private fun runDecoder() {
         try {
             while (running) {
-                val item = queue.poll(20, TimeUnit.MILLISECONDS)
+                val item = queue.poll(20)
                 decoder?.drainPendingOutput()
                 if (item == null) continue
-                // The item left the queue — release its share of the memory budget.
-                queuedBytes = (queuedBytes - sizeOf(item)).coerceAtLeast(0)
                 StreamStats.videoQueue = queue.size
                 when (item) {
-                    is Config -> configureDecoder(item.sps, item.pps)
-                    is Frame -> decodeFrame(item.annexB)
+                    is MirrorFrameQueue.Config -> configureDecoder(item.sps, item.pps)
+                    is MirrorFrameQueue.Frame -> decodeFrame(item.annexB)
                 }
             }
         } catch (e: Exception) {
@@ -357,19 +344,20 @@ class MirrorStreamServer(
     companion object {
         private const val MAX_PAYLOAD = 8 * 1024 * 1024        // 8 MB sanity cap per frame
         private const val FRAME_INTERVAL_US = 1_000_000L / 60  // monotonic PTS hint (~60fps)
-        private const val QUEUE_CAPACITY = 90                  // ~1.5s @60fps before dropping
-
-        /**
-         * Maximum number of bytes the frame queue may hold.
-         *
-         * The item count alone does not bound the memory: a sender on the LAN can push
-         * payloads of up to [MAX_PAYLOAD] (8 MB) each, so 90 items could keep ~720 MB
-         * alive and OOM the receiver. 64 MB is far above what a real 4K stream needs
-         * (a 1440p frame is typically 100–500 KB) and far below what would hurt the
-         * process.
-         */
-        private const val MAX_QUEUE_BYTES = 64 * 1024 * 1024    // 64 MB
         private const val SURFACE_WAIT_TRIES = 50
         private const val SURFACE_WAIT_MS = 100L
+
+        /**
+         * Default memory budget of the frame queue.
+         *
+         * WHY 32 MB: a real 1080p–1440p frame is typically 50–500 KB, so 32 MB holds more frames
+         * than the item limit — a healthy stream is never affected by the budget, only
+         * pathological payloads are. It is also far below the 150 MB process budget of NFR-01.
+         * The previous count-only bound allowed ~720 MB.
+         */
+        const val DEFAULT_MAX_QUEUE_BYTES = MirrorFrameQueue.DEFAULT_MAX_BYTES
+
+        /** Default item limit of the frame queue (~1.5 s of video at 60 fps). */
+        const val DEFAULT_MAX_QUEUE_ITEMS = MirrorFrameQueue.DEFAULT_MAX_ITEMS
     }
 }

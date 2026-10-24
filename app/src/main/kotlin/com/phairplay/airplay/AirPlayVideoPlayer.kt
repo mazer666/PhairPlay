@@ -31,13 +31,32 @@ class AirPlayVideoPlayer(
     private var mp: MediaPlayer? = null
     @Volatile private var prepared = false
     @Volatile private var startFraction = 0.0
+    @Volatile private var audioOnly = false
 
     /** Starts playing [url], seeking to [startPositionFraction] (0..1 of duration) once prepared. */
     @Synchronized
     fun play(url: String, startPositionFraction: Double) {
+        start(url, startPositionFraction, audioOnly = false)
+    }
+
+    /**
+     * Starts playing an audio-only stream [url].
+     *
+     * WHY: an audio stream must not be rendered onto the video surface — the decoder
+     * would show a black rectangle over the whole screen. The DLNA renderer uses this
+     * for control points that announce an audio item.
+     */
+    @Synchronized
+    fun playAudio(url: String) {
+        start(url, startPositionFraction = 0.0, audioOnly = true)
+    }
+
+    @Synchronized
+    private fun start(url: String, startPositionFraction: Double, audioOnly: Boolean) {
         release()
+        this.audioOnly = audioOnly
         startFraction = startPositionFraction.coerceIn(0.0, 1.0)
-        Logger.i("AirPlay video: play url=$url start=$startFraction")
+        Logger.i("AirPlay video: play url=$url start=$startFraction audioOnly=$audioOnly")
         val player = MediaPlayer()
         mp = player
         prepared = false
@@ -45,10 +64,13 @@ class AirPlayVideoPlayer(
             player.setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                    .setContentType(
+                        if (audioOnly) AudioAttributes.CONTENT_TYPE_MUSIC
+                        else AudioAttributes.CONTENT_TYPE_MOVIE
+                    )
                     .build()
             )
-            surfaceProvider()?.let { player.setSurface(it) }
+            if (!audioOnly) surfaceProvider()?.let { player.setSurface(it) }
             player.setOnPreparedListener { onPrepared(it) }
             player.setOnCompletionListener { Logger.i("AirPlay video: completed"); onEnded() }
             player.setOnErrorListener { _, what, extra ->
@@ -68,7 +90,7 @@ class AirPlayVideoPlayer(
         if (mp !== player) return
         // The Surface usually doesn't exist at setDataSource() time (the Activity creates it only
         // after CONNECTED) — attach it now that prepare has completed.
-        surfaceProvider()?.let { runCatching { player.setSurface(it) } }
+        if (!audioOnly) surfaceProvider()?.let { runCatching { player.setSurface(it) } }
         if (startFraction > 0.0) runCatching { player.seekTo((startFraction * player.duration).toInt()) }
         prepared = true
         runCatching { player.start() }
