@@ -10,9 +10,27 @@ import kotlinx.coroutines.launch
 import java.io.OutputStream
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
- * Minimal bounded HTTP server for UPnP device and SCPD description documents.
+ * DlnaDescriptionServer — the HTTP server that publishes the UPnP device description,
+ * the service descriptions and the control endpoints.
+ *
+ * WHY: a UPnP control point fetches the `LOCATION` URL the SSDP answer carried, so
+ * the renderer needs a small HTTP server. Because it listens on the local network
+ * without authentication, it is built defensively:
+ *
+ * - the request size, the header size and the request duration are bounded
+ *   (see [HttpRequestReader]),
+ * - only a few connections are served at the same time; further clients get a 503
+ *   instead of a thread,
+ * - error answers contain a fixed text — no stack trace, no file path, no version.
+ *
+ * Example:
+ *   val server = DlnaDescriptionServer("Living Room TV", "uuid:…", "192.168.1.5")
+ *   server.start(scope)
  */
 class DlnaDescriptionServer(
     private val friendlyName: String,
@@ -28,36 +46,73 @@ class DlnaDescriptionServer(
         playbackController = playbackController,
         onLastChange = { eventPath, lastChange -> genaEvents.publish(eventPath, lastChange) }
     )
+    private val workers = ThreadPoolExecutor(
+        2,
+        MAX_WORKER_THREADS,
+        30L,
+        TimeUnit.SECONDS,
+        ArrayBlockingQueue(MAX_QUEUED_CLIENTS)
+    ) { runnable ->
+        Thread(runnable, "dlna-http").apply { isDaemon = true }
+    }
 
+    /** The TCP port the server listens on. */
     val port: Int
         get() = serverSocket?.localPort ?: 0
 
+    /** The URL a control point has to fetch to learn about this renderer. */
     val descriptionUrl: String
         get() = "http://$localHost:$port/description.xml"
 
-    fun start(scope: CoroutineScope) {
-        if (running) return
+    /** Starts the server. */
+    fun start(scope: CoroutineScope) {        if (running) return
         serverSocket = ServerSocket(0)
         running = true
         scope.launch(Dispatchers.IO) { acceptLoop(this) }
         Logger.i("DLNA description server listening on $descriptionUrl")
     }
 
+    /** Stops the server and drops every event subscription. */
     fun stop() {
         running = false
         runCatching { serverSocket?.close() }
             .onFailure { Logger.w("Error closing DLNA description server: ${it.message}") }
         serverSocket = null
+        genaEvents.stop()
+        workers.shutdownNow()
         genaScope.cancel()
+    }
+
+    /**
+     * Applies a transport command that came from the TV remote.
+     *
+     * WHY: the remote control of the TV has to move the same transport state machine
+     * the network control point uses — otherwise the control point keeps showing
+     * "PLAYING" while the TV is paused.
+     *
+     * @param command one of the [DlnaRemoteCommand] values.
+     */
+    fun applyRemoteCommand(command: String) {
+        soapDispatcher.onRemoteCommand(command)
     }
 
     private fun acceptLoop(scope: CoroutineScope) {
         val socket = serverSocket ?: return
         while (running && scope.isActive) {
-            try {
-                handleClient(socket.accept())
+            val client = try {
+                socket.accept()
             } catch (e: Exception) {
                 if (running) Logger.e("DLNA description server accept failed", e)
+                continue
+            }
+            try {
+                workers.execute { handleClient(client) }
+            } catch (e: java.util.concurrent.RejectedExecutionException) {
+                // Too many clients — answer with a fixed text and close the socket.
+                runCatching {
+                    writeResponse(client.outputStream, 503, "Service Unavailable", "text/plain", "Server busy")
+                }
+                runCatching { client.close() }
             }
         }
     }
@@ -65,144 +120,192 @@ class DlnaDescriptionServer(
     private fun handleClient(socket: Socket) {
         socket.use { client ->
             client.soTimeout = READ_TIMEOUT_MS
-            val reader = client.getInputStream().bufferedReader(Charsets.US_ASCII)
-            val requestLine = readBoundedLine(reader)
-            if (requestLine.tooLong) {
-                writeResponse(client.outputStream, 414, "URI Too Long", "text/plain", "Request line too long")
+            val deadline = System.currentTimeMillis() + REQUEST_DEADLINE_MS
+            val request = HttpRequestReader(client, deadline).read()
+            if (!request.isValid) {
+                respondToFailure(client, request.failure)
                 drainQuietly(client)
                 return
             }
-            val line = requestLine.value ?: return
-            val parts = line.split(' ')
-            val method = parts.getOrNull(0).orEmpty()
-            val path = parts.getOrNull(1) ?: "/"
-            val headers = readHeaders(reader)
-            if (headers == null) {
-                writeResponse(client.outputStream, 431, "Request Header Fields Too Large", "text/plain", "Headers too large")
-                drainQuietly(client)
-                return
-            }
-            when (method) {
-                "GET", "HEAD" -> {
-                    val body = bodyFor(path)
-                    if (body == null) {
-                        writeResponse(client.outputStream, 404, "Not Found", "text/plain", "Not Found")
-                    } else {
-                        writeResponse(client.outputStream, 200, "OK", "text/xml; charset=\"utf-8\"", body)
-                    }
-                }
-                "POST" -> {
-                    val length = headers["content-length"]?.toIntOrNull()?.coerceAtMost(MAX_BODY_BYTES) ?: 0
-                    val bodyChars = CharArray(length)
-                    var read = 0
-                    while (read < length) {
-                        val count = reader.read(bodyChars, read, length - read)
-                        if (count < 0) break
-                        read += count
-                    }
-                    val result = soapDispatcher.dispatch(
-                        controlPath = path.substringBefore('?'),
-                        soapAction = headers["soapaction"],
-                        body = String(bodyChars, 0, read)
-                    )
-                    writeResponse(
-                        client.outputStream,
-                        result.statusCode,
-                        result.statusMessage,
-                        "text/xml; charset=\"utf-8\"",
-                        result.body
-                    )
-                }
-                "SUBSCRIBE" -> {
-                    handleSubscribe(client.outputStream, path.substringBefore('?'), headers)
-                }
-                "UNSUBSCRIBE" -> {
-                    handleUnsubscribe(client.outputStream, headers)
-                }
-                else -> writeResponse(client.outputStream, 405, "Method Not Allowed", "text/plain", "Method Not Allowed")
+            when (request.method) {
+                "GET", "HEAD" -> serveDescription(client, request.path)
+                "POST" -> serveControl(client, request)
+                "SUBSCRIBE" -> handleSubscribe(client, request)
+                "UNSUBSCRIBE" -> handleUnsubscribe(client, request)
+                else -> writeResponse(
+                    client.outputStream,
+                    405,
+                    "Method Not Allowed",
+                    "text/plain",
+                    "Method Not Allowed"
+                )
             }
         }
     }
 
-    private fun handleSubscribe(output: OutputStream, path: String, headers: Map<String, String>) {
-        runCatching {
-            val subscription = genaEvents.subscribe(headers["callback"], path)
+    /** Answers a failed request with a status that says nothing about the internals. */
+    private fun respondToFailure(client: Socket, failure: HttpFailure?) {
+        when (failure) {
+            HttpFailure.REQUEST_LINE_TOO_LONG -> writeResponse(
+                client.outputStream, 414, "URI Too Long", "text/plain", "Request line too long"
+            )
+            HttpFailure.HEADERS_TOO_LARGE -> writeResponse(
+                client.outputStream, 431, "Request Header Fields Too Large", "text/plain", "Headers too large"
+            )
+            HttpFailure.BODY_TOO_LARGE -> writeResponse(
+                client.outputStream, 413, "Payload Too Large", "text/plain", "Request body too large"
+            )
+            HttpFailure.TIMEOUT -> writeResponse(
+                client.outputStream, 408, "Request Timeout", "text/plain", "Request timeout"
+            )
+            else -> writeResponse(
+                client.outputStream, 400, "Bad Request", "text/plain", "Bad request"
+            )
+        }
+    }
+
+    private fun serveDescription(client: Socket, path: String) {
+        val body = bodyFor(path)
+        if (body == null) {
+            writeResponse(client.outputStream, 404, "Not Found", "text/plain", "Not Found")
+        } else {
+            writeResponse(client.outputStream, 200, "OK", "text/xml; charset=\"utf-8\"", body)
+        }
+    }
+
+    private fun serveControl(client: Socket, request: HttpRequest) {
+        val result = soapDispatcher.dispatch(
+            controlPath = request.path.substringBefore('?'),
+            soapAction = request.headers["soapaction"],
+            body = request.body
+        )
+        writeResponse(
+            client.outputStream,
+            result.statusCode,
+            result.statusMessage,
+            "text/xml; charset=\"utf-8\"",
+            result.body
+        )
+    }
+
+    private fun handleSubscribe(client: Socket, request: HttpRequest) {
+        val subscription = runCatching {
+            genaEvents.subscribe(
+                callbackHeader = request.headers["callback"],
+                servicePath = request.path.substringBefore('?'),
+                requestedTimeoutSeconds = parseTimeoutHeader(request.headers["timeout"])
+            )
+        }
+        subscription.onSuccess { created ->
             writeHeaders(
-                output,
+                client.outputStream,
                 200,
                 "OK",
                 mapOf(
-                    "SID" to subscription.sid,
-                    "TIMEOUT" to "Second-${subscription.timeoutSeconds}"
+                    "SID" to created.sid,
+                    "TIMEOUT" to "Second-${created.timeoutSeconds}",
+                    // The UPnP eventing specification asks for the EXT header in the
+                    // answer to a SUBSCRIBE — control points use it to recognise a
+                    // device that speaks GENA.
+                    "EXT" to ""
                 )
             )
         }.onFailure {
-            writeResponse(output, 412, "Precondition Failed", "text/plain", it.message ?: "Invalid subscription")
+            writeResponse(
+                client.outputStream,
+                412,
+                "Precondition Failed",
+                "text/plain",
+                "Invalid subscription"
+            )
         }
     }
 
-    private fun handleUnsubscribe(output: OutputStream, headers: Map<String, String>) {
-        if (genaEvents.unsubscribe(headers["sid"])) {
-            writeHeaders(output, 200, "OK", emptyMap())
+    private fun handleUnsubscribe(client: Socket, request: HttpRequest) {
+        if (genaEvents.unsubscribe(request.headers["sid"])) {
+            writeHeaders(client.outputStream, 200, "OK", emptyMap())
         } else {
-            writeResponse(output, 412, "Precondition Failed", "text/plain", "Unknown SID")
+            writeResponse(
+                client.outputStream,
+                412,
+                "Precondition Failed",
+                "text/plain",
+                "Unknown SID"
+            )
         }
     }
 
     /**
-     * Reads the request headers, bounded in length.
+     * Parses the `TIMEOUT` header of a SUBSCRIBE request.
      *
-     * @return the headers, or null when the header block exceeds its budget.
+     * @return the requested timeout in seconds, or null when the header is absent.
      */
-    private fun readHeaders(reader: java.io.BufferedReader): Map<String, String>? {
-        val headers = mutableMapOf<String, String>()
-        var totalBytes = 0
-        while (true) {
-            val line = readBoundedLine(reader)
-            if (line.tooLong) return null
-            val value = line.value ?: break
-            totalBytes += value.length
-            if (totalBytes > MAX_HEADER_BYTES) return null
-            if (value.isEmpty()) break
-            val key = value.substringBefore(':', missingDelimiterValue = "").lowercase()
-            val headerValue = value.substringAfter(':', missingDelimiterValue = "").trim()
-            if (key.isNotEmpty()) headers[key] = headerValue
-        }
-        return headers
+    private fun parseTimeoutHeader(value: String?): Int? {
+        val raw = value?.trim()?.removePrefix("Second-") ?: return null
+        if (raw.equals("infinite", ignoreCase = true)) return GenaEventManager.MAX_TIMEOUT_SECONDS
+        return raw.toIntOrNull()
     }
 
     /**
-     * Reads a single line with a hard length limit.
-     *
-     * WHY NOT `BufferedReader.readLine()`: that method materialises the whole line in
-     * memory before the caller can look at it. A client on the LAN that sends a long
-     * line without a newline would make the server allocate all of it — the byte budget
-     * checked afterwards would come too late. Reading character by character (still
-     * buffered underneath) stops at [MAX_LINE_BYTES] instead.
-     *
-     * @return the line without its terminator, or null at end of stream; [tooLong] marks
-     *   a line that exceeded the limit.
+     * Returns the document for [path], or null when the path is unknown.
      */
-    private fun readBoundedLine(reader: java.io.BufferedReader): BoundedLine {
-        val builder = StringBuilder(128)
-        while (true) {
-            val c = reader.read()
-            if (c == -1) {
-                return if (builder.isEmpty()) BoundedLine(null) else BoundedLine(builder.toString())
-            }
-            if (c == '\n'.code) {
-                val line = builder.toString()
-                return BoundedLine(if (line.endsWith("\r")) line.dropLast(1) else line)
-            }
-            builder.append(c.toChar())
-            if (builder.length > MAX_LINE_BYTES) {
-                return BoundedLine(null, tooLong = true)
-            }
+    private fun bodyFor(path: String): String? =
+        when (path.substringBefore('?')) {
+            "/", "/description.xml" -> DlnaDescriptionBuilder.deviceDescription(
+                friendlyName = friendlyName,
+                udn = udn,
+                presentationUrl = descriptionUrl
+            )
+            "/ConnectionManager.xml" -> DlnaDescriptionBuilder.serviceDescription("ConnectionManager")
+            "/AVTransport.xml" -> DlnaDescriptionBuilder.serviceDescription("AVTransport")
+            "/RenderingControl.xml" -> DlnaDescriptionBuilder.serviceDescription("RenderingControl")
+            else -> null
         }
+
+    private fun writeResponse(
+        output: OutputStream,
+        statusCode: Int,
+        statusMessage: String,
+        contentType: String,
+        body: String
+    ) {
+        val bytes = body.toByteArray(Charsets.UTF_8)
+        val header = listOf(
+            "HTTP/1.1 $statusCode $statusMessage",
+            "Connection: close",
+            "Content-Type: $contentType",
+            "Content-Length: ${bytes.size}",
+            "",
+            ""
+        ).joinToString("\r\n")
+        runCatching {
+            output.write(header.toByteArray(Charsets.US_ASCII))
+            output.write(bytes)
+            output.flush()
+        }.onFailure { Logger.w("DLNA response write failed: ${it.javaClass.simpleName}") }
     }
 
-    /** Result of [readBoundedLine]. */
-    private data class BoundedLine(val value: String?, val tooLong: Boolean = false)
+    private fun writeHeaders(
+        output: OutputStream,
+        statusCode: Int,
+        statusMessage: String,
+        headers: Map<String, String>
+    ) {
+        val baseHeaders = mutableMapOf(
+            "Connection" to "close",
+            "Content-Length" to "0"
+        )
+        baseHeaders.putAll(headers)
+        val header = buildString {
+            append("HTTP/1.1 $statusCode $statusMessage\r\n")
+            baseHeaders.forEach { (key, value) -> append("$key: $value\r\n") }
+            append("\r\n")
+        }
+        runCatching {
+            output.write(header.toByteArray(Charsets.US_ASCII))
+            output.flush()
+        }.onFailure { Logger.w("DLNA response write failed: ${it.javaClass.simpleName}") }
+    }
 
     /**
      * Discards the request bytes the client has not sent yet.
@@ -225,81 +328,20 @@ class DlnaDescriptionServer(
         }
     }
 
-    private fun bodyFor(path: String): String? =
-        when (path.substringBefore('?')) {
-            "/", "/description.xml" -> DlnaDescriptionBuilder.deviceDescription(
-                friendlyName = friendlyName,
-                udn = udn,
-                presentationUrl = descriptionUrl
-            )
-            "/ConnectionManager.xml" -> DlnaDescriptionBuilder.serviceDescription(
-                "ConnectionManager",
-                listOf("GetProtocolInfo", "GetCurrentConnectionIDs")
-            )
-            "/AVTransport.xml" -> DlnaDescriptionBuilder.serviceDescription(
-                "AVTransport",
-                listOf("SetAVTransportURI", "Play", "Pause", "Stop", "GetTransportInfo", "GetPositionInfo")
-            )
-            "/RenderingControl.xml" -> DlnaDescriptionBuilder.serviceDescription(
-                "RenderingControl",
-                listOf("GetVolume", "SetVolume", "GetMute", "SetMute")
-            )
-            else -> null
-        }
-
-    private fun writeResponse(
-        output: OutputStream,
-        statusCode: Int,
-        statusMessage: String,
-        contentType: String,
-        body: String
-    ) {
-        val bytes = body.toByteArray(Charsets.UTF_8)
-        val header = listOf(
-            "HTTP/1.1 $statusCode $statusMessage",
-            "Connection: close",
-            "Content-Type: $contentType",
-            "Content-Length: ${bytes.size}",
-            "",
-            ""
-        ).joinToString("\r\n")
-        output.write(header.toByteArray(Charsets.US_ASCII))
-        output.write(bytes)
-        output.flush()
-    }
-
-    private fun writeHeaders(
-        output: OutputStream,
-        statusCode: Int,
-        statusMessage: String,
-        headers: Map<String, String>
-    ) {
-        val baseHeaders = mutableMapOf(
-            "Connection" to "close",
-            "Content-Length" to "0"
-        )
-        baseHeaders.putAll(headers)
-        val header = buildString {
-            append("HTTP/1.1 $statusCode $statusMessage\r\n")
-            baseHeaders.forEach { (key, value) -> append("$key: $value\r\n") }
-            append("\r\n")
-        }
-        output.write(header.toByteArray(Charsets.US_ASCII))
-        output.flush()
-    }
-
     companion object {
+        /** Time a single socket read may block. */
         private const val READ_TIMEOUT_MS = 2_000
-        private const val MAX_HEADER_BYTES = 16 * 1024
-        /**
-         * Maximum length of a single request line or header line.
-         *
-         * The total header budget is checked only after a line has been read, so without
-         * this per-line limit a single long line would be materialised in full first.
-         */
-        private const val MAX_LINE_BYTES = 8 * 1024
+
+        /** Total time a client may take to send a complete request. */
+        private const val REQUEST_DEADLINE_MS = 10_000L
+
+        /** Maximum number of clients that are served at the same time. */
+        private const val MAX_WORKER_THREADS = 8
+
+        /** Maximum number of clients that wait for a worker. */
+        private const val MAX_QUEUED_CLIENTS = 16
+
         /** Maximum number of bytes discarded from a rejected request before closing. */
         private const val MAX_DRAIN_BYTES = 256 * 1024
-        private const val MAX_BODY_BYTES = 64 * 1024
     }
 }

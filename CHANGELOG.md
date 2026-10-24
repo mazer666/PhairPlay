@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- `SECURITY.md` — the security policy: threat model, the hardening guarantees the code enforces, the supported versions, and how to report a vulnerability privately.
+- `PRIVACY.md` — the data protection statement: what leaves the television, what is stored on it, the permissions and their justification, and the explicit zero-telemetry commitment.
+- `docs/audit/2026-10-24-security-audit.md` — the security and privacy review of 1.0.0-beta.3 with 14 findings, each with its attack path, a concrete fix and a negative test.
+
+### Security
+- **Central log reduction.** Every message that goes through `com.phairplay.util.Logger` is now reduced before it reaches the log: the host part of an IP address, the device-specific half of a MAC address, complete UUIDs, and the credentials and query string of a URL are replaced by placeholders. A logged exception is copied and sanitised as well, because exception messages repeat the value that caused them. The reduction is on by default in every build — a debug build and a release build log the same, reduced data — and can be switched off for a local debugging session with `Logger.setRedactionMode(LogRedactionMode.OFF)`.
+- **The location permissions are bounded.** `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` are now capped at API 32, and `NEARBY_WIFI_DEVICES` carries `android:usesPermissionFlags="neverForLocation"`. A television running Android 13 or newer therefore no longer declares a location permission at all. The runtime behaviour is unchanged — the permissions were never granted, because the app never requests them.
+
+### Fixed
+- The manifest claimed that `ACCESS_WIFI_STATE` is used to read the IP and MAC address. It is not: both are read with `java.net.NetworkInterface`, which needs no permission. The comment and the unused `WifiManager` import are gone.
+
+---
+
 ## [1.0.0-beta.3] - 2026-10-24
 
 ### Added

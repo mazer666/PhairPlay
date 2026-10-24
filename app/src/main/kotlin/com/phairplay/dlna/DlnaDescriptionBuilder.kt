@@ -1,10 +1,26 @@
 package com.phairplay.dlna
 
 /**
- * Builds the static UPnP device and service descriptors for PhairPlay's DLNA MediaRenderer.
+ * DlnaDescriptionBuilder — builds the static UPnP device and service descriptors for
+ * PhairPlay's DLNA MediaRenderer.
+ *
+ * WHY: the device description is the first document a control point fetches. It names
+ * the device (`friendlyName` — the label in the renderer picker), the UDN and the
+ * services. The service description (SCPD) tells the control point which actions a
+ * service offers and which arguments they take.
+ *
+ * Example:
+ *   DlnaDescriptionBuilder.deviceDescription("Living Room TV", "uuid:…", "http://…/description.xml")
  */
 object DlnaDescriptionBuilder {
 
+    /**
+     * Builds the device description document.
+     *
+     * @param friendlyName the name shown in the control point's device list.
+     * @param udn the unique device identifier, e.g. `uuid:…`.
+     * @param presentationUrl the URL of the presentation page.
+     */
     fun deviceDescription(
         friendlyName: String,
         udn: String,
@@ -40,9 +56,41 @@ object DlnaDescriptionBuilder {
         """.trimIndent()
     }
 
-    fun serviceDescription(serviceName: String, actions: List<String>): String {
-        val actionXml = actions.joinToString(separator = "\n") { action ->
-            "      <action><name>${action.xmlEscaped()}</name></action>"
+    /**
+     * Builds the service description (SCPD) of [serviceName].
+     *
+     * @param serviceName `ConnectionManager`, `AVTransport` or `RenderingControl`.
+     */
+    fun serviceDescription(serviceName: String): String {
+        val actions = DlnaServiceCatalog.actionsFor(serviceName)
+        val actionXml = actions.joinToString(separator = "\n") { spec ->
+            val arguments = spec.arguments.joinToString(separator = "\n") { argument ->
+                """
+                    <argument>
+                      <name>${argument.name.xmlEscaped()}</name>
+                      <direction>${argument.direction}</direction>
+                      <relatedStateVariable>${argument.stateVariable.xmlEscaped()}</relatedStateVariable>
+                    </argument>
+                """.trimIndent()
+            }
+            buildString {
+                append("    <action>\n")
+                append("      <name>${spec.name.xmlEscaped()}</name>\n")
+                if (spec.arguments.isNotEmpty()) {
+                    append("      <argumentList>\n")
+                    append(arguments)
+                    append("\n      </argumentList>\n")
+                }
+                append("    </action>")
+            }
+        }
+        val stateVariables = DlnaServiceCatalog.stateVariablesFor(serviceName).joinToString(separator = "\n") { name ->
+            """
+                <stateVariable sendEvents="no">
+                  <name>${name.xmlEscaped()}</name>
+                  <dataType>${DlnaServiceCatalog.typeOf(name)}</dataType>
+                </stateVariable>
+            """.trimIndent()
         }
         return """
             <?xml version="1.0"?>
@@ -55,10 +103,7 @@ object DlnaDescriptionBuilder {
             $actionXml
               </actionList>
               <serviceStateTable>
-                <stateVariable sendEvents="no">
-                  <name>PhairPlay${serviceName.xmlEscaped()}State</name>
-                  <dataType>string</dataType>
-                </stateVariable>
+            $stateVariables
               </serviceStateTable>
             </scpd>
         """.trimIndent()

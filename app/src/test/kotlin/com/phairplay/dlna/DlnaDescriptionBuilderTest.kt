@@ -35,13 +35,46 @@ class DlnaDescriptionBuilderTest {
     }
 
     @Test
-    fun `service description includes requested actions`() {
-        val xml = DlnaDescriptionBuilder.serviceDescription(
-            serviceName = "AVTransport",
-            actions = listOf("Play", "Stop")
+    fun `the device description points at the three control URLs`() {
+        val xml = DlnaDescriptionBuilder.deviceDescription(
+            friendlyName = "Living Room TV",
+            udn = "uuid:test-device",
+            presentationUrl = "http://192.168.1.2:1234/description.xml"
         )
 
+        assertTrue(xml.contains("<controlURL>/upnp/control/ConnectionManager</controlURL>"))
+        assertTrue(xml.contains("<controlURL>/upnp/control/AVTransport</controlURL>"))
+        assertTrue(xml.contains("<controlURL>/upnp/control/RenderingControl</controlURL>"))
+        assertTrue(xml.contains("<eventSubURL>/upnp/event/AVTransport</eventSubURL>"))
+    }
+
+    @Test
+    fun `the AVTransport service description lists the actions with their arguments`() {
+        val xml = DlnaDescriptionBuilder.serviceDescription("AVTransport")
+
+        assertTrue(xml.contains("<name>SetAVTransportURI</name>"))
         assertTrue(xml.contains("<name>Play</name>"))
-        assertTrue(xml.contains("<name>Stop</name>"))
+        assertTrue(xml.contains("<name>GetPositionInfo</name>"))
+        assertTrue(xml.contains("<name>CurrentURI</name>"))
+        assertTrue(xml.contains("<direction>in</direction>"))
+        assertTrue(xml.contains("<direction>out</direction>"))
+    }
+
+    @Test
+    fun `the ConnectionManager service description lists GetProtocolInfo`() {
+        val xml = DlnaDescriptionBuilder.serviceDescription("ConnectionManager")
+
+        assertTrue(xml.contains("<name>GetProtocolInfo</name>"))
+        assertTrue(xml.contains("<name>Source</name>"))
+        assertTrue(xml.contains("<name>Sink</name>"))
+    }
+
+    @Test
+    fun `the RenderingControl service description lists the volume actions`() {
+        val xml = DlnaDescriptionBuilder.serviceDescription("RenderingControl")
+
+        assertTrue(xml.contains("<name>GetVolume</name>"))
+        assertTrue(xml.contains("<name>SetVolume</name>"))
+        assertTrue(xml.contains("<name>GetMute</name>"))
     }
 }

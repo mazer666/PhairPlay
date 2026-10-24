@@ -8,9 +8,19 @@ import kotlinx.coroutines.launch
 import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.MulticastSocket
+import java.net.SocketException
 
 /**
- * SSDP announcer/listener for the DLNA MediaRenderer discovery phase.
+ * SsdpAdvertiser — announces PhairPlay as a UPnP MediaRenderer and answers searches.
+ *
+ * WHY: the advertiser owns the network side of the discovery phase. The protocol
+ * side (which answer belongs to which search target) lives in [SsdpResponder], so
+ * the answer set can be tested without a socket — and the socket code stays small
+ * enough to be obviously correct.
+ *
+ * Example:
+ *   val advertiser = SsdpAdvertiser(location = "http://192.168.1.5:49152/description.xml", udn = "uuid:…")
+ *   advertiser.start(scope)
  */
 class SsdpAdvertiser(
     private val location: String,
@@ -19,20 +29,19 @@ class SsdpAdvertiser(
     @Volatile private var running = false
     @Volatile private var socket: MulticastSocket? = null
     private val groupAddress: InetAddress = InetAddress.getByName(SsdpMessages.MULTICAST_ADDRESS)
+    private val responder = SsdpResponder(location = location, udn = udn)
 
+    /** Starts the listener and announces the device. */
     fun start(scope: CoroutineScope) {
         if (running) return
         running = true
-        socket = MulticastSocket(SsdpMessages.PORT).apply {
-            reuseAddress = true
-            soTimeout = SOCKET_TIMEOUT_MS
-            joinGroup(groupAddress)
-        }
+        socket = openSocket()
         sendAlive()
         scope.launch(Dispatchers.IO) { listenLoop(this) }
         Logger.i("DLNA SSDP advertiser started")
     }
 
+    /** Stops the listener and announces the goodbye. */
     fun stop() {
         running = false
         sendByebye()
@@ -43,6 +52,26 @@ class SsdpAdvertiser(
         socket = null
     }
 
+    /**
+     * Opens the SSDP socket.
+     *
+     * WHY the multicast group is optional: on some devices and virtual networks the
+     * group cannot be joined. The socket still receives the unicast `M-SEARCH`
+     * requests a control point sends to the device address, so the renderer stays
+     * usable instead of disappearing completely.
+     */
+    private fun openSocket(): MulticastSocket? = try {
+        MulticastSocket(SsdpMessages.PORT).apply {
+            reuseAddress = true
+            soTimeout = SOCKET_TIMEOUT_MS
+            runCatching { joinGroup(groupAddress) }
+                .onFailure { Logger.w("Could not join SSDP multicast group: ${it.message}") }
+        }
+    } catch (e: SocketException) {
+        Logger.e("Could not open SSDP socket", e)
+        null
+    }
+
     private fun listenLoop(scope: CoroutineScope) {
         val buffer = ByteArray(MAX_PACKET_BYTES)
         val activeSocket = socket ?: return
@@ -51,8 +80,8 @@ class SsdpAdvertiser(
                 val packet = DatagramPacket(buffer, buffer.size)
                 activeSocket.receive(packet)
                 val message = String(packet.data, packet.offset, packet.length, Charsets.US_ASCII)
-                if (SsdpMessages.isRendererSearch(message)) {
-                    respond(packet.address, packet.port, requestedTarget(message))
+                if (SsdpMessages.isRendererSearch(message, udn)) {
+                    respond(packet.address, packet.port, message)
                 }
             } catch (e: java.net.SocketTimeoutException) {
                 // Periodic wake-up so stop() can end the loop promptly.
@@ -62,9 +91,17 @@ class SsdpAdvertiser(
         }
     }
 
-    private fun respond(address: InetAddress, port: Int, searchTarget: String) {
-        val body = SsdpMessages.searchResponse(location, udn, searchTarget)
-        send(body, address, port)
+    /**
+     * Sends the answer to a search.
+     *
+     * WHY one datagram per target: `ST: ssdp:all` has to be answered with three
+     * separate responses (rootdevice, MediaRenderer, UDN) — a control point that
+     * expects three answers and receives one treats the device as incomplete.
+     */
+    private fun respond(address: InetAddress, port: Int, message: String) {
+        responder.responsesFor(message).forEach { response ->
+            send(response, address, port)
+        }
     }
 
     private fun sendAlive() {
@@ -85,19 +122,6 @@ class SsdpAdvertiser(
             socket?.send(DatagramPacket(bytes, bytes.size, address, port))
         }.onFailure {
             if (running) Logger.w("DLNA SSDP send failed: ${it.message}")
-        }
-    }
-
-    private fun requestedTarget(message: String): String {
-        val requested = message.lineSequence()
-            .firstOrNull { it.startsWith("ST:", ignoreCase = true) }
-            ?.substringAfter(':')
-            ?.trim()
-            ?: SsdpMessages.MEDIA_RENDERER
-        return if (requested.equals("ssdp:all", ignoreCase = true)) {
-            SsdpMessages.MEDIA_RENDERER
-        } else {
-            requested
         }
     }
 

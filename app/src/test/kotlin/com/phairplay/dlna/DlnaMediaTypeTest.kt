@@ -18,4 +18,19 @@ class DlnaMediaTypeTest {
         assertNull(DlnaMediaType.imageMimeFromUrl("http://host/movie.mp4"))
         assertNull(DlnaMediaType.imageMimeFromUrl("http://host/stream"))
     }
+
+    @Test
+    fun `detects the media kind from the file extension`() {
+        assertEquals(DlnaMediaKind.VIDEO, DlnaMediaType.kindFromUrl("http://host/movie.mp4"))
+        assertEquals(DlnaMediaKind.VIDEO, DlnaMediaType.kindFromUrl("http://host/movie.mkv?token=1"))
+        assertEquals(DlnaMediaKind.AUDIO, DlnaMediaType.kindFromUrl("http://host/song.mp3"))
+        assertEquals(DlnaMediaKind.AUDIO, DlnaMediaType.kindFromUrl("http://host/song.m4a"))
+        assertEquals(DlnaMediaKind.IMAGE, DlnaMediaType.kindFromUrl("http://host/photo.jpg"))
+    }
+
+    @Test
+    fun `an unknown extension yields the unknown kind`() {
+        assertEquals(DlnaMediaKind.UNKNOWN, DlnaMediaType.kindFromUrl("http://host/stream"))
+        assertEquals(DlnaMediaKind.UNKNOWN, DlnaMediaType.kindFromUrl("http://host/"))
+    }
 }

@@ -1,6 +1,7 @@
 package com.phairplay.dlna
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.view.Surface
 import com.phairplay.airplay.AirPlayVideoPlayer
 import com.phairplay.service.ProtocolState
@@ -13,15 +14,24 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
-import java.net.Inet4Address
-import java.net.NetworkInterface
 import java.net.URL
 
 /**
- * DLNA MediaRenderer discovery receiver.
+ * DlnaReceiver — the DLNA MediaRenderer of PhairPlay.
  *
- * D1 exposes PhairPlay to UPnP control points via SSDP and static device descriptors. SOAP
- * control and media playback are intentionally implemented in later phases.
+ * WHY: this class ties the UPnP control plane to the Android media stack. It
+ * publishes the renderer (SSDP + description server), forwards the transport
+ * commands to the player and shows photos.
+ *
+ * The three media kinds need different pipelines:
+ * - video and audio are played by [AirPlayVideoPlayer]; an audio-only stream is
+ *   played without a video surface so that no black rectangle covers the screen,
+ * - a photo is fetched with a hard size limit and downsampled before it reaches
+ *   the screen (see [DlnaImageDecoder]).
+ *
+ * Example:
+ *   val receiver = DlnaReceiver(context, "Living Room TV", { surface }, { bytes, mime -> }, {}, { })
+ *   receiver.start()
  */
 class DlnaReceiver(
     private val context: Context,
@@ -45,9 +55,10 @@ class DlnaReceiver(
     )
     @Volatile private var currentUri: String = ""
 
+    /** Starts the renderer: description server first, then the SSDP advertisement. */
     fun start() {
         try {
-            val localHost = localIpv4Address()
+            val localHost = DlnaNetworkAddress.localIpv4Address()
             val friendlyName = displayName.ifBlank { NetworkUtils.getDeviceName(context) }
             val udn = "uuid:${NetworkUtils.getPersistentUuid(context)}"
             val server = DlnaDescriptionServer(friendlyName, udn, localHost, this).also {
@@ -70,6 +81,7 @@ class DlnaReceiver(
         }
     }
 
+    /** Stops the renderer and releases every resource. */
     fun stop() {
         runCatching { ssdpAdvertiser?.stop() }
             .onFailure { Logger.w("DLNA SSDP stop failed: ${it.message}") }
@@ -83,39 +95,33 @@ class DlnaReceiver(
         onStateChanged(ProtocolState.DISABLED)
     }
 
-    private fun localIpv4Address(): String {
-        return NetworkInterface.getNetworkInterfaces()
-            ?.toList()
-            .orEmpty()
-            .asSequence()
-            .filter { it.isUp && !it.isLoopback }
-            .flatMap { it.inetAddresses.toList().asSequence() }
-            .filterIsInstance<Inet4Address>()
-            .firstOrNull()
-            ?.hostAddress
-            ?: "127.0.0.1"
-    }
-
     override fun onSetTransportUri(uri: String) {
         currentUri = uri
         Logger.i("DLNA AVTransport URI set: $uri")
     }
 
-    override fun onPlay(uri: String) {
+    override fun onPlay(uri: String, metadata: DlnaMediaMetadata?) {
         val target = uri.ifBlank { currentUri }
         if (target.isBlank()) {
             Logger.w("DLNA Play ignored: no CurrentURI")
             return
         }
         currentUri = target
-        val imageMime = DlnaMediaType.imageMimeFromUrl(target)
-        if (imageMime != null) {
-            playImage(target, imageMime)
-            return
+        val kind = metadata?.kind?.takeIf { it != DlnaMediaKind.UNKNOWN }
+            ?: DlnaMediaType.kindFromUrl(target)
+        when (kind) {
+            DlnaMediaKind.IMAGE -> playImage(target, metadata?.mimeType)
+            DlnaMediaKind.AUDIO -> {
+                onPhotoCleared()
+                mediaPlayer.playAudio(target)
+                onStateChanged(ProtocolState.CONNECTED)
+            }
+            else -> {
+                onPhotoCleared()
+                mediaPlayer.play(target, startPositionFraction = 0.0)
+                onStateChanged(ProtocolState.CONNECTED)
+            }
         }
-        onPhotoCleared()
-        mediaPlayer.play(target, startPositionFraction = 0.0)
-        onStateChanged(ProtocolState.CONNECTED)
     }
 
     override fun onPause() {
@@ -128,19 +134,53 @@ class DlnaReceiver(
         onStateChanged(ProtocolState.ADVERTISING)
     }
 
-    fun sendRemoteCommand(command: String) {
-        when (command) {
-            COMMAND_PLAY_PAUSE -> mediaPlayer.setRate(1f)
-            COMMAND_PAUSE -> mediaPlayer.setRate(0f)
-            COMMAND_STOP -> onStop()
-        }
+    override fun onSeek(positionMillis: Long) {
+        mediaPlayer.scrub(positionMillis / 1000.0)
     }
 
-    private fun playImage(uri: String, mimeType: String) {
+    override fun positionInfo(): DlnaPositionInfo {
+        val info = mediaPlayer.info() ?: return DlnaPositionInfo.EMPTY
+        return DlnaPositionInfo(
+            durationMillis = (info.durationSec * 1000).toLong(),
+            positionMillis = (info.positionSec * 1000).toLong()
+        )
+    }
+
+    /**
+     * Handles a transport command from the TV remote.
+     *
+     * WHY the command is handed to the control plane: the DLNA transport state has a
+     * single owner. If the remote changed the player directly, the control point
+     * would keep showing a stale state and the GENA event would be wrong.
+     */
+    fun sendRemoteCommand(command: String) {
+        val server = descriptionServer
+        if (server == null) {
+            Logger.w("DLNA remote command ignored: renderer is not running")
+            return
+        }
+        server.applyRemoteCommand(command)
+    }
+
+    /**
+     * Fetches a photo, bounds its size and shows it on the screen.
+     *
+     * WHY the size limit: a control point may offer any file. An unbounded download
+     * would fill the memory of the TV, and a 20 MB JPEG decodes into far more pixels
+     * than the screen can show.
+     */
+    private fun playImage(uri: String, announcedMimeType: String?) {
         scope.launch(Dispatchers.IO) {
             try {
                 val bytes = fetchBounded(uri)
-                onPhotoReceived(bytes, mimeType)
+                val bitmap = DlnaImageDecoder.decode(bytes, MAX_PHOTO_DIMENSION)
+                if (bitmap == null) {
+                    Logger.w("DLNA photo payload could not be decoded")
+                    onStateChanged(ProtocolState.ERROR)
+                    return@launch
+                }
+                val encoded = encodeJpeg(bitmap)
+                onPhotoReceived(encoded, "image/jpeg")
                 onStateChanged(ProtocolState.CONNECTED)
             } catch (e: Exception) {
                 Logger.e("DLNA photo fetch failed", e)
@@ -149,6 +189,11 @@ class DlnaReceiver(
         }
     }
 
+    /**
+     * Downloads a photo with a hard size limit.
+     *
+     * @throws IllegalStateException when the payload exceeds the limit.
+     */
     private fun fetchBounded(uri: String): ByteArray {
         val connection = (URL(uri).openConnection() as HttpURLConnection).apply {
             connectTimeout = HTTP_TIMEOUT_MS
@@ -163,18 +208,34 @@ class DlnaReceiver(
                 val read = input.read(buffer)
                 if (read < 0) break
                 total += read
-                require(total <= MAX_IMAGE_BYTES) { "DLNA image exceeds 20 MB limit" }
+                require(total <= DlnaImageDecoder.MAX_IMAGE_BYTES) {
+                    "DLNA image exceeds the ${DlnaImageDecoder.MAX_IMAGE_BYTES} byte limit"
+                }
                 out.write(buffer, 0, read)
             }
             return out.toByteArray()
         }
     }
 
+    /** Re-encodes a decoded photo so that the screen never decodes a huge bitmap. */
+    private fun encodeJpeg(bitmap: Bitmap): ByteArray {
+        val out = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+        bitmap.recycle()
+        return out.toByteArray()
+    }
+
     companion object {
-        const val COMMAND_PLAY_PAUSE = "play-pause"
-        const val COMMAND_PAUSE = "pause"
-        const val COMMAND_STOP = "stop"
-        private const val MAX_IMAGE_BYTES = 20 * 1024 * 1024
+        const val COMMAND_PLAY_PAUSE = DlnaRemoteCommand.PLAY_PAUSE
+        const val COMMAND_PAUSE = DlnaRemoteCommand.PAUSE
+        const val COMMAND_STOP = DlnaRemoteCommand.STOP
+
+        /** Edge length a photo is scaled down to before it reaches the screen. */
+        private const val MAX_PHOTO_DIMENSION = 1920
+
+        /** Quality of the re-encoded photo. */
+        private const val JPEG_QUALITY = 90
+
         private const val HTTP_TIMEOUT_MS = 10_000
     }
 }

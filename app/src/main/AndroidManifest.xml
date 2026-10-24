@@ -3,22 +3,31 @@
     AndroidManifest.xml for PhairPlay.
 
     Permission philosophy: request ONLY what is strictly necessary.
-    See docs/spec/REQUIREMENTS.md §2.3 for the full permission rationale.
+    The full rationale for every line is in PRIVACY.md and in
+    docs/audit/2026-10-24-security-audit.md (section "Permission audit").
 
     INTERNET                    — required for local TCP/UDP socket operations (AirPlay is LAN-only)
     CHANGE_WIFI_MULTICAST_STATE — required to join mDNS multicast groups
-    ACCESS_WIFI_STATE           — required to read the device's IP address and MAC address
+    ACCESS_WIFI_STATE           — required by Wi-Fi Direct (Miracast) and by the Cast SDK
     ACCESS_NETWORK_STATE        — required to detect network changes (reconnect logic)
     FOREGROUND_SERVICE          — required for persistent background receiver service (Android 9+)
     FOREGROUND_SERVICE_CONNECTED_DEVICE — required for connectedDevice foreground service type (Android 14+)
     CHANGE_WIFI_STATE           — required by WifiP2pManager for Miracast Wi-Fi Direct
-    ACCESS_FINE_LOCATION        — required by Wi-Fi P2P / Miracast discovery on Android 10+
+    NEARBY_WIFI_DEVICES         — required by WifiP2pManager on Android 13+ (API 33+)
+    ACCESS_FINE_LOCATION        — required by Wi-Fi Direct up to Android 12 (API 32)
+    ACCESS_COARSE_LOCATION      — mandatory companion of ACCESS_FINE_LOCATION on Android 12+
     RECEIVE_BOOT_COMPLETED      — required for "start on boot" feature
+    SYSTEM_ALERT_WINDOW         — special access, needed to bring the app to the front on connect
+    POST_NOTIFICATIONS          — foreground service notification (Android 13+ runtime grant)
+
+    The device's IP address and MAC address are read with java.net.NetworkInterface, which
+    needs no permission at all — ACCESS_WIFI_STATE is NOT used for that.
 
     Explicitly NOT requested:
     - RECORD_AUDIO      (we receive audio, we do not record it)
     - READ/WRITE storage (we don't persist stream data)
     - CAMERA            (not needed)
+    - BLUETOOTH         (not needed)
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -32,11 +41,27 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
-    <!-- Miracast (Wi-Fi Direct / Wi-Fi P2P) -->
+    <!--
+        Miracast (Wi-Fi Direct / Wi-Fi P2P).
+
+        The shape follows Google's Wi-Fi Direct documentation: on Android 13+ the platform
+        replaced the location permission with NEARBY_WIFI_DEVICES, so the location permissions
+        are capped at API 32 and are not declared on a current TV at all.
+
+        "neverForLocation" is a promise to the user and to the platform: PhairPlay uses Wi-Fi
+        Direct only to advertise and accept a mirroring session, it never derives a location
+        from a Wi-Fi result.
+    -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="32" />
 
     <!-- Start on boot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
