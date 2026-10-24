@@ -96,12 +96,15 @@ internal object DlnaMediaAddressPolicy {
         val cleaned = host.trim().removePrefix("[").removeSuffix("]").lowercase(Locale.US)
         if (cleaned.isEmpty()) return "the URI has no readable host"
 
+        // A plain dotted quad is an IPv4 address and is checked as one. The check has to
+        // come first: "192.168.1.5" consists of digits and dots as well, and a plain
+        // address must never be mistaken for an obfuscated one.
+        val octets = GenaCallbackPolicy.parseIpv4Literal(cleaned)
+        if (octets != null) return checkIpv4(octets)
+
         // The decimal, octal and hexadecimal notations of an IPv4 address.
         if (DECIMAL_NOTATION.matches(cleaned)) return "the address uses a non-standard notation"
         if (HEX_NOTATION.matches(cleaned)) return "the address uses a non-standard notation"
-
-        val octets = GenaCallbackPolicy.parseIpv4Literal(cleaned)
-        if (octets != null) return checkIpv4(octets)
 
         if (cleaned.contains(':')) return checkIpv6(cleaned)
 
