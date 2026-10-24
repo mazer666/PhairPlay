@@ -11,6 +11,12 @@ AC-M8.1 … AC-M8.8 (plus the legacy round AR-6 / `AC-6.x`)
 **Tester / roles:** Project Manager (audit), with the code evidence and the JVM
 test run
 **Date:** 2026-10-24
+**Update (second pass, 2026-10-24):** the team leader closed the three open
+points of the previous round — the CI quality gate, the lint and the three files
+above the line limit. The statements about the red gate, the lint finding and
+the file-size warning were brought up to date in the same commit. The JVM suite
+and the debug APKs were **not** built again; the numbers of section 2.1 name the
+run they come from.
 
 ---
 
@@ -55,17 +61,32 @@ Does the feature do what the requirement says?
 - The file-size rule respected (≤ 400 lines soft, ≤ 550 hard): **yes** — the
   touched files in this milestone are all small: `NetworkRecoveryMonitor.kt` 128
   lines, `MdnsRegistrationTracker.kt` (in `airplay/`), `MirrorFrameQueue.kt`.
+  The repository-wide check is green as well: `bash scripts/check-file-size.sh`
+  → exit 0, `0 warning(s) above the soft limit of 400 lines`.
 - Every new class has a KDoc header: **yes** for the production classes —
-  `NetworkRecoveryMonitor.kt` lines 11–30, `MirrorFrameQueue.kt` lines 30–33.
-  The KDoc gate reports no violation in these files.
+  `NetworkRecoveryMonitor.kt` lines 10–32, `MirrorFrameQueue.kt` lines 3–30.
+  The KDoc gate reports no violation in these files, and the gate is green on
+  the whole tree: `bash scripts/check-kdoc-headers.sh` → exit 0,
+  `OK: KDoc header check passed — 227 class declaration(s) checked, all of them
+  have a KDoc header.`
 - Every new public method has a test: **yes** for the two testable units
   (`MdnsRegistrationTracker`, `MirrorFrameQueue`); the device-dependent paths
   (`NetworkRecoveryMonitor`) have none and cannot have any on the JVM.
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
   `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
   54 test classes. This includes the 10 `MdnsRegistrationTrackerTest` and the 13
-  `MirrorFrameQueueTest` cases.
-- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **no — the lint was run and it failed.** Measured on `51933eb`: the `googletv` variant ends with `:app:lintGoogletvDebug FAILED`, `1 errors, 0 warnings`; the single finding is `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is only used in API level 31 and higher (current min is 29) [UnusedAttribute]`. The `firetv` variant did not run — the build stopped at the first failure. The finding sits in the shared manifest, so it is not specific to this milestone.
+  `MirrorFrameQueueTest` cases. **Current state (not re-run):** 469 test methods
+  in 56 test classes; the `com.phairplay.service` package still holds its 35 test
+  methods. The JVM suite was not executed again in this documentation cycle.
+- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
+  measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
+  SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
+  Both reports say `No issues found.` The single finding of the previous round —
+  `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is
+  only used in API level 31 and higher (current min is 29) [UnusedAttribute]` —
+  is closed: the permission element now carries `tools:targetApi="31"`. The
+  `firetv` variant, which was never analysed before, is analysed and green.
+
 - Both flavours build — `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug`:
   **yes** — see section 2.1.
 - No new dependency / no new permission: **yes** — no new dependency, no new
@@ -85,6 +106,42 @@ BUILD SUCCESSFUL
 ```
 BUILD SUCCESSFUL in 3m 27s
 457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
+```
+
+The test run and the APK build above describe commit `51933eb`; the tree has
+moved on since then (the quality-gate and the lint fixes). **No APK was built
+again** in this documentation cycle.
+
+**Repository structure checks (measured in the second pass, current tree):**
+
+```
+$ bash scripts/check-file-size.sh        ; echo "exit=$?"
+OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
+exit=0
+
+$ bash scripts/check-kdoc-headers.sh     ; echo "exit=$?"
+OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.
+exit=0
+
+$ bash scripts/check-docs-links.sh       ; echo "exit=$?"
+OK: documentation link check passed — 192 internal link(s) resolve, 15 external link(s) skipped.
+exit=0
+
+$ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
+OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+exit=0
+```
+
+**Lint (measured in the second pass, current tree):**
+
+```
+$ ./gradlew :app:lintGoogletvDebug     -> BUILD SUCCESSFUL (5m 12s)
+$ ./gradlew :app:lintFiretvDebug       -> BUILD SUCCESSFUL (3m 39s)
+
+$ cat app/build/reports/lint-results-googletvDebug.txt
+No issues found.
+$ cat app/build/reports/lint-results-firetvDebug.txt
+No issues found.
 ```
 
 ---
@@ -227,6 +284,13 @@ The one **functional** gap that is not a measurement gap: the DLNA receiver has
 no re-advertisement path (FR-61). That is a small change with a clear
 specification; it is listed as a follow-up.
 
+The second pass closed the two pipeline gates that were red in the previous
+round: the CI quality gate is green (all four structure checks exit 0) and the
+lint is green for **both** flavours. That changes the standing of the milestone
+in one respect only: the pipeline can now carry the code. The distance to a
+"stable" claim is unchanged — it is a hardware distance, not a pipeline
+distance.
+
 **Follow-up (open, because …):**
 
 1. **Run device test plan cases DT-02, DT-13, DT-15** on a Google TV **and** a
@@ -248,11 +312,16 @@ specification; it is listed as a follow-up.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped |
-| 2 | Lint and both debug APKs are green | **partly** — both debug APKs build (measured); the lint **fails** with 1 error (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`) |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
 | 3 | **No known S4 finding** | **yes for this milestone** — the M8 surface has no S4 finding. SEC-03 (unbounded FU-A buffer) touches the AirPlay RTP path and is **still open**; see the risk register and the M8-adjacent note in `docs/audit/2026-10-24-security-audit.md` |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-07 has a written decision (audit §7) |
 | 5 | The device scenarios ran on both flavours | **no** — DT-02, DT-13 and DT-15 have not been executed |
-| 6 | The file-size rule holds for the touched files | **yes** — all touched files are well below 400 lines |
+| 6 | The file-size rule holds for the touched files | **yes** — all touched files are well below 400 lines; `bash scripts/check-file-size.sh` → exit 0 with `0 warning(s) above the soft limit of 400 lines` |
 | 7 | The documentation is up to date (same change) | **yes** — the FR-61 deviation is written down in `docs/spec/REQUIREMENTS.md` |
 | 8 | The limitations in `README.md` are true of this build | **yes** — the README does not claim a measured endurance time |
+
+**CI quality gate** (the job `quality-gate` of `.github/workflows/ci.yml`, not a
+separate gate in `docs/quality/QUALITY.md` §7): **green** — all four structure
+checks exit 0 (section 2.1).
+

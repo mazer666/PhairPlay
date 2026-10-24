@@ -12,6 +12,12 @@ no device
 **Tester / roles:** Project Manager (audit), with the build output and the code
 evidence
 **Date:** 2026-10-24
+**Update (second pass, 2026-10-24):** the team leader closed the three open
+points of the previous round — the CI quality gate, the lint and the three files
+above the line limit. The `firetv` lint, which had never been analysed before,
+now runs and is green, so AC-M9.2 is measured instead of open. The JVM suite and
+the debug APKs were **not** built again; the numbers of section 2.1 name the run
+they come from.
 
 ---
 
@@ -22,7 +28,7 @@ Does the feature do what the requirement says?
 | # | Scenario | Expected | Result | Evidence |
 |---|---|---|---|---|
 | 1 | The `firetv` flavour builds | exit code 0, the debug APK exists | **PASS (measured)** | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline` → `BUILD SUCCESSFUL` (see section 2.1). The APK is written to `app/build/outputs/apk/firetv/debug/app-firetv-debug.apk`. |
-| 2 | The `firetv` flavour uses no API above API 25 without a runtime check | 0 `NewApi` findings in the lint report | **NOT MEASURED** | The lint ran for the `googletv` variant and failed (section 2); the `firetv` variant never ran, so the `NewApi` check for API 25 is still open. The command is `./gradlew :app:lintFiretvDebug`. `minSdk = 25` is set for the flavour (`app/build.gradle.kts` line 66). |
+| 2 | The `firetv` flavour uses no API above API 25 without a runtime check | 0 `NewApi` findings in the lint report | **PASS (measured)** | The `firetv` variant was analysed for the first time in the second pass: `./gradlew :app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s), the report `app/build/reports/lint-results-firetvDebug.txt` says `No issues found.` — no `NewApi` finding. `minSdk = 25` is set for the flavour (`app/build.gradle.kts` line 66). **Scope:** the lint proves that no API above API 25 is used unguarded in the source; the runtime behaviour on an API 25 device is still device-only (edge case below). |
 | 3 | The Cast card on Fire TV shows "disabled" and names Google Play Services as the reason | the card shows the disabled state with the reason text | **PASS (code) / NOT MEASURED (device)** | `app/src/firetv/kotlin/com/phairplay/cast/CastReceiver.kt`: `isAvailable()` returns `false`, `start()` reports `ProtocolState.DISABLED`. The Fire TV implementation contains **no** reference to `com.google.android.gms` (`grep -rn "com.google.android.gms" app/src/firetv` → 0 matches), so the SDK can never be initialised. The card renders the state via `HomeFragment.kt` line 183 (`svc.castState`). The rendering is device-only. |
 | 4 | The AirPlay criteria pass on Fire TV hardware | all of AR-3, AR-4, AR-5 pass on a Fire TV Stick | **NOT MEASURED** | No Fire TV was available. Device test plan cases DT-03, DT-04 and DT-05. This is the largest gap of the milestone. |
 | 5 | The Fire TV release APK stays below the size budget | ≤ 10 MB | **PARTLY** | The **debug** APK was built and weighed: `app-firetv-debug.apk`, 16 294 476 bytes = **15.5 MB**. A debug APK is always larger than a release APK (no R8 shrinking, no resource optimisation, the full Cast SDK is absent but the debug tooling is present), so this number says nothing about the release budget. The **release** APK was not built in this cycle, so AC-M9.4 is still open. |
@@ -37,7 +43,7 @@ Does the feature do what the requirement says?
 |---|---|---|
 | Play Services are missing on the device | the Cast receiver reports `DISABLED` and never initialises the SDK | **PASS (code)** — the Fire TV implementation has no SDK import at all, so the failure mode cannot occur |
 | The user turns Cast on on Fire TV | the card shows the disabled state with the reason | **PASS (code)** / **NOT MEASURED (device)** |
-| The device is an old Fire TV on API 25 | no `NewApi` crash | **NOT MEASURED** — needs the lint report and a device |
+| The device is an old Fire TV on API 25 | no `NewApi` crash | **PASS (lint) / NOT MEASURED (device)** — the `firetv` lint is green with no `NewApi` finding; the crash-free run on an API 25 device needs hardware |
 | The device has no Wi-Fi Direct | the Miracast card shows the error, the app keeps running | **PASS (unit test)** — `MiracastReceiverTest > start emits error when WifiP2pManager is unavailable` |
 
 ---
@@ -48,11 +54,17 @@ Does the feature do what the requirement says?
   the flavour split is a source-set split; the Cast class of the Fire TV flavour
   has the same public surface as the Google TV one.
 - The file-size rule respected (≤ 400 lines soft, ≤ 550 hard): **yes** — the
-  Fire TV flavour contains one file, `CastReceiver.kt`, 40 lines.
+  Fire TV flavour contains one file, `CastReceiver.kt`, 40 lines. The
+  repository-wide check is green as well: `bash scripts/check-file-size.sh` →
+  exit 0, `0 warning(s) above the soft limit of 400 lines`.
 - Every new class has a KDoc header: **yes** — the Fire TV `CastReceiver` has a
-  KDoc header (lines 7–12). The KDoc gate reports one violation in the
-  **Google TV** flavour:
-  `app/src/googletv/kotlin/com/phairplay/cast/CastReceiverOptionsProvider.kt:8: MISSING-KDOC CastReceiverOptionsProvider`.
+  KDoc header (lines 8–14). The violation of the previous round in the
+  **Google TV** flavour
+  (`app/src/googletv/kotlin/com/phairplay/cast/CastReceiverOptionsProvider.kt:8:
+  MISSING-KDOC CastReceiverOptionsProvider`) is closed, and the KDoc gate is
+  green on the whole tree: `bash scripts/check-kdoc-headers.sh` → exit 0,
+  `OK: KDoc header check passed — 227 class declaration(s) checked, all of them
+  have a KDoc header.`
 - Every new public method has a test: **partly** — `isConfigured` and
   `isAvailable` are covered by `CastReceiverTest` (3 tests, **PASSED**); `start()`
   and `stop()` are not, because they need a real `Context`.
@@ -63,8 +75,18 @@ Does the feature do what the requirement says?
   `test-runner/build.gradle.kts`), so the Fire TV Cast implementation is
   compiled and its shared logic is tested. The `googletv` flavour source set is
   **not** compiled by the runner, so the Google TV variant of the Cast
-  receiver has no unit test at all.
-- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **no — the lint was run and it failed.** Measured on `51933eb`: the `googletv` variant ends with `:app:lintGoogletvDebug FAILED`, `1 errors, 0 warnings`; the single finding is `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is only used in API level 31 and higher (current min is 29) [UnusedAttribute]`. The `firetv` variant did not run — the build stopped at the first failure. The finding sits in the shared manifest, so it is not specific to this milestone.
+  receiver has no unit test at all. **Current state (not re-run):** 469 test
+  methods in 56 test classes; the `com.phairplay.cast` package still holds its 3
+  test methods. The JVM suite was not executed again in this documentation
+  cycle.
+- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
+  measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
+  SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
+  Both reports say `No issues found.` The single finding of the previous round —
+  `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is
+  only used in API level 31 and higher (current min is 29) [UnusedAttribute]` —
+  is closed: the permission element now carries `tools:targetApi="31"`. **The
+  `firetv` variant was analysed for the first time in this pass and is green.**
 - Both flavours build — `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug`:
   **yes** — see section 2.1.
 - No new dependency / no new permission: **yes** — the Fire TV flavour has **no**
@@ -87,6 +109,46 @@ BUILD SUCCESSFUL
 BUILD SUCCESSFUL in 3m 27s
 457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
 ```
+
+The test run and the APK build above describe commit `51933eb`; the tree has
+moved on since then (the quality-gate and the lint fixes). **No APK was built
+again** in this documentation cycle.
+
+**Repository structure checks (measured in the second pass, current tree):**
+
+```
+$ bash scripts/check-file-size.sh        ; echo "exit=$?"
+OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
+exit=0
+
+$ bash scripts/check-kdoc-headers.sh     ; echo "exit=$?"
+OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.
+exit=0
+
+$ bash scripts/check-docs-links.sh       ; echo "exit=$?"
+OK: documentation link check passed — 192 internal link(s) resolve, 15 external link(s) skipped.
+exit=0
+
+$ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
+OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+exit=0
+```
+
+**Lint (measured in the second pass, current tree):**
+
+```
+$ ./gradlew :app:lintGoogletvDebug     -> BUILD SUCCESSFUL (5m 12s)
+$ ./gradlew :app:lintFiretvDebug       -> BUILD SUCCESSFUL (3m 39s)
+
+$ cat app/build/reports/lint-results-googletvDebug.txt
+No issues found.
+$ cat app/build/reports/lint-results-firetvDebug.txt
+No issues found.
+```
+
+The `firetv` lint report is the **first** analysis of that variant: before this
+pass the Fire TV flavour had never been analysed, so its findings were unknown,
+not absent.
 
 ### 2.2 The built artefacts (measured)
 
@@ -249,6 +311,12 @@ notification, the DLNA discovery — has never been observed. The plan status
 "🟡 Implemented, device validation open" is therefore honest for M9: the
 flavour is built, not yet validated on hardware.
 
+The second pass closed one of the open points of the previous round: the lint
+is green for **both** flavours, and the `firetv` variant was analysed for the
+first time — `No issues found.`, no `NewApi` finding, so AC-M9.2 is now
+measured instead of open. The device half of AC-M9.2 (a crash-free run on an
+API 25 device) stays open; it needs hardware.
+
 **Follow-up (open, because …):**
 
 1. **Run the whole device test plan on a Fire TV Stick** (hardware H2) and fill
@@ -257,11 +325,7 @@ flavour is built, not yet validated on hardware.
 2. **Build and weigh the release APKs** for both flavours to close AC-M9.4.
    Reason: only the debug APKs were built in this cycle, and the release script
    needs a keystore (risk R-10).
-3. **Make the lint green, then run `./gradlew :app:lintFiretvDebug`** and check
-   for `NewApi` findings. Reason: the lint was run for the `googletv` variant
-   and failed with one finding in the shared manifest; the `firetv` variant was
-   never analysed, so AC-M9.2 is still open.
-4. **Repeat the Play Services check on the Fire TV *release* APK.** The check
+3. **Repeat the Play Services check on the Fire TV *release* APK.** The check
    was performed in this cycle on the built debug APK and returned 0 matches
    (section 2.2); AC-M7.2 names the release APK, which was not built. Reason:
    the release APK is a different artefact.
@@ -272,11 +336,15 @@ flavour is built, not yet validated on hardware.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped; the Fire TV source set is part of the compiled module |
-| 2 | Lint and both debug APKs are green | **partly** — both debug APKs build (measured); the lint **fails** with 1 error (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`) |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped; the Fire TV source set is part of the compiled module. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
 | 3 | **No known S4 finding** | **yes** — the Fire TV surface has no S4 finding; it has fewer attack surface than the Google TV flavour |
 | 4 | Every open S3 has a written owner decision | **yes** — the Miracast residual risk is written down in the audit §7 |
 | 5 | The device scenarios ran on both flavours | **no** — the Fire TV column of the result sheet is empty |
-| 6 | The file-size rule holds for the touched files | **yes** — the Fire TV flavour file is 40 lines |
+| 6 | The file-size rule holds for the touched files | **yes** — the Fire TV flavour file is 40 lines; `bash scripts/check-file-size.sh` → exit 0 with `0 warning(s) above the soft limit of 400 lines` |
 | 7 | The documentation is up to date (same change) | **yes** — `docs/guides/INSTALLATION.md` describes the two flavours and the Cast limitation |
 | 8 | The limitations in `README.md` are true of this build | **yes** — the README states that Cast is unavailable on Fire TV |
+
+**CI quality gate** (the job `quality-gate` of `.github/workflows/ci.yml`, not a
+separate gate in `docs/quality/QUALITY.md` §7): **green** — all four structure
+checks exit 0 (section 2.1).

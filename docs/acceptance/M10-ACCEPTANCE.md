@@ -10,6 +10,12 @@
 **Tester / roles:** Project Manager (audit), with the measured output of the
 i18n completeness script and the code evidence
 **Date:** 2026-10-24
+**Update (second pass, 2026-10-24):** the team leader closed the three open
+points of the previous round — the CI quality gate, the lint and the three files
+above the line limit. The statements about the red gate, the lint finding and
+the file-size warning were brought up to date in the same commit. The JVM suite
+and the debug APKs were **not** built again; the numbers of section 2.1 name the
+run they come from.
 
 ---
 
@@ -22,7 +28,7 @@ Does the feature do what the requirement says?
 | 1 | No locale file defines a key that the base locale does not define | 0 stale keys | **PASS (measured)** | `bash scripts/check-i18n-completeness.sh` → exit 0, `OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` The script checks three things: every base key exists in the translation, no translation key is unknown to the base, and the format placeholders match. |
 | 2 | Every shipped locale translates the protocol state texts | every locale file defines all `protocol_state_*` keys | **PASS (measured)** | The same script run covers all 80 keys of every locale; the `protocol_state_*` and `protocol_detail_*` keys are part of that set. They exist in `values/`, `values-de/` and `values-fr/`. |
 | 3 | The protocol names are identical in every locale | the four `protocol_*` values are equal in all locale files | **PASS (measured)** | `protocol_airplay`, `protocol_miracast`, `protocol_cast`, `protocol_dlna` are part of the 80 keys the script compares. Measured with the same script: 80 keys in the base file, complete in 2 languages, no stale key, no placeholder difference. |
-| 4 | No user-visible text is hardcoded in Kotlin or in a layout | 0 lint findings, 0 grep matches | **PASS (code + lint)** | `grep -rn "setText(\"" app/src/main` → 0 matches. The lint analysis of the `googletv` variant completed and reported exactly one finding — the `UnusedAttribute` error in the shared manifest, not a `HardcodedText` finding; the `firetv` variant was not analysed. The resource references in the UI code are `R.string.*` (`HomeFragment.kt` lines 124–127 use `R.string.protocol_airplay` and so on). |
+| 4 | No user-visible text is hardcoded in Kotlin or in a layout | 0 lint findings, 0 grep matches | **PASS (code + lint)** | `grep -rn "setText(\"" app/src/main` → 0 matches. The lint is green for **both** flavours in the second pass (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, both reports `No issues found.`) — no `HardcodedText` finding and no other finding at all. The resource references in the UI code are `R.string.*` (`HomeFragment.kt` lines 124–127 use `R.string.protocol_airplay` and so on). |
 | 5 | With the device language set to German, the app shows German texts | Home screen, Settings, notification and the protocol cards are in German | **NOT MEASURED** | The resource files are complete (scenarios 1–3), but the rendering, the line breaks and the button widths can only be judged on a device. Device test plan case DT-12. |
 | 6 | With the device language set to French, the app shows the French texts | no French key falls back to English | **NOT MEASURED** | Same as scenario 5. Device test plan case DT-12. |
 | 7 | French strings exist at all | the `values-fr/` folder is complete | **PASS (measured)** | `app/src/main/res/values-fr/strings.xml` exists with 80 keys, the same set as the base file. The folder did not exist before this cycle — the QA track added it. |
@@ -48,8 +54,13 @@ Does the feature do what the requirement says?
   touched.
 - The file-size rule respected (≤ 400 lines soft, ≤ 550 hard): **yes** — the
   resource files are 131 lines (base), 132 lines (de), 132 lines (fr); the script
-  is 274 lines.
+  is 274 lines. The repository-wide check is green as well:
+  `bash scripts/check-file-size.sh` → exit 0, `0 warning(s) above the soft limit
+  of 400 lines`.
 - Every new class has a KDoc header: **not applicable** — no class was added.
+  The KDoc gate is nevertheless green on the whole tree:
+  `bash scripts/check-kdoc-headers.sh` → exit 0, `OK: KDoc header check passed —
+  227 class declaration(s) checked, all of them have a KDoc header.`
 - Every new public method has a test: **no** — and this is a known gap: the
   completeness check lives **only** in `scripts/check-i18n-completeness.sh`, which
   is **not** part of `./gradlew :test-runner:test`. The script runs in the CI job
@@ -59,8 +70,17 @@ Does the feature do what the requirement says?
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
   `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
   54 test classes. **Caveat:** no test in that suite covers the resource
-  completeness.
-- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **no — the lint was run and it failed.** Measured on `51933eb`: the `googletv` variant ends with `:app:lintGoogletvDebug FAILED`, `1 errors, 0 warnings`; the single finding is `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is only used in API level 31 and higher (current min is 29) [UnusedAttribute]`. The `firetv` variant did not run — the build stopped at the first failure. The finding sits in the shared manifest, so it is not specific to this milestone.
+  completeness. **Current state (not re-run):** 469 test methods in 56 test
+  classes; the JVM suite was not executed again in this documentation cycle.
+- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
+  measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
+  SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
+  Both reports say `No issues found.` The single finding of the previous round —
+  `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is
+  only used in API level 31 and higher (current min is 29) [UnusedAttribute]` —
+  is closed: the permission element now carries `tools:targetApi="31"`. The
+  `firetv` variant, which was never analysed before, is analysed and green.
+
 - Both flavours build — `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug`:
   **yes** — see section 2.1.
 - No new dependency / no new permission: **yes** — resources only.
@@ -80,6 +100,42 @@ $ source /workspace/toolchain/env.sh
 $ ./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline --console=plain
 ...
 BUILD SUCCESSFUL
+```
+
+The test run and the APK build above describe commit `51933eb`; the tree has
+moved on since then (the quality-gate and the lint fixes). **No APK was built
+again** in this documentation cycle.
+
+**Repository structure checks (measured in the second pass, current tree):**
+
+```
+$ bash scripts/check-file-size.sh        ; echo "exit=$?"
+OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
+exit=0
+
+$ bash scripts/check-kdoc-headers.sh     ; echo "exit=$?"
+OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.
+exit=0
+
+$ bash scripts/check-docs-links.sh       ; echo "exit=$?"
+OK: documentation link check passed — 192 internal link(s) resolve, 15 external link(s) skipped.
+exit=0
+
+$ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
+OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+exit=0
+```
+
+**Lint (measured in the second pass, current tree):**
+
+```
+$ ./gradlew :app:lintGoogletvDebug     -> BUILD SUCCESSFUL (5m 12s)
+$ ./gradlew :app:lintFiretvDebug       -> BUILD SUCCESSFUL (3m 39s)
+
+$ cat app/build/reports/lint-results-googletvDebug.txt
+No issues found.
+$ cat app/build/reports/lint-results-firetvDebug.txt
+No issues found.
 ```
 
 ---
@@ -215,6 +271,12 @@ formatting** are still open tasks in phase 10 of the project plan, and they were
 not touched in this cycle. The **rendering** of the translations on a screen is
 unproven.
 
+The second pass closed the two pipeline gates that were red in the previous
+round: the CI quality gate is green (all four structure checks exit 0) and the
+lint is green for **both** flavours. The language gap of this milestone is
+unchanged: the check still runs outside the Gradle suite, and the texts have
+still never been seen on a screen.
+
 **Follow-up (open, because …):**
 
 1. **Run device test plan case DT-12** on a Google TV and a Fire TV: set the
@@ -236,11 +298,15 @@ unproven.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Note: this does **not** cover the resource completeness. |
-| 2 | Lint and both debug APKs are green | **partly** — both debug APKs build (measured); the lint **fails** with 1 error (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`) |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). Note: this does **not** cover the resource completeness. |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
 | 3 | **No known S4 finding** | **yes** — the M10 surface has no S4 finding |
 | 4 | Every open S3 has a written owner decision | **yes** — the two script gaps are written down as P3 items in the QA acceptance record |
 | 5 | The device scenarios ran on both flavours | **no** — DT-12 has not been executed |
-| 6 | The file-size rule holds for the touched files | **yes** — the three resource files are 131/132/132 lines |
+| 6 | The file-size rule holds for the touched files | **yes** — the three resource files are 131/132/132 lines; `bash scripts/check-file-size.sh` → exit 0 with `0 warning(s) above the soft limit of 400 lines` |
 | 7 | The documentation is up to date (same change) | **yes** — `docs/acceptance/QA-I18N-ACCEPTANCE.md` documents the key table and the script behaviour |
 | 8 | The limitations in `README.md` are true of this build | **yes** — the README does not claim a French or German UI that has been seen on a device |
+
+**CI quality gate** (the job `quality-gate` of `.github/workflows/ci.yml`, not a
+separate gate in `docs/quality/QUALITY.md` §7): **green** — all four structure
+checks exit 0 (section 2.2).

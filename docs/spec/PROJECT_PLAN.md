@@ -1,15 +1,23 @@
 # PhairPlay – Project Plan
 
-Version: 2.2
+Version: 2.3
 Status: Active
 Date: 2026-03-23
 Last Updated: 2026-10-24
 
+> **Revision 2.3 (2026-10-24, second pass).** The CI quality gate and the lint
+> are green since the team leader closed them, and the media URI has an address
+> policy. The status table, the phase boxes and the milestone summary below were
+> updated against the code on commit `2267672` — not against the checkboxes of
+> the older plan. The acceptance criteria identifiers follow
+> `docs/spec/ACCEPTANCE_CRITERIA.md` v2.0 (`AC-M<n>.<m>` for the milestones
+> M6 … M12; the legacy rounds AR-0 … AR-8 keep their old `AC-<n>.<m>`
+> identifiers). The milestone risk register lives in
+> [`../project/RISKS.md`](../project/RISKS.md).
+
 > **Revision 2.2 (2026-10-24).** The status table below was verified against the
 > code on commit `51933eb`, not against the checkboxes of the older plan. The
-> acceptance criteria identifiers follow `docs/spec/ACCEPTANCE_CRITERIA.md` v2.0
-> (`AC-M<n>.<m>` for the milestones M6 … M12; the legacy rounds AR-0 … AR-8 keep
-> their old `AC-<n>.<m>` identifiers). The milestone risk register has moved to
+> milestone risk register has moved to
 > [`../project/RISKS.md`](../project/RISKS.md).
 
 ---
@@ -52,8 +60,8 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | 8 | M8 – Stability | 🟠 Partial | The frame-queue budget and the mDNS registration bookkeeping are proven by unit tests; the 30-minute session, the RAM, the CPU and the re-advertisement after a network outage are **not measured** |
 | 9 | M9 – Fire TV | 🟡 Implemented, device validation open | The flavour builds, carries no Play Services and degrades honestly; it has never been run on a Fire TV |
 | 10 | M10 – i18n | 🟠 Partial | EN / DE / FR are complete (80 keys each) and proven by `scripts/check-i18n-completeness.sh`; the RTL baseline and the locale-aware formatting are still open; the texts have never been seen on a device |
-| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | The JVM suite is green (457 tests, 0 failures) and both debug APKs build; the CI quality gate is **red** (16 missing KDoc headers) and the lint **fails** with one finding (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`), no signed APK was cut, no device test was executed |
-| 12 | M12 – DLNA | 🟠 Partial — control plane delivered, media path open | SSDP, description server, hardened SOAP dispatcher, GENA eventing, the Samsung DIAL extension and the playback wiring are implemented with 157 green tests; the media URI has no address policy (open finding SEC-04, S3 — it needs a written owner decision) and no cleartext configuration exists, and no control point has ever talked to the renderer |
+| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | The JVM suite is green (457 tests, 0 failures at the measured run; 469 test methods in the tree today) and both debug APKs build. **The CI quality gate is green** (all four structure checks exit 0) and **the lint is green for both flavours** (the `firetv` variant was analysed for the first time). Still open: no signed APK was cut, no device test was executed, three S4 findings are open, the README contradicts the code |
+| 12 | M12 – DLNA | 🟠 Partial — control plane delivered, media path open | SSDP, description server, hardened SOAP dispatcher, GENA eventing, the Samsung DIAL extension and the playback wiring are implemented with 169 test methods; the media URI now has an **address policy** (loopback, link-local / metadata, multicast, broadcast, obfuscated notations and user info are refused) — still open: the **scheme list** of the media URI, the accepted **public addresses** and the **un-resolved host names** (finding SEC-04, S3 — it needs a written owner decision), no cleartext configuration exists, and no control point has ever talked to the renderer |
 
 The per-milestone acceptance records live in
 [`../acceptance/`](../acceptance/): `M06-ACCEPTANCE.md` … `M12-ACCEPTANCE.md`.
@@ -318,7 +326,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 
 **Tasks:**
 - [ ] Test all phases on Fire TV hardware — **open: no device** (device test plan, Fire TV column)
-- [ ] Fix API level 25 issues — **open: the lint build fails before the `firetv` variant is analysed, so the `NewApi` check for API 25 is still unproven; `minSdk = 25` is set**
+- [x] Fix API level 25 issues — **the `firetv` variant was analysed for the first time in the second pass: `./gradlew :app:lintFiretvDebug` → `BUILD SUCCESSFUL`, the report says `No issues found.`, so the `NewApi` check for API 25 is proven; `minSdk = 25` is set. The runtime behaviour on an API 25 device still needs hardware**
 - [x] Cast graceful fallback (no GMS) — the Fire TV flavour reports `DISABLED` and contains no reference to `com.google.android.gms`
 - [x] Fire TV flavor specific adjustments — the flavour compiles, carries its own package id `com.phairplay.firetv` and its own version suffix
 
@@ -353,10 +361,10 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [x] Documentation updated (README, TROUBLESHOOTING, INSTALLATION, PROJECT_PLAN)
 - [x] Community bug fixes merged (screen awake, mDNS standby recovery, iOS 17+ RTSP limit, IPv4 wildcard binding)
 - [x] CI quality gate with four repository structure checks (`.github/workflows/ci.yml`, job `quality-gate`)
-- [x] JVM test suite green — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped
+- [x] JVM test suite green — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. The tree holds 469 test methods in 56 test classes today (static count; the suite was not re-run in the second pass)
 - [x] Both debug flavours build — measured: `BUILD SUCCESSFUL`
-- [ ] Make the quality gate green — **open: `check-kdoc-headers.sh` reports 16 declarations without a KDoc header (risk R-07)**
-- [ ] Make the lint green for both flavours — **open: measured, the `googletv` variant fails with one finding (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`); the `firetv` variant never ran**
+- [x] Make the quality gate green — **closed and measured**: all four structure checks exit 0 (`check-file-size.sh`: `184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh`: `227 class declaration(s) checked, all of them have a KDoc header`; `check-docs-links.sh` and `check-i18n-completeness.sh` green as well). Risk R-07 is closed
+- [x] Make the lint green for both flavours — **closed and measured**: `:app:lintGoogletvDebug` → `BUILD SUCCESSFUL` (5m 12s), `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s), both reports say `No issues found.` The finding was `android:usesPermissionFlags` without `tools:targetApi="31"`. Risk R-16 is closed
 - [ ] Produce and verify the signed v1.0.0 APKs (`apksigner verify`) — **open: the keystore is the owner's**
 - [ ] Real-device A/V validation on Google TV and Fire TV hardware — **open: no device; 0 of 15 device test cases executed**
 - [ ] Close the three open S4 findings (SEC-01, SEC-02, SEC-03) or get a written owner decision for each
@@ -373,10 +381,11 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 
 **Goal:** Provide native media streaming for Windows ("Cast to Device"), VLC, BubbleUPnP, and Android UPnP controllers via an incremental, secure, and fully unit-tested DLNA MediaRenderer stack.
 
-> **Note (2026-10-24).** The sub-phases below were unchecked in this plan
-> although the code exists: `app/src/main/kotlin/com/phairplay/dlna/` holds 28
-> production files and 157 of the 457 green JVM tests. The boxes now reflect the
-> code. What is **not** done is stated explicitly in each box.
+> **Note (2026-10-24, second pass).** The sub-phases below were unchecked in this plan
+> although the code exists: `app/src/main/kotlin/com/phairplay/dlna/` holds 29
+> production files and 169 of the 469 test methods in the tree (157 of the 457
+> green tests of the measured run). The boxes now reflect the code. What is
+> **not** done is stated explicitly in each box.
 
 ### Sub-Phase D1: Discovery & Receiver Foundation
 - [x] Implement `SsdpAdvertiser` on `239.255.255.250:1900` broadcasting `urn:schemas-upnp-org:device:MediaRenderer:1` and responding to `M-SEARCH` — `SsdpAdvertiser.kt`; `SsdpAdvertiserLiveTest` and `SsdpResponderTest` are green
@@ -398,11 +407,12 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 
 ### Sub-Phase D4: GENA Eventing & Security Hardening
 - [x] Implement GENA event subscription and `LastChange` event dispatching — `GenaEventManager.kt`; the `NOTIFY` goes out over a raw socket because `HttpURLConnection` refuses that method; `GenaEventManagerTest` (8) is green
-- [x] Enforce SSRF protection: GENA callback URLs restricted to private IPv4 addresses on the local subnet — `GenaCallbackPolicy.kt`; `GenaCallbackPolicyTest` (16) is green. **The media URI is not covered by this policy** — open finding SEC-04 (S3), risk R-03
+- [x] Enforce SSRF protection: GENA callback URLs restricted to private IPv4 addresses on the local subnet — `GenaCallbackPolicy.kt`; `GenaCallbackPolicyTest` (16) is green
+- [x] Enforce SSRF protection for the **media URI** — `DlnaMediaAddressPolicy.kt` (new in the second pass): the loopback, the reserved range `0.0.0.0/8`, the link-local range (and with it `169.254.169.254`), the multicast range, the broadcast address, the range `240.0.0.0/4`, the further metadata addresses (`100.100.100.200`, `192.0.0.192`, `fd00:ec2::254`), the known metadata host names, the non-standard notations of an IPv4 address and every user info part are refused. `DlnaMediaAddressPolicyTest` (11) plus one new case in `DlnaMediaUriTest` are green. **Still open:** the *scheme* list, the accepted **public addresses** and the **un-resolved host names** — finding SEC-04 (S3), risk R-03, change request CR-01
 - [ ] End-to-end testing with Windows 11 "Cast to Device", VLC Renderer, and BubbleUPnP — **open: no device and no control point** (device test plan DT-08 … DT-11)
 - [ ] Samsung Smart View extension — **delivered**: the Samsung SSDP search term and the DIAL documents are implemented (`SamsungSsdpResponderTest` 6, `DialAppCatalogTest` 10, `DialEndpointTest` 6, `DlnaDeviceDescriptionFieldsTest` 7 — all green); the visibility in a real television list is not proven
 
-**Definition of Done (2026-10-24):** AC-M12.1 … AC-M12.20. AC-M12.15 is **not met** (the media URI allowlist still contains `file`, `smb`, `ftp` and other schemes). AC-M12.4, AC-M12.18, AC-M12.19 and the Samsung visibility need a device. Acceptance record: [`../acceptance/M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md).
+**Definition of Done (2026-10-24, second pass):** AC-M12.1 … AC-M12.20. AC-M12.15 is **still not met** — the *address* of the media URI is now restricted, but the *scheme* allowlist still contains `file`, `smb`, `ftp` and other schemes. AC-M12.4, AC-M12.18, AC-M12.19 and the Samsung visibility need a device. Acceptance record: [`../acceptance/M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md).
 
 ---
 
@@ -421,8 +431,8 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 | M8 | Stability | Bounded queue, mDNS retry; the endurance numbers are open | 🟠 Partial | AC-M8.x + AC-6.x | [`M08-ACCEPTANCE.md`](../acceptance/M08-ACCEPTANCE.md) |
 | M9 | Fire TV | The flavour builds and degrades honestly; never run on a device | 🟡 Implemented, device validation open | AC-M9.x + AC-7.x | [`M09-ACCEPTANCE.md`](../acceptance/M09-ACCEPTANCE.md) |
 | M10 | i18n | EN + DE + FR complete (80 keys each); RTL and formatting open | 🟠 Partial | AC-M10.x | [`M10-ACCEPTANCE.md`](../acceptance/M10-ACCEPTANCE.md) |
-| M11 | Release | Signed APKs, CI green, all tests pass | 🟠 Beta — not ready for v1.0.0 | AC-M11.x + AC-8.x | [`M11-ACCEPTANCE.md`](../acceptance/M11-ACCEPTANCE.md) |
-| M12 | DLNA | SSDP, SOAP, Playback, GENA, Samsung DIAL — all implemented | 🟠 Partial — control plane delivered, media path open | AC-M12.x | [`M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md) |
+| M11 | Release | CI quality gate and lint green; signed APKs and the device validation open | 🟠 Beta — not ready for v1.0.0 | AC-M11.x + AC-8.x | [`M11-ACCEPTANCE.md`](../acceptance/M11-ACCEPTANCE.md) |
+| M12 | DLNA | SSDP, SOAP, Playback, GENA, Samsung DIAL — all implemented; the media URI is address-restricted | 🟠 Partial — control plane delivered, media path open | AC-M12.x | [`M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md) |
 
 **Status legend:** ✅ Complete · 🟡 Implemented, device validation open ·
 🟠 Partial · 🔴 Blocked.
@@ -432,7 +442,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 ## Risk Register
 
 > The maintained risk register lives in
-> [`../project/RISKS.md`](../project/RISKS.md) — 15 entries with the likelihood,
+> [`../project/RISKS.md`](../project/RISKS.md) — 17 entries with the likelihood,
 > the impact, the countermeasure, the owner and the status. The table below is the
 > original planning view and is kept for the history of the project; where the
 > two differ, **the register in `docs/project/RISKS.md` is authoritative**.

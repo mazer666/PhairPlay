@@ -11,6 +11,12 @@ both compile
 **Tester / roles:** Project Manager (audit), with the code evidence of the Cast
 integration and the JVM test run
 **Date:** 2026-10-24
+**Update (second pass, 2026-10-24):** the team leader closed the three open
+points of the previous round — the CI quality gate, the lint and the three files
+above the line limit. The statements about the red gate, the missing KDoc
+header, the lint finding and the file-size warning were brought up to date in
+the same commit. The JVM suite and the debug APKs were **not** built again;
+the numbers of section 2.1 name the run they come from.
 
 ---
 
@@ -50,11 +56,17 @@ Does the feature do what the requirement says?
   name and the same public surface. The AirPlay and DLNA stacks are untouched.
 - The file-size rule respected (≤ 400 lines soft, ≤ 550 hard): **yes** —
   `CastReceiver.kt` (googletv) 81 lines, `CastReceiver.kt` (firetv) 40 lines,
-  `CastReceiverOptionsProvider.kt` 14 lines.
-- Every new class has a KDoc header (what / why / example): **partly** — the two
-  `CastReceiver` classes have KDoc headers; the KDoc gate reports one violation in
-  this area:
-  `app/src/googletv/kotlin/com/phairplay/cast/CastReceiverOptionsProvider.kt:8: MISSING-KDOC CastReceiverOptionsProvider — no KDoc header found above the declaration.`
+  `CastReceiverOptionsProvider.kt` 14 lines. The repository-wide check is green
+  as well: `bash scripts/check-file-size.sh` → exit 0, `0 warning(s) above the
+  soft limit of 400 lines`.
+- Every new class has a KDoc header (what / why / example): **yes** — the two
+  `CastReceiver` classes and `CastReceiverOptionsProvider` carry their headers.
+  The violation of the previous round
+  (`app/src/googletv/kotlin/com/phairplay/cast/CastReceiverOptionsProvider.kt:8:
+  MISSING-KDOC CastReceiverOptionsProvider`) is closed, and the KDoc gate is
+  green on the whole tree: `bash scripts/check-kdoc-headers.sh` → exit 0,
+  `OK: KDoc header check passed — 227 class declaration(s) checked, all of them
+  have a KDoc header.`
 - Every new public method has a test: **partly** — the configuration check is
   covered by three tests; `start()` / `stop()` are not tested because they need a
   real `Context` with or without Play Services. **Caveat:** the JVM runner does
@@ -66,8 +78,19 @@ Does the feature do what the requirement says?
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
   `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
   54 test classes. The three Cast tests are part of that run (see the caveat
-  above: they run against the Fire TV implementation).
-- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **no — the lint was run and it failed.** Measured on `51933eb`: the `googletv` variant ends with `:app:lintGoogletvDebug FAILED`, `1 errors, 0 warnings`; the single finding is `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is only used in API level 31 and higher (current min is 29) [UnusedAttribute]`. The `firetv` variant did not run — the build stopped at the first failure. The finding sits in the shared manifest, so it is not specific to this milestone.
+  above: they run against the Fire TV implementation). **Current state (not
+  re-run):** 469 test methods in 56 test classes; the `com.phairplay.cast`
+  package still holds its 3 test methods. The JVM suite was not executed again
+  in this documentation cycle.
+- Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
+  measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
+  SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
+  Both reports say `No issues found.` The single finding of the previous round —
+  `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is
+  only used in API level 31 and higher (current min is 29) [UnusedAttribute]` —
+  is closed: the permission element now carries `tools:targetApi="31"`. The
+  `firetv` variant, which was never analysed before, is analysed and green.
+
 - Both flavours build — `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug`:
   **yes** — see section 2.1.
 - No new dependency / no new permission: **no new permission** — the Cast SDK is
@@ -90,6 +113,42 @@ BUILD SUCCESSFUL
 ```
 BUILD SUCCESSFUL in 3m 27s
 457 tests, 0 failures, 0 errors, 0 skipped (54 test classes)
+```
+
+The test run and the APK build above describe commit `51933eb`; the tree has
+moved on since then (the quality-gate and the lint fixes). **No APK was built
+again** in this documentation cycle.
+
+**Repository structure checks (measured in the second pass, current tree):**
+
+```
+$ bash scripts/check-file-size.sh        ; echo "exit=$?"
+OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
+exit=0
+
+$ bash scripts/check-kdoc-headers.sh     ; echo "exit=$?"
+OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.
+exit=0
+
+$ bash scripts/check-docs-links.sh       ; echo "exit=$?"
+OK: documentation link check passed — 192 internal link(s) resolve, 15 external link(s) skipped.
+exit=0
+
+$ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
+OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+exit=0
+```
+
+**Lint (measured in the second pass, current tree):**
+
+```
+$ ./gradlew :app:lintGoogletvDebug     -> BUILD SUCCESSFUL (5m 12s)
+$ ./gradlew :app:lintFiretvDebug       -> BUILD SUCCESSFUL (3m 39s)
+
+$ cat app/build/reports/lint-results-googletvDebug.txt
+No issues found.
+$ cat app/build/reports/lint-results-firetvDebug.txt
+No issues found.
 ```
 
 ---
@@ -231,6 +290,12 @@ The milestone status in `docs/spec/PROJECT_PLAN.md` ("🟠 Partial — graceful
 degradation only") is therefore correct: it is not "in progress", it is
 "degradation delivered, function pending an external prerequisite".
 
+The second pass closed the two pipeline gates that were red in the previous
+round: the CI quality gate is green (all four structure checks exit 0) and the
+lint is green for **both** flavours. That changes nothing about the Cast
+prerequisites: without a registered application ID and without hardware, the
+milestone stays a graceful degradation.
+
 **Follow-up (open, because …):**
 
 1. **Register the Cast application** in the Google Cast Developer Console and
@@ -247,11 +312,16 @@ degradation only") is therefore correct: it is not "in progress", it is
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped |
-| 2 | Lint and both debug APKs are green | **partly** — both debug APKs build (measured); the lint **fails** with 1 error (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`) |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped. Current static count: 469 test methods in 56 classes (the suite was not re-run in this cycle). |
+| 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
 | 3 | **No known S4 finding** | **yes** — the M7 surface has no S4 finding; the SDK is a documented black box (SEC-13) |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-13 is an accepted Info finding; the Cast scope is written down in `docs/spec/REQUIREMENTS.md` §3 |
 | 5 | The device scenarios ran on both flavours | **no** — DT-07 has not been executed on either flavour |
 | 6 | The file-size rule holds for the touched files | **yes** — all Cast files are far below the soft limit |
 | 7 | The documentation is up to date (same change) | **yes** — `docs/guides/CAST_APP_ID.md`, `README.md`, `docs/spec/REQUIREMENTS.md` §3 |
 | 8 | The limitations in `README.md` are true of this build | **yes** — README states that full Cast testing requires a Cast app ID |
+
+**CI quality gate** (the job `quality-gate` of `.github/workflows/ci.yml`, not a
+separate gate in `docs/quality/QUALITY.md` §7): **green** — all four structure
+checks exit 0 (section 2.1).
+
