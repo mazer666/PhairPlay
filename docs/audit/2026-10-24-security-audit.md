@@ -155,6 +155,27 @@ fun `POST play rejects a file url`() {
 }
 ```
 
+**Status as of 2026-10-24 (implemented by the AirPlay track, verified by the lead):**
+the media URL is checked before the player sees it. `FetchableUrlPolicy.isFetchable`
+accepts only `http` and `https`, refuses control characters and an over-long URL, and
+hands the address to `HostAddressPolicy` — the rules that already guarded the DLNA media
+URI. `file://`, `content://`, `rtsp://`, `ftp://`, the loopback address, the cloud
+metadata address of the router and every obfuscated notation of an IPv4 address are
+therefore refused. `RtspVideoUrlHandler.handleVideoPlay` answers **400 Bad Request** in
+that case and never calls `onVideoPlay`, so the television never opens the connection.
+
+The address rules moved with the fix: `DlnaMediaAddressPolicy` became
+`com.phairplay.util.HostAddressPolicy`, because both protocol stacks now share them. The
+rules themselves did not change.
+
+Tests: `FetchableUrlPolicyTest` and `RtspHandlerHandshakeTest` — `POST play rejects a
+file url` and the URL cases of the policy test.
+
+**Still open:** a **public** address is accepted, because the sender decides which media
+the owner wants to see and PhairPlay itself sends nothing. Restricting the host to the
+local subnet is a **product decision**, not a security decision — the audit says so, and
+the decision belongs to the owner.
+
 ---
 
 #### SEC-02 — An image decompression bomb kills the receiver
@@ -226,6 +247,28 @@ fun `rejects a picture whose dimensions exceed the limit`() {
     assertNull(SafeBitmapDecoder.decode(bomb))
 }
 ```
+
+**Status as of 2026-10-24 (implemented by the UI track, verified by the lead):**
+the picture is decoded through `com.phairplay.util.SafeBitmapDecoder`. It reads the
+dimensions first (`inJustDecodeBounds`), refuses a picture whose edge is longer than
+4096 px or whose pixel count exceeds the budget, and decodes the rest with an
+`inSampleSize` so the pixels are never allocated at full size. `PhotoScreen.showPhoto`
+and `NowPlayingScreen.update` both use it; a picture that is refused leaves the previous
+image on the screen instead of crashing the app.
+
+The proposed fix above was **not** copied literally: rejecting every picture longer than
+4096 px would throw away a legitimate 8000×6000 photo from a phone. The decoder
+downsamples instead and only refuses what does not fit into the budget.
+
+The downsampling arithmetic is shared with the DLNA path: `DlnaImageDecoder` uses the
+same calculation, so both stacks apply the same rule to the same kind of payload.
+
+Tests: `SafeBitmapDecoderTest` — the arithmetic and the limit rule, 16 cases.
+
+**Still open:** `BitmapFactory` is part of the Android framework and is not available in
+the pure JVM test module. The **decoding path** is therefore not covered by the test
+run; only the rule in front of it is. A picture of 20 000 × 20 000 px needs an
+instrumented test on a real device to prove the rejection end to end.
 
 ---
 
