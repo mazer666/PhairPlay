@@ -1,9 +1,16 @@
 # PhairPlay – Project Plan
 
-Version: 2.1
+Version: 2.2
 Status: Active
 Date: 2026-03-23
-Last Updated: 2026-05-23
+Last Updated: 2026-10-24
+
+> **Revision 2.2 (2026-10-24).** The status table below was verified against the
+> code on commit `51933eb`, not against the checkboxes of the older plan. The
+> acceptance criteria identifiers follow `docs/spec/ACCEPTANCE_CRITERIA.md` v2.0
+> (`AC-M<n>.<m>` for the milestones M6 … M12; the legacy rounds AR-0 … AR-8 keep
+> their old `AC-<n>.<m>` identifiers). The milestone risk register has moved to
+> [`../project/RISKS.md`](../project/RISKS.md).
 
 ---
 
@@ -20,21 +27,37 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 
 ## Status Overview
 
+> **How to read the statuses.**
+> * **✅ Complete** — the code is there, the tests exist and are green, and the
+>   remaining device validation is explicitly marked as open in the acceptance
+>   record. The acceptance record is the authority; it names the test that
+>   proves each claim.
+> * **🟡 Implemented, device validation open** — the code is there and the unit
+>   tests are green, but the behaviour on a television has never been observed.
+> * **🟠 Partial** — a defined part of the milestone is delivered, a defined
+>   part is not, and the split is written down.
+> * **🔴 Blocked** — the milestone cannot advance without something that is not
+>   in the repository (an application ID, a system privilege, hardware).
+
 | Phase | Milestone | Status | Notes |
 |---|---|---|---|
-| 0 | M0 – Spec | ✅ Complete | All spec docs written, codec matrix added (v2.2) |
-| 1 | M1 – Skeleton | ✅ Complete | UI, settings, foreground service, and both APK flavors build |
-| 2 | M2 – mDNS | ✅ Complete | AirPlay mDNS + InfoResponder implemented; Miracast WFD advertising added; Cast remains registration-dependent |
-| 3 | M3 – AirPlay Handshake | ✅ Complete | Full RTSP router, SDP parsing, plist codec, pairing (Ed25519/X25519 + SRP), FairPlay fp-setup, `/photo` endpoint, 247 unit tests |
-| 4 | M4 – AirPlay Video | ✅ Complete | H.264 via MirrorStreamServer + MirrorCrypto (AES-128-CTR), MediaCodec with SPS-driven reinit and self-heal, aspect-fit rendering; real-device validation ongoing |
-| 5 | M5 – AirPlay Audio | ✅ Complete | AAC-ELD/AAC-LC (AudioStreamServer), ALAC (AlacDecoder + libalac), AES-128-CBC, NTP sync, DACP reverse remote, NowPlayingScreen; real-device validation ongoing |
-| 6 | M6 – Miracast | 🔄 Started | Wi-Fi Direct/WFD advertising and RTSP control-plane implemented; system API limitations identified (see ADR-004) |
-| 7 | M7 – Google Cast | 🔄 Started | Google TV Cast Connect SDK lifecycle implemented; full testing requires registered Cast app ID |
-| 8 | M8 – Stability | 🔄 In Progress | Screen awake, mDNS standby recovery & socket binding fixes integrated in v1.0.0-beta.2 |
-| 9 | M9 – Fire TV | 🔄 In Progress | Signed Fire TV APK released (v1.0.0-beta.2); screensaver timeout resolved |
-| 10 | M10 – i18n | 🔄 Partial | EN/DE resource structure exists; full UX string audit pending |
-| 11 | M11 – Release | 🔄 Beta | v1.0.0-beta.2 signed release published on GitHub (2026-10-09) |
-| 12 | M12 – DLNA | 📋 Planned | Stepwise UPnP/DLNA MediaRenderer for Windows & Android (see ADR-004) |
+| 0 | M0 – Spec | ✅ Complete | 4 spec documents present; `REQUIREMENTS.md` v3.0 and `ACCEPTANCE_CRITERIA.md` v2.0 were realigned to the code in this cycle |
+| 1 | M1 – Skeleton | 🟡 Implemented, device validation open | UI, settings, foreground service and both APK flavours build; the UI navigation pass on real hardware is still open |
+| 2 | M2 – mDNS | 🟡 Implemented, device validation open | AirPlay mDNS (`_airplay._tcp`, `_raop._tcp`), the InfoResponder, the Miracast WFD advertising and the Cast lifecycle are implemented; the picker entry is not proven on a device |
+| 3 | M3 – AirPlay Handshake | 🟡 Implemented, device validation open | Full RTSP router, SDP parsing, plist codec, pairing (Ed25519/X25519 + SRP), FairPlay fp-setup, `/photo`; 202 AirPlay tests are green; the macOS/iOS handshake is not proven on a device |
+| 4 | M4 – AirPlay Video | 🟡 Implemented, device validation open | H.264 via `MirrorStreamServer` + `MirrorCrypto`, MediaCodec with SPS-driven reinit and self-heal, aspect-fit rendering; the fps / latency budget is **not measured** |
+| 5 | M5 – AirPlay Audio | 🟡 Implemented, device validation open | AAC-ELD/AAC-LC, ALAC, AES-128-CBC, NTP sync, DACP reverse remote, NowPlaying screen; the A/V sync budget is **not measured** |
+| 6 | M6 – Miracast | 🟠 Partial — control plane only | Discovery and the WFD RTSP control plane are implemented and tested; the **media path does not exist** and cannot exist for a sideloaded app (ADR-004). No MPEG-TS demuxer, no WFD decoder. |
+| 7 | M7 – Google Cast | 🟠 Partial — graceful degradation only | The Cast Connect SDK lifecycle is implemented, the Fire TV flavour degrades to `DISABLED`, the unconfigured Google TV build reports `ERROR`; the end-to-end Cast receiver needs a registered application ID and hardware |
+| 8 | M8 – Stability | 🟠 Partial | The frame-queue budget and the mDNS registration bookkeeping are proven by unit tests; the 30-minute session, the RAM, the CPU and the re-advertisement after a network outage are **not measured** |
+| 9 | M9 – Fire TV | 🟡 Implemented, device validation open | The flavour builds, carries no Play Services and degrades honestly; it has never been run on a Fire TV |
+| 10 | M10 – i18n | 🟠 Partial | EN / DE / FR are complete (80 keys each) and proven by `scripts/check-i18n-completeness.sh`; the RTL baseline and the locale-aware formatting are still open; the texts have never been seen on a device |
+| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | The JVM suite is green (457 tests, 0 failures) and both debug APKs build; the CI quality gate is **red** (16 missing KDoc headers) and the lint **fails** with one finding (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`), no signed APK was cut, no device test was executed |
+| 12 | M12 – DLNA | 🟠 Partial — control plane delivered, media path open | SSDP, description server, hardened SOAP dispatcher, GENA eventing, the Samsung DIAL extension and the playback wiring are implemented with 157 green tests; the media URI has no address policy (open finding SEC-04, S3 — it needs a written owner decision) and no cleartext configuration exists, and no control point has ever talked to the renderer |
+
+The per-milestone acceptance records live in
+[`../acceptance/`](../acceptance/): `M06-ACCEPTANCE.md` … `M12-ACCEPTANCE.md`.
+The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 
 ---
 
@@ -80,7 +103,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 - Notification visible with Stop/Restart buttons
 - DE strings visible when device language is German
 
-**Acceptance Criteria:** AC-1.x
+**Acceptance Criteria:** AC-1.x (legacy round AR-1)
 
 ---
 
@@ -98,7 +121,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 - [x] Settings: device name applied to implemented advertisers
 
 **Definition of Done:**
-- macOS sees PhairPlay within 3s (AC-2.1)
+- macOS sees PhairPlay within 3s (AC-2.1, legacy round AR-2)
 - Device name from Settings is shown in picker
 - WifiP2p service registered (Miracast P2P)
 - Service cards update when advertising starts/stops
@@ -121,10 +144,10 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 - [x] `RaopRsa.kt` — legacy rsaaeskey recovery (RSA-OAEP, AirPort Express key)
 - [x] `PhotoHandler.kt` + `PhotoScreen.kt` — `/photo` PUT/DELETE; JPEG/PNG full-screen display
 - [x] AirPlay `features` bitmask in mDNS TXT record
-- [x] 247 unit tests (FairPlay, RaopRsa, SRP, RTSP, pairing, plist, DMAP)
+- [x] Unit tests for the whole AirPlay stack — 202 tests in `com.phairplay.airplay` and `com.phairplay.airplay.handshake` are green (measured on `51933eb`)
 - [ ] Real macOS/iOS AirPlay handshake and photo transfer validation
 
-**Definition of Done:** AC-3.x — full handshake from macOS without RTSP errors; photo from iOS Photos app appears on screen.
+**Definition of Done:** AC-3.x (legacy round AR-3) — full handshake from macOS without RTSP errors; photo from iOS Photos app appears on screen.
 
 ---
 
@@ -146,7 +169,8 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 - [ ] SDP negotiation: detect `H265/90000` in `a=rtpmap`; fall back to H.264 if HEVC unavailable
 - [ ] Advertise HEVC support in AirPlay `features` bitmask only if hardware supports it
 
-**Definition of Done:** AC-4.x — ≥25fps, ≤100ms latency on Google TV for H.264 streams. HEVC streams play if hardware is capable.
+**Definition of Done:** AC-4.x (legacy round AR-4) — ≥25fps, ≤100ms latency on Google TV for H.264 streams. HEVC streams play if hardware is capable.
+**Note (2026-10-24):** neither number has been measured on a device — see [`../acceptance/M08-ACCEPTANCE.md`](../acceptance/M08-ACCEPTANCE.md) §3.
 
 ---
 
@@ -173,7 +197,8 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 - [ ] E-AC-3 / Dolby Atmos (JOC) output via AudioTrack with `ENCODING_E_AC3_JOC` if device supports it
 - [ ] Advertise surround capability in AirPlay `features` bitmask only if hardware supports it
 
-**Definition of Done:** AC-5.x — A/V sync ≤40ms. ALAC music streams play correctly. Surround audio passes through on capable hardware.
+**Definition of Done:** AC-5.x (legacy round AR-5) — A/V sync ≤40ms. ALAC music streams play correctly. Surround audio passes through on capable hardware.
+**Note (2026-10-24):** the A/V sync number has not been measured on a device.
 
 ---
 
@@ -214,7 +239,8 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 **UI:**
 - [ ] Miracast status card updates in HomeScreen (connecting, streaming, codec info in debug overlay)
 
-**Definition of Done:** AC-6.x — Windows 10 screen mirroring works end-to-end; LPCM and AAC audio work; H.265 works on capable hardware; HDCP negotiated.
+**Definition of Done:** ~~Windows 10 screen mirroring works end-to-end; LPCM and AAC audio work; H.265 works on capable hardware; HDCP negotiated.~~
+**Revised Definition of Done (2026-10-24):** AC-M6.1 … AC-M6.8 — discovery and control plane only. The media path is **out of scope** (see ADR-004 and `docs/spec/REQUIREMENTS.md` §3). Acceptance record: [`../acceptance/M06-ACCEPTANCE.md`](../acceptance/M06-ACCEPTANCE.md).
 
 ---
 
@@ -264,7 +290,8 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 - [ ] Widevine L1/L3 via Android `MediaDrm` (handled automatically by Cast SDK)
 - [ ] PlayReady via Android `MediaDrm` (handled automatically by Cast SDK)
 
-**Definition of Done:** AC-7.x — Cast from Chrome works on Google TV; H.264 + VP8 mandatory; optional codecs negotiated at runtime; DRM-free streams play; Widevine-protected streams play via Cast SDK.
+**Definition of Done:** ~~Cast from Chrome works on Google TV; H.264 + VP8 mandatory; optional codecs negotiated at runtime; DRM-free streams play; Widevine-protected streams play via Cast SDK.~~
+**Revised Definition of Done (2026-10-24):** AC-M7.1 … AC-M7.6 — graceful degradation. The Cast SDK lifecycle runs, the Fire TV flavour degrades to `DISABLED`, an unconfigured build reports `ERROR`. The end-to-end Cast receiver needs a registered application ID. Acceptance record: [`../acceptance/M07-ACCEPTANCE.md`](../acceptance/M07-ACCEPTANCE.md).
 
 ---
 
@@ -273,12 +300,15 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 **Milestone:** M8
 
 **Tasks:**
-- [ ] 30-minute continuous stream tests for all 3 protocols
-- [ ] Auto-reconnect for all protocols
-- [ ] Memory leak audit
-- [ ] `start on boot` BroadcastReceiver
+- [ ] 30-minute continuous stream tests for all 3 protocols — **open: no device** (device test plan DT-15)
+- [ ] Auto-reconnect for all protocols — **open: no protocol-level reconnect exists; only the AirPlay mDNS re-advertisement** (FR-61 deviation)
+- [ ] Memory leak audit — **open: no profiler run**
+- [x] `start on boot` BroadcastReceiver — implemented (`service/BootReceiver.kt`, `RECEIVE_BOOT_COMPLETED`); the runtime behaviour needs a device (DT-13)
+- [x] Bounded mirroring frame queue (90 items / 32 MB) — `MirrorFrameQueueTest`, 13 green tests
+- [x] Bounded mDNS registration retry with an explicit error state — `MdnsRegistrationTrackerTest`, 10 green tests
 
-**Definition of Done:** AC-8.x — 30min stable, reconnect working.
+**Definition of Done:** ~~AC-8.x — 30min stable, reconnect working.~~
+**Revised Definition of Done (2026-10-24):** AC-M8.1 … AC-M8.8 (plus the legacy round AR-6 / `AC-6.x`). AC-M8.4 and AC-M8.7 are proven by unit tests; AC-M8.1, AC-M8.2, AC-M8.3, AC-M8.5, AC-M8.6 and AC-M8.8 need a device. Acceptance record: [`../acceptance/M08-ACCEPTANCE.md`](../acceptance/M08-ACCEPTANCE.md).
 
 ---
 
@@ -287,10 +317,12 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 **Milestone:** M9
 
 **Tasks:**
-- [ ] Test all phases on Fire TV hardware
-- [ ] Fix API level 25 issues
-- [ ] Cast graceful fallback (no GMS)
-- [ ] Fire TV flavor specific adjustments
+- [ ] Test all phases on Fire TV hardware — **open: no device** (device test plan, Fire TV column)
+- [ ] Fix API level 25 issues — **open: the lint build fails before the `firetv` variant is analysed, so the `NewApi` check for API 25 is still unproven; `minSdk = 25` is set**
+- [x] Cast graceful fallback (no GMS) — the Fire TV flavour reports `DISABLED` and contains no reference to `com.google.android.gms`
+- [x] Fire TV flavor specific adjustments — the flavour compiles, carries its own package id `com.phairplay.firetv` and its own version suffix
+
+**Definition of Done (2026-10-24):** AC-M9.1 … AC-M9.6 (plus the legacy round AR-7 / `AC-7.x`). AC-M9.1 and AC-M9.3 are covered by the build; every other criterion needs a device. Acceptance record: [`../acceptance/M09-ACCEPTANCE.md`](../acceptance/M09-ACCEPTANCE.md).
 
 ---
 
@@ -299,82 +331,111 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 **Milestone:** M10
 
 **Tasks:**
-- [ ] Complete all string resources in EN and DE
-- [ ] Add FR strings (community contribution ready)
-- [ ] RTL support baseline (for future AR/HE)
-- [ ] Locale-aware date/time/number formatting
+- [x] Complete all string resources in EN and DE — 80 keys in each, proven by `scripts/check-i18n-completeness.sh` (exit 0)
+- [x] Add FR strings (community contribution ready) — `values-fr/strings.xml` with 80 keys, same key set
+- [ ] RTL support baseline (for future AR/HE) — **open: not started**
+- [ ] Locale-aware date/time/number formatting — **open: not started**
+- [ ] Render the translations on a device — **open: no device** (device test plan DT-12)
+
+**Definition of Done (2026-10-24):** AC-M10.1 … AC-M10.6. AC-M10.1 … AC-M10.3 are proven by the script; AC-M10.4 by the code; AC-M10.5 and AC-M10.6 need a device. Acceptance record: [`../acceptance/M10-ACCEPTANCE.md`](../acceptance/M10-ACCEPTANCE.md).
 
 ---
 
 ## Phase 11 – Release
 
 **Milestone:** M11
-**Status:** 🔄 Beta — v1.0.0-beta.2 published 2026-10-09
+**Status:** 🟠 Beta — v1.0.0-beta.2 published 2026-10-09; v1.0.0-beta.3 prepared 2026-10-24; **not ready for a stable v1.0.0**
 
 **Tasks:**
-- [x] Signed release APKs for both flavors (`scripts/release.sh`)
+- [x] Signed release APKs for both flavors (`scripts/release.sh`) — the script is in place and the beta.2 release was signed with it
 - [x] GitHub Release with GoogleTV + FireTV APKs ([v1.0.0-beta.2](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-beta.2))
 - [x] CHANGELOG.md entry for v1.0.0-beta.2
 - [x] Documentation updated (README, TROUBLESHOOTING, INSTALLATION, PROJECT_PLAN)
 - [x] Community bug fixes merged (screen awake, mDNS standby recovery, iOS 17+ RTSP limit, IPv4 wildcard binding)
-- [ ] Real-device A/V validation on Google TV and Fire TV hardware
+- [x] CI quality gate with four repository structure checks (`.github/workflows/ci.yml`, job `quality-gate`)
+- [x] JVM test suite green — measured on `51933eb`: 457 tests, 0 failures, 0 errors, 0 skipped
+- [x] Both debug flavours build — measured: `BUILD SUCCESSFUL`
+- [ ] Make the quality gate green — **open: `check-kdoc-headers.sh` reports 16 declarations without a KDoc header (risk R-07)**
+- [ ] Make the lint green for both flavours — **open: measured, the `googletv` variant fails with one finding (`UnusedAttribute`, `app/src/main/AndroidManifest.xml:58`); the `firetv` variant never ran**
+- [ ] Produce and verify the signed v1.0.0 APKs (`apksigner verify`) — **open: the keystore is the owner's**
+- [ ] Real-device A/V validation on Google TV and Fire TV hardware — **open: no device; 0 of 15 device test cases executed**
+- [ ] Close the three open S4 findings (SEC-01, SEC-02, SEC-03) or get a written owner decision for each
 - [ ] Stable v1.0.0 release
+
+**Definition of Done (2026-10-24):** AC-M11.1 … AC-M11.8 (plus the legacy round AR-8 / `AC-8.x`). Acceptance record: [`../acceptance/M11-ACCEPTANCE.md`](../acceptance/M11-ACCEPTANCE.md).
 
 ---
 
-## Phase 12 – UPnP / DLNA MediaRenderer 📋
+## Phase 12 – UPnP / DLNA MediaRenderer
 
 **Milestone:** M12  
-**Status:** 📋 Planned (Architected in [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md))  
+**Status:** 🟠 Partial — the control plane is delivered, the media path is open (architected in [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md))  
 
 **Goal:** Provide native media streaming for Windows ("Cast to Device"), VLC, BubbleUPnP, and Android UPnP controllers via an incremental, secure, and fully unit-tested DLNA MediaRenderer stack.
 
+> **Note (2026-10-24).** The sub-phases below were unchecked in this plan
+> although the code exists: `app/src/main/kotlin/com/phairplay/dlna/` holds 28
+> production files and 157 of the 457 green JVM tests. The boxes now reflect the
+> code. What is **not** done is stated explicitly in each box.
+
 ### Sub-Phase D1: Discovery & Receiver Foundation
-- [ ] Implement `SsdpAdvertiser` on `239.255.255.250:1900` broadcasting `urn:schemas-upnp-org:device:MediaRenderer:1` and responding to `M-SEARCH`
-- [ ] Lightweight embedded HTTP server serving `/description.xml` and SCPD service descriptors
-- [ ] Create `DlnaReceiver` in `com.phairplay.dlna` managed by `PhairPlayService`
-- [ ] Add `dlnaEnabled` preference in `AppSettings` and status card in `HomeFragment`
+- [x] Implement `SsdpAdvertiser` on `239.255.255.250:1900` broadcasting `urn:schemas-upnp-org:device:MediaRenderer:1` and responding to `M-SEARCH` — `SsdpAdvertiser.kt`; `SsdpAdvertiserLiveTest` and `SsdpResponderTest` are green
+- [x] Lightweight embedded HTTP server serving `/description.xml` and SCPD service descriptors — `DlnaDescriptionServer.kt` (bounded: 8 KB request line, 16 KB header, 64 KB body, 8 workers + 16 queued)
+- [x] Create `DlnaReceiver` in `com.phairplay.dlna` managed by `PhairPlayService` — `DlnaReceiver.kt`; the receiver is owned by `ReceiverSupervisor`
+- [x] Add `dlnaEnabled` preference in `AppSettings` and status card in `HomeFragment` — `AppSettings.dlnaEnabled`, `SettingsRepository`, `HomeFragment.kt` lines 127 and 186
 
 ### Sub-Phase D2: Control Plane & Hardened SOAP Dispatcher
-- [ ] Harden XML parser against XXE (`FEATURE_SECURE_PROCESSING`, entity resolution disabled, recursion depth limit)
-- [ ] Implement `ConnectionManager:1` service (`GetProtocolInfo`, `GetCurrentConnectionIDs`)
-- [ ] Implement `AVTransport:1` state machine (`SetAVTransportURI`, `Play`, `Pause`, `Stop`, `GetTransportInfo`, `GetPositionInfo`)
-- [ ] Implement `RenderingControl:1` service (`GetVolume`, `SetVolume`, `GetMute`, `SetMute`)
+- [x] Harden XML parser against XXE (`FEATURE_SECURE_PROCESSING`, entity resolution disabled, recursion depth limit) — `SecureSoapXml.kt` (fail-closed, 64 KB / 32 levels); `SecureSoapXmlTest` (10) and `DlnaSoapDispatcherSecurityTest` (6) are green
+- [x] Implement `ConnectionManager:1` service (`GetProtocolInfo`, `GetCurrentConnectionIDs`) — `DlnaSoapDispatcherTest` is green; `DlnaProtocolInfo.SOURCE` is not empty
+- [x] Implement `AVTransport:1` state machine (`SetAVTransportURI`, `Play`, `Pause`, `Stop`, `GetTransportInfo`, `GetPositionInfo`) — `DlnaAvTransportService.kt`; `DlnaSoapDispatcherTest` (16) is green
+- [x] Implement `RenderingControl:1` service (`GetVolume`, `SetVolume`, `GetMute`, `SetMute`) — implemented, but the value is **not applied to the TV volume**; open point O-4
 
 ### Sub-Phase D3: Media Playback Integration (Video, Audio, Photo)
-- [ ] Connect `AVTransport` media URL playback to Android `SurfaceView` via `StreamingScreen` / `MediaPlayer`
-- [ ] Support audio-only playback with `NowPlayingScreen` metadata display
-- [ ] Support photo display (`PhotoScreen`) with strict payload memory limits (max 20 MB, downsampling)
-- [ ] Connect TV remote transport controls (play, pause, stop) to DLNA state machine
+- [x] Connect `AVTransport` media URL playback to Android `SurfaceView` via `StreamingScreen` / `MediaPlayer` — `DlnaReceiver.onPlay` → `AirPlayVideoPlayer`; **not verifiable without a device**, and the cleartext fetch is likely blocked on API 35 (risk R-05)
+- [x] Support audio-only playback with `NowPlayingScreen` metadata display — `AirPlayVideoPlayer.playAudio`, no surface
+- [x] Support photo display (`PhotoScreen`) with strict payload memory limits (max 20 MB, downsampling) — `DlnaImageDecoder.kt`; `DlnaImageDecoderTest` (6) is green
+- [x] Connect TV remote transport controls (play, pause, stop) to DLNA state machine — `DlnaRemoteCommand` → `DlnaSoapDispatcher.onRemoteCommand`; the D-pad mapping itself is not tested on a device
 
 ### Sub-Phase D4: GENA Eventing & Security Hardening
-- [ ] Implement GENA event subscription and `LastChange` event dispatching
-- [ ] Enforce SSRF protection: GENA callback URLs restricted to private IPv4 addresses on the local subnet
-- [ ] End-to-end testing with Windows 11 "Cast to Device", VLC Renderer, and BubbleUPnP
+- [x] Implement GENA event subscription and `LastChange` event dispatching — `GenaEventManager.kt`; the `NOTIFY` goes out over a raw socket because `HttpURLConnection` refuses that method; `GenaEventManagerTest` (8) is green
+- [x] Enforce SSRF protection: GENA callback URLs restricted to private IPv4 addresses on the local subnet — `GenaCallbackPolicy.kt`; `GenaCallbackPolicyTest` (16) is green. **The media URI is not covered by this policy** — open finding SEC-04 (S3), risk R-03
+- [ ] End-to-end testing with Windows 11 "Cast to Device", VLC Renderer, and BubbleUPnP — **open: no device and no control point** (device test plan DT-08 … DT-11)
+- [ ] Samsung Smart View extension — **delivered**: the Samsung SSDP search term and the DIAL documents are implemented (`SamsungSsdpResponderTest` 6, `DialAppCatalogTest` 10, `DialEndpointTest` 6, `DlnaDeviceDescriptionFieldsTest` 7 — all green); the visibility in a real television list is not proven
+
+**Definition of Done (2026-10-24):** AC-M12.1 … AC-M12.20. AC-M12.15 is **not met** (the media URI allowlist still contains `file`, `smb`, `ftp` and other schemes). AC-M12.4, AC-M12.18, AC-M12.19 and the Samsung visibility need a device. Acceptance record: [`../acceptance/M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md).
 
 ---
 
 ## Milestone Summary
 
-| # | Phase | Key Deliverable | Status | Primary AC |
-|---|---|---|---|---|
-| M0 | Spec | 4 spec docs, codec matrix, photo/DRM spec | ✅ Complete | AC-0.x |
-| M1 | Skeleton | Service + UI scaffold (both flavors) | ✅ Build-ready | AC-1.x |
-| M2 | Discovery | AirPlay mDNS + Miracast WFD advertising groundwork | 🔄 In Progress | AC-2.x |
-| M3 | AirPlay Handshake + Photo | RTSP session + `/photo` endpoint | 🔄 In Progress | AC-3.x |
-| M4 | AirPlay Video | H.264 mandatory ≥25fps; H.265 optional | 🔄 In Progress | AC-4.x |
-| M5 | AirPlay Audio | A/V sync ≤40ms; ALAC; optional surround | 🔄 In Progress | AC-5.x |
-| M6 | Miracast | H.264 CHP/CBP + LPCM mandatory; HEVC/AAC/AC3 optional | 🔄 Started | AC-6.x |
-| M7 | Cast | H.264+VP8 mandatory; HEVC/VP9/AV1 optional; Widevine | 🔄 Started | AC-7.x |
-| M8 | Stability | 30min tests all protocols; auto-reconnect | 🔄 In Progress | AC-8.x |
-| M9 | Fire TV | All protocols on Fire TV; Cast graceful fallback | 🔄 In Progress | AC-9.x |
-| M10 | i18n | EN+DE complete | 🔄 Partial | AC-10.x |
-| M11 | Release | Signed APKs, CI green, all tests pass | 🔄 Beta | AC-11.x |
-| M12 | DLNA | Stepwise UPnP/DLNA MediaRenderer (SSDP, SOAP, Playback, GENA) | 📋 Planned | AC-12.x |
+| # | Phase | Key Deliverable | Status | Primary AC | Acceptance record |
+|---|---|---|---|---|---|
+| M0 | Spec | 4 spec docs, codec matrix, photo/DRM spec | ✅ Complete | AC-0.x | — |
+| M1 | Skeleton | Service + UI scaffold (both flavors) | 🟡 Implemented, device validation open | AC-1.x | — |
+| M2 | Discovery | AirPlay mDNS + Miracast WFD advertising groundwork | 🟡 Implemented, device validation open | AC-2.x | — |
+| M3 | AirPlay Handshake + Photo | RTSP session + `/photo` endpoint | 🟡 Implemented, device validation open | AC-3.x | — |
+| M4 | AirPlay Video | H.264 mandatory ≥25fps; H.265 optional | 🟡 Implemented, device validation open | AC-4.x | — |
+| M5 | AirPlay Audio | A/V sync ≤40ms; ALAC; optional surround | 🟡 Implemented, device validation open | AC-5.x | — |
+| M6 | Miracast | Discovery + WFD control plane; **no media path** | 🟠 Partial | AC-M6.x | [`M06-ACCEPTANCE.md`](../acceptance/M06-ACCEPTANCE.md) |
+| M7 | Cast | Cast SDK lifecycle + graceful degradation | 🟠 Partial | AC-M7.x | [`M07-ACCEPTANCE.md`](../acceptance/M07-ACCEPTANCE.md) |
+| M8 | Stability | Bounded queue, mDNS retry; the endurance numbers are open | 🟠 Partial | AC-M8.x + AC-6.x | [`M08-ACCEPTANCE.md`](../acceptance/M08-ACCEPTANCE.md) |
+| M9 | Fire TV | The flavour builds and degrades honestly; never run on a device | 🟡 Implemented, device validation open | AC-M9.x + AC-7.x | [`M09-ACCEPTANCE.md`](../acceptance/M09-ACCEPTANCE.md) |
+| M10 | i18n | EN + DE + FR complete (80 keys each); RTL and formatting open | 🟠 Partial | AC-M10.x | [`M10-ACCEPTANCE.md`](../acceptance/M10-ACCEPTANCE.md) |
+| M11 | Release | Signed APKs, CI green, all tests pass | 🟠 Beta — not ready for v1.0.0 | AC-M11.x + AC-8.x | [`M11-ACCEPTANCE.md`](../acceptance/M11-ACCEPTANCE.md) |
+| M12 | DLNA | SSDP, SOAP, Playback, GENA, Samsung DIAL — all implemented | 🟠 Partial — control plane delivered, media path open | AC-M12.x | [`M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md) |
+
+**Status legend:** ✅ Complete · 🟡 Implemented, device validation open ·
+🟠 Partial · 🔴 Blocked.
 
 ---
 
 ## Risk Register
+
+> The maintained risk register lives in
+> [`../project/RISKS.md`](../project/RISKS.md) — 15 entries with the likelihood,
+> the impact, the countermeasure, the owner and the status. The table below is the
+> original planning view and is kept for the history of the project; where the
+> two differ, **the register in `docs/project/RISKS.md` is authoritative**.
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
