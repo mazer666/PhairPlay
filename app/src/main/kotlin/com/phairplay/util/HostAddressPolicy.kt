@@ -1,14 +1,17 @@
-package com.phairplay.dlna
+package com.phairplay.util
 
+import com.phairplay.dlna.GenaCallbackPolicy
 import java.net.URI
 import java.util.Locale
 
 /**
- * DlnaMediaAddressPolicy — the address rules for the media URI a control point sends.
+ * HostAddressPolicy — the address rules for a URL that the receiver fetches itself.
  *
- * WHY: `SetAVTransportURI` carries a URL that the *renderer* fetches itself. Without an
- * address policy, a hostile device on the network can point the TV at the cloud metadata
- * service of the router (`169.254.169.254`) and read the answer — which contains
+ * WHAT: Decides whether the host part of a URL may be fetched by the television.
+ *
+ * WHY: A sender on the network names the address and the *receiver* fetches it. Without
+ * an address policy, a hostile device on the network can point the TV at the cloud
+ * metadata service of the router (`169.254.169.254`) and read the answer — which contains
  * credentials — as if the TV had asked for it. The same trick reaches the loopback
  * services of the TV itself. `GenaCallbackPolicy` guards the event callback address, but
  * the media address needed its own rules.
@@ -34,11 +37,15 @@ import java.util.Locale
  * can still point anywhere. The known metadata names are refused by name instead; a name
  * that resolves to a link-local address stays a documented residual risk.
  *
+ * The rules are shared by both protocol stacks: the DLNA renderer (`SetAVTransportURI`)
+ * and the AirPlay URL mode (`POST /play`) fetch a URL the peer named, so both apply the
+ * same address policy.
+ *
  * Example:
- *   DlnaMediaAddressPolicy.check("http://192.168.1.5/movie.mp4")  // null — allowed
- *   DlnaMediaAddressPolicy.check("http://169.254.169.254/latest")  // "link-local address"
+ *   HostAddressPolicy.check("http://192.168.1.5/movie.mp4")  // null — allowed
+ *   HostAddressPolicy.check("http://169.254.169.254/latest")  // "link-local address"
  */
-internal object DlnaMediaAddressPolicy {
+internal object HostAddressPolicy {
 
     /**
      * Host names that are known to answer with cloud credentials.
@@ -61,9 +68,10 @@ internal object DlnaMediaAddressPolicy {
     private val HEX_NOTATION = Regex("^0[xX][0-9a-fA-F]+$")
 
     /**
-     * Checks the address of a media URI.
+     * Checks the address of a URL the receiver would fetch.
      *
-     * @param uri the URI a control point sent as `CurrentURI`.
+     * @param uri the URL a peer sent (the `CurrentURI` of a DLNA control point, the
+     *   `Content-Location` of an AirPlay sender).
      * @return null when the URI may be used, otherwise the reason it was refused.
      */
     fun check(uri: String): String? {

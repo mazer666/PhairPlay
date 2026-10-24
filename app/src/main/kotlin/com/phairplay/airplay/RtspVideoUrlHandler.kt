@@ -1,6 +1,7 @@
 package com.phairplay.airplay
 
 import com.phairplay.airplay.handshake.PlistCodec
+import com.phairplay.util.FetchableUrlPolicy
 import com.phairplay.util.Logger
 
 /**
@@ -30,6 +31,14 @@ internal class RtspVideoUrlHandler(
         val (url, start) = parsePlayBody(request)
         if (url.isNullOrBlank()) {
             Logger.w("POST /play with no Content-Location")
+            return RtspResponse(400, "Bad Request", protocol = request.responseProtocol())
+        }
+        // The television fetches the URL itself. A URL that must not be fetched — a
+        // file:// path, a local address, the cloud metadata service of the router — would
+        // turn the receiver into a request proxy or a file reader for the home network.
+        // The URL itself is not logged: it can carry credentials.
+        if (!FetchableUrlPolicy.isFetchable(url)) {
+            Logger.w("POST /play rejected: the media URL is not fetchable")
             return RtspResponse(400, "Bad Request", protocol = request.responseProtocol())
         }
         Logger.i("POST /play url=$url start=$start")
