@@ -29,7 +29,8 @@
     - CAMERA            (not needed)
     - BLUETOOTH         (not needed)
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Network permissions — local LAN only, no internet required -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -53,9 +54,15 @@
         from a Wi-Fi result.
     -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!--
+        "neverForLocation" was introduced with API 31. On an older system the attribute is
+        simply ignored, so the declaration is marked with tools:targetApi. The tools
+        namespace is removed again when the manifest is merged, it never reaches the APK.
+    -->
     <uses-permission
         android:name="android.permission.NEARBY_WIFI_DEVICES"
-        android:usesPermissionFlags="neverForLocation" />
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="31" />
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="32" />
