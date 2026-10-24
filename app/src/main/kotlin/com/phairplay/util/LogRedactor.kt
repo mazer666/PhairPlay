@@ -105,7 +105,10 @@ object LogRedactor {
         val schemeEnd = url.indexOf("://")
         if (schemeEnd < 0) return url
         val authorityStart = schemeEnd + 3
-        val authorityEnd = url.indexOfFirst { it == '/' || it == '?' || it == '#' }
+        // The search MUST start at authorityStart. A search from index 0 would find the slash
+        // inside "://" (at schemeEnd + 1), which lies BEFORE the authority, and the substring
+        // below would then be called with begin > end and throw.
+        val authorityEnd = url.indexOfFirst(authorityStart) { it == '/' || it == '?' || it == '#' }
             .let { if (it < 0) url.length else it }
         val authority = url.substring(authorityStart, authorityEnd)
 

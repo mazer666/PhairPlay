@@ -35,7 +35,7 @@ class LogRedactorTest {
     fun `keeps the network prefix so the subnet stays debuggable`() {
         // The /24 prefix is shared by every device of the household and identifies nobody,
         // while "is the sender in my subnet?" is the first question when a LAN problem is debugged.
-        assertTrue(LogRedactor.redact("from 192.168.1.42").startsWith("192.168.1."))
+        assertTrue(LogRedactor.redact("from 192.168.1.42").contains("192.168.1."))
     }
 
     @Test
