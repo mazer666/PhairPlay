@@ -18,6 +18,13 @@ headers, the lint finding and the three files above 400 lines were brought up to
 date in the same commit. The JVM suite, the debug APKs and the signed release
 APKs were **not** built again; the numbers of section 2.1 name the run they come
 from.
+**Update (third pass, 2026-10-24):** the AirPlay track closed **SEC-03**, the
+unbounded FU-A reassembly buffer: `RtpInterleaved.MAX_FUA_BYTES` (8 MB) now caps
+the reassembled NAL unit, an over-long unit is discarded with a warning, and the
+next FU-A start fragment begins a clean unit. The statements that named SEC-03 as
+an open S4 finding were brought up to date in the same commit. SEC-01 and SEC-02
+are still open. The JVM suite, the debug APKs and the signed release APKs were
+**not** built again; the numbers of section 2.1 name the run they come from.
 
 ---
 
@@ -32,7 +39,7 @@ Does the feature do what the requirement says?
 | 3 | Signed release APKs are produced for both flavours | both APKs exist and `apksigner verify` reports "Verified" | **NOT MEASURED** | Only the **debug** APKs were built in this audit. The release path needs a keystore that lives outside the repository (`~/.config/phairplay/release.jks`, see `scripts/release.sh`). The previous release `v1.0.0-beta.2` was signed and published (2026-10-09) — that is a historical fact, not a measurement of this commit. |
 | 4 | `CHANGELOG.md` contains the entry of the released version, including the DLNA section and the documented limitations | the entry names the version and the date and lists DLNA, Miracast and Cast with their real state | **PARTLY** | `CHANGELOG.md` has a `[1.0.0-beta.3] - 2026-10-24` section with the DLNA block (SSDP, description server, SOAP dispatcher, GENA, MediaCapabilities, the Settings toggle, the protocol isolation) and the statement "Media playback (phase D3) is not part of this release." **That last sentence contradicts the code** — `DlnaReceiver.onPlay` plays through `AirPlayVideoPlayer` and the photo pipeline exists. Corrected in this cycle: see the CHANGELOG entry of this commit. |
 | 5 | `README.md`, `SECURITY.md` and `PRIVACY.md` describe exactly the protocols that are shipped | no document claims a protocol that is not implemented and no document denies an implemented one | **NO — three defects** | `README.md` line 25: "**UPnP/DLNA MediaRenderer** is planned as an upcoming option" — the package `com.phairplay.dlna` exists with 29 production files and 169 test methods (157 of them in the measured run). `README.md` line 48 repeats the same claim. `README.md` line 19 also says "Current Status — v1.0.0-beta.2" while `app/build.gradle.kts` says `1.0.0-beta.3`. Correction proposed to the docs track (it owns the README). |
-| 6 | Every finding of the security audit is either fixed or documented as open with a reason | 0 findings open **and** unexplained | **YES** | `docs/audit/2026-10-24-security-audit.md` §7 lists the 7 accepted residual risks with their reasons; the 14 findings each carry a location, an attack path and a concrete fix. **But:** SEC-01, SEC-02, SEC-03 (the three High findings) are still **open in the code**, and SEC-03 (the unbounded FU-A buffer) sits directly in the AirPlay path. They are documented, so this criterion is met in the "documented as open" sense — and the quality model turns them into a release blocker. See risk R-03 and the release checklist. |
+| 6 | Every finding of the security audit is either fixed or documented as open with a reason | 0 findings open **and** unexplained | **YES** | `docs/audit/2026-10-24-security-audit.md` §7 lists the 7 accepted residual risks with their reasons; the 14 findings each carry a location, an attack path and a concrete fix. **But:** SEC-01 and SEC-02 (two of the three High findings) are still **open in the code**. SEC-03 (the unbounded FU-A buffer in the AirPlay path) was **closed on 2026-10-24**: the reassembled FU-A NAL unit is capped at 8 MB (`RtpInterleaved.MAX_FUA_BYTES`), an over-long unit is discarded with a warning and the next FU-A start fragment begins a clean unit (`RtpInterleavedTest`). The two remaining findings are documented, so this criterion is met in the "documented as open" sense — and the quality model turns them into a release blocker. See risk R-03 and the release checklist. |
 | 7 | The version name in the code equals the released tag | the two values are equal | **PARTLY** | `app/build.gradle.kts` line 32: `versionName = "1.0.0-beta.3"`; the tag `v1.0.0-beta.3` exists in the changelog. The mismatch is with `README.md`, which still says beta.2 (see scenario 5). |
 | 8 | The DLNA pull semantics are documented for the user | the README states that only `http`/`https` URLs can be played | **NO** | `grep -n "file:///" README.md` → no match. The statement exists in `docs/guides/CASTING_TO_A_TV.md` under "Known limitations" and in `docs/spec/REQUIREMENTS.md` §3, but not in the README. AC-M11.8 names the README explicitly. Correction proposed to the docs track. |
 | 9 | The four repository structure checks are green | exit code 0 for each script | **YES — 4 of 4 green** | Measured in the second pass on the current tree: `check-file-size.sh` → exit 0 (`OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`); `check-kdoc-headers.sh` → exit 0 (`OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.`); `check-docs-links.sh` → exit 0 (`OK: documentation link check passed — 192 internal link(s) resolve, 15 external link(s) skipped.` — the count grows with every new document, it was 167 before the acceptance records were added); `check-i18n-completeness.sh` → exit 0 (`OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).`). The CI job `quality-gate` is therefore **green**; the 16 missing KDoc headers of the previous round are closed. |
@@ -317,9 +324,10 @@ What is missing is everything that makes a release *stable* rather than
 
 1. **no signed APK** was produced and verified (`apksigner verify`);
 2. **no device test** of any kind has been executed — 0 of 15 cases;
-3. three **High security findings** are still open in the code (SEC-01, SEC-02,
-   SEC-03), one of them (SEC-03, the unbounded FU-A buffer) directly in the
-   AirPlay media path;
+3. two **High security findings** are still open in the code (SEC-01, SEC-02);
+   the third one (SEC-03, the unbounded FU-A buffer in the AirPlay media path)
+   was closed on 2026-10-24 by the AirPlay track — the reassembled FU-A NAL unit
+   is capped at 8 MB and an over-long unit is discarded with a warning;
 4. the **documentation** contradicts the code in three places (README: DLNA
    "planned", version beta.2, missing `file:///` statement).
 
@@ -335,9 +343,10 @@ whether the release is called `v1.0.0` or `v1.0.0-beta.4`.
    Reason: AC-M11.3; the keystore is the owner's.
 2. **Correct the README** (version beta.3, DLNA implemented, `file:///`
    statement). Reason: AC-M11.5 and AC-M11.8 fail today.
-3. **Close SEC-01, SEC-02 and SEC-03** or get a written owner decision for each.
-   Reason: SEC-03 is an unbounded remote-triggerable buffer in the AirPlay path
-   — an S4-class finding in the quality model.
+3. **Close SEC-01 and SEC-02** or get a written owner decision for each.
+   Reason: SEC-03 is closed (the FU-A reassembly buffer is bounded at 8 MB since
+   2026-10-24, with a negative test in `RtpInterleavedTest`); SEC-01 and SEC-02
+   are still open and SEC-01 is an S4-class finding in the quality model.
 4. **Execute the device test plan** on a Google TV and a Fire TV. Reason: no
    claim of "stable" is defensible without it.
 5. **Back up the release keystore** outside the team-controlled storage.
@@ -353,7 +362,7 @@ The gate is defined in [`../quality/QUALITY.md`](../quality/QUALITY.md) §7.
 |---|---|---|
 | 1 | `./gradlew :test-runner:test` is green | **yes** — 457 tests, 0 failures, 0 errors, 0 skipped (measured on `51933eb`); 469 test methods in 56 classes statically today (the suite was not re-run in this cycle) |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on `51933eb`) |
-| 3 | **No known S4 finding** | **NO** — SEC-01, SEC-02 and SEC-03 are open in the code. SEC-03 sits in the AirPlay RTP path. Each needs a fix or a written owner decision. |
+| 3 | **No known S4 finding** | **NO** — SEC-01 and SEC-02 are open in the code; each needs a fix or a written owner decision. SEC-03 was closed on 2026-10-24 (the FU-A reassembly buffer is bounded at 8 MB, `RtpInterleaved.MAX_FUA_BYTES`). |
 | 4 | Every open S3 has a written owner decision | **partly** — SEC-04 (S3, the DLNA media URI) is **partly closed** by the new address policy and still needs either the CR-01 change (the scheme list) or a written owner decision in the release notes; SEC-09 and SEC-10 carry their grades in the audit, the accepted residual risks are listed in §7 |
 | 5 | The device scenarios ran on both flavours | **NO** — 0 of 15 device test cases executed |
 | 6 | The file-size rule holds for the touched files | **yes** — no file is above 400; `bash scripts/check-file-size.sh` → exit 0, `0 warning(s) above the soft limit of 400 lines`. The three files of the previous round were split. Risk R-08 (the wording of the rule) stays open. |
