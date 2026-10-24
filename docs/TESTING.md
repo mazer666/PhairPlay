@@ -19,7 +19,8 @@ Unit tests run on your development machine. They mock Android APIs and test the 
 ./gradlew testFiretvDebugUnitTest
 
 # Run a single test class
-./gradlew test --tests "com.phairplay.airplay.RtspHandlerTest"
+./gradlew test --tests "com.phairplay.airplay.RtspHandlerHandshakeTest"
+./gradlew test --tests "com.phairplay.airplay.RtspHandlerSessionTest"
 ```
 
 Test results are in: `app/build/reports/tests/`
@@ -72,7 +73,8 @@ Android framework behavior.
 | Test Class | Tests | What Is Verified |
 |---|---|---|
 | `MdnsServiceTest` | 5 | mDNS registration, correct number of services, idempotency, stop behavior, port number |
-| `RtspHandlerTest` | 5 | OPTIONS/RECORD/TEARDOWN responses, callback triggering, unknown method handling, SDP parsing |
+| `RtspHandlerHandshakeTest` | 11 | OPTIONS/ANNOUNCE/SETUP/RECORD responses, session handshake state, unknown method handling, SDP parsing |
+| `RtspHandlerSessionTest` | 10 | TEARDOWN responses and callbacks, per-stream teardown, photo endpoint push/clear |
 | `VideoDecoderTest` | 4 | Pre-init safety, double-release safety, empty input handling, basic construction |
 | `NetworkUtilsTest` | 5 | Device name reading, fallback behavior, special character sanitization, MAC address format |
 | `MainActivityTest` | 3 | Activity startup, WaitingScreen visibility, StreamingScreen hidden at startup |

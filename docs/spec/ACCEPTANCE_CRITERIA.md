@@ -161,10 +161,10 @@ AR-6, AC-M9.x replaces AR-7 and AC-M11.x replaces AR-8.
 | AC-3.2 | No RTSP error responses (4xx / 5xx) during normal handshake | Inspect logcat | 0 error responses for a standard connection attempt |
 | AC-3.3 | A second connection attempt while streaming is rejected | Connect a second Mac while first is active | Second connection gets `503 Service Unavailable` |
 | AC-3.4 | TEARDOWN cleans up all resources | Disconnect from macOS, check logcat | Resources freed, WaitingScreen shown, mDNS still active |
-| AC-3.5 | SDP is correctly parsed (video codec, audio codec, keys extracted) | Unit test | `RtspHandlerTest.testSdpParsing()` passes |
-| AC-3.6 | Unit test: RTSP method routing | Unit test | `RtspHandlerTest` — all handler method tests pass |
-| AC-3.7 | RTSP oversized message (>64KB) is rejected without crash | Fuzzing test / unit test | `RtspHandlerTest.testOversizedMessageRejected()` passes |
-| AC-3.8 | Malformed RTSP message does not crash the app | Unit test with invalid input | `RtspHandlerTest.testMalformedMessageHandled()` passes |
+| AC-3.5 | SDP is correctly parsed (video codec, audio codec, keys extracted) | Unit test | `RtspHandlerHandshakeTest.testSdpParsing()` passes |
+| AC-3.6 | Unit test: RTSP method routing | Unit test | `RtspHandlerHandshakeTest` + `RtspHandlerSessionTest` — all handler method tests pass |
+| AC-3.7 | RTSP oversized message (>64KB) is rejected without crash | Fuzzing test / unit test | `RtspHandlerHandshakeTest.testOversizedMessageRejected()` passes |
+| AC-3.8 | Malformed RTSP message does not crash the app | Unit test with invalid input | `RtspHandlerHandshakeTest.testMalformedMessageHandled()` passes |
 
 **Definition of Done:** All 8 criteria pass. ✅
 

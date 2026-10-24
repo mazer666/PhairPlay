@@ -144,7 +144,7 @@ promise literally — but it breaks a legitimate use case: a media server in the
 cloud. That is a product decision, not a security decision.
 
 **Negative test** (proves the fix; belongs in
-`app/src/test/kotlin/com/phairplay/airplay/RtspHandlerTest.kt`):
+`app/src/test/kotlin/com/phairplay/airplay/RtspHandlerHandshakeTest.kt`):
 
 ```kotlin
 @Test
