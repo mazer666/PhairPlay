@@ -239,6 +239,14 @@ data class GenaSubscription(
     val timeoutSeconds: Int
 )
 
+/**
+ * Subscription — the server-side state of one GENA subscriber.
+ *
+ * WHY: for every `SUBSCRIBE` the manager has to remember the SID, the callback URL
+ * and the service path to be able to notify that subscriber later, and it has to know
+ * when the subscription expires so that a control point that stopped listening is
+ * dropped instead of being notified forever.
+ */
 private data class Subscription(
     val sid: String,
     val callbackUrl: String,

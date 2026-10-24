@@ -55,6 +55,16 @@ object DmapParser {
     private const val ARTIST_TAG = "asar"
     private const val ALBUM_TAG = "asal"
 
+    /**
+     * Metadata — the now-playing fields the DMAP parser extracted from a binary body.
+     *
+     * WHY: `parseNowPlaying` walks a mutable tag tree, so it must hand the caller a
+     * value that cannot change afterwards. The mutable accumulator is therefore
+     * converted into this immutable result at the end of the walk.
+     *
+     * Example:
+     *   Metadata(title = "Song", artist = "Band", album = "Album")
+     */
     data class Metadata(val title: String?, val artist: String?, val album: String?) {
         val isEmpty: Boolean get() = title == null && artist == null && album == null
     }
@@ -65,6 +75,13 @@ object DmapParser {
         return Metadata(acc.title, acc.artist, acc.album)
     }
 
+    /**
+     * MutableMetadata — the accumulator the DMAP walk fills while it reads the tag tree.
+     *
+     * WHY: every field can appear in any container and the walk visits them in file
+     * order, so the values are collected in a mutable holder and turned into the
+     * immutable [Metadata] once the walk has finished.
+     */
     private class MutableMetadata {
         var title: String? = null
         var artist: String? = null
