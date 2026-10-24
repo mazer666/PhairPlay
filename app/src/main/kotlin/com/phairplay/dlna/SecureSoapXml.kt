@@ -2,7 +2,9 @@ package com.phairplay.dlna
 
 import org.w3c.dom.Document
 import org.w3c.dom.Element
+import org.w3c.dom.EntityReference
 import org.w3c.dom.Node
+import org.w3c.dom.Text
 import java.io.ByteArrayInputStream
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
@@ -83,8 +85,33 @@ internal object SecureSoapXml {
             .map { actionNode.childNodes.item(it) }
             .filter { it.nodeType == Node.ELEMENT_NODE }
             .associate { element ->
-                (element as Element).localName to (element.textContent ?: "")
+                (element as Element).localName to textWithEntities(element)
             }
+    }
+
+    /**
+     * Returns the text of [element] with the predefined XML entities resolved.
+     *
+     * WHY: the parser runs with entity expansion switched off, so an escaped
+     * document — a DIDL-Lite metadata block, for example — arrives as a chain of
+     * entity reference nodes instead of text. `textContent` returns an empty
+     * string for those nodes, and the control point's metadata would be lost
+     * without a trace. Only the five predefined entities can occur at all: a
+     * DOCTYPE, and with it every custom entity, is rejected before the parser
+     * starts, so no other entity name needs to be resolved.
+     */
+    private fun textWithEntities(element: Element): String {
+        val builder = StringBuilder()
+        val children = element.childNodes
+        for (index in 0 until children.length) {
+            when (val node = children.item(index)) {
+                // CDATASection extends Text, so both are covered here.
+                is Text -> builder.append(node.data)
+                is EntityReference -> builder.append(PREDEFINED_ENTITIES[node.nodeName].orEmpty())
+                else -> Unit
+            }
+        }
+        return builder.toString()
     }
 
     /**
@@ -170,4 +197,16 @@ internal object SecureSoapXml {
         }
         return 1 + maxChildDepth
     }
+
+    /**
+     * The five entities XML defines. A DOCTYPE is rejected before the parser
+     * runs, so no custom entity can reach this map.
+     */
+    private val PREDEFINED_ENTITIES = mapOf(
+        "lt" to "<",
+        "gt" to ">",
+        "amp" to "&",
+        "apos" to "'",
+        "quot" to "\""
+    )
 }
