@@ -334,7 +334,7 @@ fun `SetAVTransportURI rejects a file url`() {
 the scheme allow-list and the address policy exist.
 `DlnaMediaUri.validate` refuses a `CurrentURI` with an unknown scheme, with control
 characters, that is too long, or whose address is not allowed. The address rules live in
-`DlnaMediaAddressPolicy`:
+`HostAddressPolicy`:
 
 * loopback, the reserved range `0.0.0.0/8`, link-local (`169.254/16`, which contains
   the cloud metadata address `169.254.169.254`), multicast, broadcast and the reserved
@@ -346,7 +346,7 @@ characters, that is too long, or whose address is not allowed. The address rules
 * a URI with a user info part is refused, because it hides the real host.
 
 `SetAVTransportURI` answers such a URI with the SOAP fault `402 Invalid Args`.
-Tests: `DlnaMediaAddressPolicyTest` (10 cases) and `DlnaMediaUriTest`.
+Tests: `HostAddressPolicyTest` (10 cases) and `DlnaMediaUriTest`.
 
 **Still open:** a public address is accepted, because the control point decides which
 media the owner wants to see and PhairPlay itself sends nothing. A *name* is not
@@ -819,7 +819,7 @@ and the first two are addressed to a peer that the protocol itself designates.
 | `app/src/main/kotlin/com/phairplay/util/Logger.kt` | Every message now passes through the reduction; the exception is copied and sanitised; the mode is switchable | `LoggerTest` (6 cases) |
 | `app/src/main/kotlin/com/phairplay/util/NetworkUtils.kt` | The unused `WifiManager` import is gone (it made the manifest comment wrong), the log goes through `Logger`, and the KDoc states that the MAC address is a device identifier that leaves the device in cleartext | covered by the existing `NetworkUtilsTest` |
 | `app/src/main/AndroidManifest.xml` | The location permissions are capped at API 32, `NEARBY_WIFI_DEVICES` carries `neverForLocation`, the permission comment is corrected and names the evidence | manifest inspection |
-| `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaAddressPolicy.kt` | New — the address rules for the media URI the renderer fetches itself (SEC-04) | `DlnaMediaAddressPolicyTest` (10 cases) |
+| `app/src/main/kotlin/com/phairplay/util/HostAddressPolicy.kt` | New — the address rules for a URL the receiver fetches itself (SEC-04) | `HostAddressPolicyTest` (10 cases) |
 | `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt` | The address rules are applied to the `CurrentURI` of `SetAVTransportURI` | `DlnaMediaUriTest` |
 
 ---

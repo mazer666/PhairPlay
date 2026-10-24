@@ -15,7 +15,7 @@ JVM test run
 **Update (second pass, 2026-10-24):** the team leader closed the three open
 points of the previous round — the CI quality gate, the lint and the three files
 above the line limit — and the media URI got an **address policy**
-(`DlnaMediaAddressPolicy`), which closes SEC-04 partly. The statements about the
+(`HostAddressPolicy`), which closes SEC-04 partly. The statements about the
 red gate, the lint finding, the missing KDoc header and the missing address
 policy were brought up to date in the same commit. The JVM suite and the debug
 APKs were **not** built again; the numbers of section 2.1 name the run they come
@@ -45,7 +45,7 @@ Does the feature do what the requirement says?
 | 14 | A photo payload above 20 MB is refused and a photo is downsampled to at most 1920 px on its longest edge | the documented limits | **PASS (unit test, arithmetic) / NOT MEASURED (decoding)** | `DlnaImageDecoder.MAX_IMAGE_BYTES = 20 * 1024 * 1024`, `DEFAULT_MAX_DIMENSION = 1920`; `DlnaImageDecoderTest` — 6 tests, all **PASSED**, including the `calculateInSampleSize` arithmetic. The actual `BitmapFactory` decode needs an Android runtime and can only be checked on a device. |
 | 15 | The DLNA switch in Settings starts and stops the renderer and the state is shown on the Home screen | the switch persists, the card follows the state | **PASS (unit test) / NOT MEASURED (device)** | `AppSettings.dlnaEnabled` (default `true`), `SettingsRepository` persists it (`Keys.DLNA_ENABLED`), `HomeFragment` collects `svc.dlnaState` (line 186). `AppSettingsTest > anyProtocolEnabled is true when only DLNA is enabled` and `default settings have all protocols enabled` — **PASSED**. The card rendering and the disappearance of the advertisement within 5 s are device-only. |
 | 16 | Stopping the service closes the description server, drops the GENA subscriptions and sends the SSDP `byebye` | no port stays bound, no event is delivered afterwards | **PASS (unit test, partly) / NOT MEASURED (device)** | `GenaEventManagerTest > stop drops every subscription` — **PASSED**. The `byebye` is sent by `SsdpAdvertiser.stop()`; the port check (`adb shell ss -ltn`) is device-only. |
-| 17 | The renderer refuses a media URI whose host points at a link-local, loopback, multicast, broadcast or obfuscated address, and refuses a URI with a user info part | `http://169.254.169.254/latest/meta-data/` is rejected | **PASS for the address — the criterion itself is still open** | **Address policy:** the new class `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaAddressPolicy.kt` (162 lines) is called from `DlnaMediaUri.validate` and refuses the loopback (`127.0.0.0/8`, `::1`, `::ffff:127.0.0.1`), the reserved range `0.0.0.0/8`, the link-local range (and with it `169.254.169.254`), the multicast range, the broadcast address, the reserved range `240.0.0.0/4`, the further metadata addresses (`100.100.100.200`, `192.0.0.192`, `fd00:ec2::254`), the known metadata host names (`metadata`, `metadata.google.internal`, `metadata.goog`, `instance-data`, `instance-data.ec2.internal`) and every non-standard notation of an IPv4 address (decimal `2130706433`, octal `0177.0.0.1`, hexadecimal `0x7f000001`), plus any URI with a user info part. Tests: `DlnaMediaAddressPolicyTest` — 11 test methods, plus one new case in `DlnaMediaUriTest` (`rejects a URI that points at the cloud metadata service`). **Still open:** the *scheme* list of the media URI is unchanged — `DlnaMediaUri.ALLOWED_SCHEMES` still contains `file`, `smb`, `ftp`, `rtsp`, `rtmp`, `rtmpe`, `rtmps`, `mms`, `mmsh`, `mmst`, `udp`, `pnm` (`app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt` lines 30–33) — and the existing test still asserts the opposite: `DlnaSoapDispatcherTest > SetAVTransportURI accepts a file URI and an rtsp URI`. That reduction is CR-01 and it is **not** implemented; it is a deliberate compatibility decision and it needs an owner decision. Residual risks: a **public** address is allowed, and a **host name is not resolved** — a name that points at a link-local address stays a documented residual risk. Risk R-03, change request CR-01. |
+| 17 | The renderer refuses a media URI whose host points at a link-local, loopback, multicast, broadcast or obfuscated address, and refuses a URI with a user info part | `http://169.254.169.254/latest/meta-data/` is rejected | **PASS for the address — the criterion itself is still open** | **Address policy:** the new class `app/src/main/kotlin/com/phairplay/util/HostAddressPolicy.kt` (170 lines) is called from `DlnaMediaUri.validate` and refuses the loopback (`127.0.0.0/8`, `::1`, `::ffff:127.0.0.1`), the reserved range `0.0.0.0/8`, the link-local range (and with it `169.254.169.254`), the multicast range, the broadcast address, the reserved range `240.0.0.0/4`, the further metadata addresses (`100.100.100.200`, `192.0.0.192`, `fd00:ec2::254`), the known metadata host names (`metadata`, `metadata.google.internal`, `metadata.goog`, `instance-data`, `instance-data.ec2.internal`) and every non-standard notation of an IPv4 address (decimal `2130706433`, octal `0177.0.0.1`, hexadecimal `0x7f000001`), plus any URI with a user info part. Tests: `HostAddressPolicyTest` — 11 test methods, plus one new case in `DlnaMediaUriTest` (`rejects a URI that points at the cloud metadata service`). **Still open:** the *scheme* list of the media URI is unchanged — `DlnaMediaUri.ALLOWED_SCHEMES` still contains `file`, `smb`, `ftp`, `rtsp`, `rtmp`, `rtmpe`, `rtmps`, `mms`, `mmsh`, `mmst`, `udp`, `pnm` (`app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt` lines 30–33) — and the existing test still asserts the opposite: `DlnaSoapDispatcherTest > SetAVTransportURI accepts a file URI and an rtsp URI`. That reduction is CR-01 and it is **not** implemented; it is a deliberate compatibility decision and it needs an owner decision. Residual risks: a **public** address is allowed, and a **host name is not resolved** — a name that points at a link-local address stays a documented residual risk. Risk R-03, change request CR-01. |
 | 18 | The TV remote moves the same transport state machine | the control point sees the new state | **PARTLY** | The remote command goes through the dispatcher into the same state machine (`DlnaSoapDispatcher.onRemoteCommand`), which is proven by the unit test `AVTransport actions notify playback controller` and `transport state changes are published to the event subscribers`. The device half (press OK on the TV remote, the progress bar in VLC pauses) is device-only. |
 | 19 | The Samsung SSDP search term is answered and the DIAL documents are served | one answer for `urn:samsung.com:service:MultiScreenService:1`; `/dial/` and `/dial/PhairPlay` are served | **PASS (unit test)** | `SamsungSsdpResponderTest` — 6 tests, all **PASSED** (`the Samsung search is answered with exactly one response`, `the Samsung answer carries the search target, the USN and the location`, `the location of the Samsung answer is the device description of this server`, `the USN of the Samsung answer names the device`, `the Samsung search is not answered twice`, `the advertiser accepts the Samsung search`); `DialAppCatalogTest` — 10 tests **PASSED**; `DialEndpointTest` — 6 tests over real HTTP **PASSED** (`the dial directory answers with the app list`, `the dial info of PhairPlay is answered`, `an unknown app is answered with 404`, `an app id that tries to escape the path is answered with 404`, `the device description carries the Application-Url header`, `the Application-Url header is not sent with the app documents`); `DlnaDeviceDescriptionFieldsTest` — 7 tests **PASSED**. |
 | 20 | The DLNA pull semantics are documented for the user | the README states that a `file:///` URI points at the sender's disk | **PARTLY** | The statement is in `docs/guides/CASTING_TO_A_TV.md` under "Known limitations" and in `docs/spec/REQUIREMENTS.md` §3 — but `grep -n "file:///" README.md` → no match. AC-M11.8 / AC-M12.20 name the README; the README is owned by the docs track. |
@@ -68,7 +68,7 @@ Does the feature do what the requirement says?
 | A DIAL app id uses a forbidden character | it is refused | **PASS** — `DialAppCatalogTest > an app id with a forbidden character is refused` |
 | The DIAL app id has a different case | `404` | **PASS** — `DialAppCatalogTest > the app id is case sensitive` |
 | An empty / over-long / control-character media URI arrives | it is refused | **PASS** — `DlnaMediaUriTest` — 8 test methods (7 in the measured run plus the new `rejects a URI that points at the cloud metadata service`), all **PASSED** (`rejects an empty URI`, `rejects a URI without a scheme`, `rejects a URI with control characters`, `rejects an oversized URI`, `rejects an unknown scheme`) |
-| The media URI points at the cloud metadata endpoint | it must be refused | **PASS** — `DlnaMediaUriTest > rejects a URI that points at the cloud metadata service` (new in the second pass) and `DlnaMediaAddressPolicyTest > refuses the cloud metadata address of the router`, `refuses the other metadata addresses`, `refuses a metadata host name` — the address policy refuses `169.254.169.254`, `100.100.100.200`, `192.0.0.192`, `fd00:ec2::254` and the known metadata names. |
+| The media URI points at the cloud metadata endpoint | it must be refused | **PASS** — `DlnaMediaUriTest > rejects a URI that points at the cloud metadata service` (new in the second pass) and `HostAddressPolicyTest > refuses the cloud metadata address of the router`, `refuses the other metadata addresses`, `refuses a metadata host name` — the address policy refuses `169.254.169.254`, `100.100.100.200`, `192.0.0.192`, `fd00:ec2::254` and the known metadata names. |
 | A `NOTIFY` is sent | `HttpURLConnection` refuses the method | **PASS (fixed)** — the raw socket implementation in `GenaEventManager.kt` bypasses it; the regression test `GenaEventManagerTest > a LastChange event reaches the control point` is **PASSED** |
 
 ---
@@ -83,7 +83,7 @@ Does the feature do what the requirement says?
   ADR-004.
 - The file-size rule respected (≤ 400 lines soft, ≤ 550 hard): **yes** — the
   largest file of the package is `DlnaDescriptionServer.kt` with 385 lines; no
-  file exceeds 400. The new `DlnaMediaAddressPolicy.kt` has 162 lines.
+  file exceeds 400. The new `HostAddressPolicy.kt` has 170 lines.
   `bash scripts/check-file-size.sh` → exit 0, `0 warning(s) above the soft
   limit of 400 lines`.
 - Every new class has a KDoc header (what / why / example): **yes** — the
@@ -101,11 +101,13 @@ Does the feature do what the requirement says?
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on `51933eb`:
   `BUILD SUCCESSFUL in 3m 27s`, 457 tests, 0 failures, 0 errors, 0 skipped,
   54 test classes. The DLNA package alone accounts for **157** of them.
-  **Current state (not re-run):** 469 test methods in 56 test classes, of which
-  **169** are in `com.phairplay.dlna` — the twelve new methods are the address
-  policy (11 in `DlnaMediaAddressPolicyTest`, 1 in `DlnaMediaUriTest`). The JVM
-  suite was not executed again in this documentation cycle, so this number is a
-  static count and not a fresh run result.
+  **Current state (measured in the SEC-01 run of 2026-10-24):** 490 test methods
+  in 58 test classes, of which **158** are in `com.phairplay.dlna` and **59** in
+  `com.phairplay.util`. The eleven methods of the address policy moved with the
+  class from `com.phairplay.dlna` to `com.phairplay.util` (11 in
+  `HostAddressPolicyTest`, 1 in `DlnaMediaUriTest`), and the SEC-01 fix added 21
+  methods (16 in `FetchableUrlPolicyTest`, 5 in `RtspVideoUrlHandlerTest`). The
+  measured run: `BUILD SUCCESSFUL`, 490 tests, 0 failures, 0 errors, 0 skipped.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
   SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
@@ -304,7 +306,7 @@ adb shell dumpsys meminfo com.phairplay.googletv
 - New outbound connection (where does it go?): **yes** — the GENA `NOTIFY` goes
   to the subscribed callback address, which the policy restricts to a private
   IPv4 in the local subnet; the photo fetch goes to the URL the control point
-  named. **The second one is now address-restricted** — `DlnaMediaAddressPolicy`
+  named. **The second one is now address-restricted** — `HostAddressPolicy`
   refuses the loopback, the reserved, the link-local (and with it the cloud
   metadata address), the multicast, the broadcast and the `240.0.0.0/4`
   addresses, the non-standard notations of an IPv4 address, the known metadata
@@ -317,7 +319,7 @@ adb shell dumpsys meminfo com.phairplay.googletv
   (10), `GenaCallbackPolicyTest` (16), `DlnaDescriptionServerTest` (13, of which
   8 are negative), `DlnaMediaUriTest` (8, of which 7 are negative),
   `DlnaSoapDispatcherTest` (16), and — new in the second pass —
-  `DlnaMediaAddressPolicyTest` (11, all negative for the refused addresses).
+  `HostAddressPolicyTest` (11, all negative for the refused addresses).
   All **PASSED** in the measured run; the twelve new ones are part of the
   current static count (section 2.1).
 - The log reduction still applies to every new log statement (SEC-07)? **yes** —
@@ -380,8 +382,8 @@ adb shell dumpsys meminfo com.phairplay.googletv
 | The television has never been seen in a VLC renderer list or a Windows "Cast to Device" list | No hardware was available | `docs/guides/CASTING_TO_A_TV.md`; device test plan DT-08 / DT-09; risk R-12 |
 | The media fetch over plain `http` is likely blocked on API 35 | No `network_security_config.xml` exists | SEC-10; NFR-28; risk R-05 |
 | The media URI accepts `file`, `smb`, `ftp`, `rtsp`, `rtmp` and other schemes | The allowlist was deliberately wide when it was written; the change request CR-01 was not implemented. **Deliberate decision for the compatibility with real control points — it needs an owner decision, because the choice changes the interoperability promise** | `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt`; AC-M12.15; risk R-03 |
-| A **public** address in the media URI is allowed | The control point decides which medium the owner wants to see, and PhairPlay itself sends nothing to it | `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaAddressPolicy.kt`; risk R-03 |
-| A **host name** in the media URI is not resolved | Resolving it would send a DNS query from the television, and a name can still point anywhere — a name that points at a link-local address stays a residual risk | `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaAddressPolicy.kt`; risk R-03 |
+| A **public** address in the media URI is allowed | The control point decides which medium the owner wants to see, and PhairPlay itself sends nothing to it | `app/src/main/kotlin/com/phairplay/util/HostAddressPolicy.kt`; risk R-03 |
+| A **host name** in the media URI is not resolved | Resolving it would send a DNS query from the television, and a name can still point anywhere — a name that points at a link-local address stays a residual risk | `app/src/main/kotlin/com/phairplay/util/HostAddressPolicy.kt`; risk R-03 |
 | The DIAL start command `POST /dial/<AppId>` is not implemented | A DIAL `POST` would add body parsing and a state change without a device to test it against | `docs/guides/CASTING_TO_A_TV.md` ("Known limitations"); the Samsung acceptance record |
 | The DIAL `<state>` is constantly `stopped` | PhairPlay runs no DIAL session of its own | same as above |
 | The `RenderingControl` volume and mute are stored but never applied to the TV volume | No `AudioManager.setStreamVolume` call exists in the project | `docs/spec/REQUIREMENTS.md`; the open point in the product handover (O-4) |
@@ -392,7 +394,7 @@ adb shell dumpsys meminfo com.phairplay.googletv
 
 | Was a limitation | Closed by | Measured |
 |---|---|---|
-| The media URI had **no address policy** — `http://169.254.169.254/latest/meta-data/` was accepted | the new `DlnaMediaAddressPolicy` class, called from `DlnaMediaUri.validate` | `DlnaMediaAddressPolicyTest` (11 test methods) and `DlnaMediaUriTest > rejects a URI that points at the cloud metadata service` |
+| The media URI had **no address policy** — `http://169.254.169.254/latest/meta-data/` was accepted | the new `HostAddressPolicy` class, called from `DlnaMediaUri.validate` | `HostAddressPolicyTest` (11 test methods) and `DlnaMediaUriTest > rejects a URI that points at the cloud metadata service` |
 
 
 ---

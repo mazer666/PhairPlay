@@ -1,5 +1,6 @@
 package com.phairplay.dlna
 
+import com.phairplay.util.HostAddressPolicy
 import java.util.Locale
 
 /**
@@ -13,7 +14,7 @@ import java.util.Locale
  *
  * The accepted scheme list is deliberately wide (HTTP(S) for the normal case, plus
  * the streaming and file schemes real control points emit). The *address* of the URI is
- * checked separately by [DlnaMediaAddressPolicy], because the renderer fetches the media
+ * checked separately by [HostAddressPolicy], because the renderer fetches the media
  * itself and a hostile control point must not be able to aim the TV at the cloud
  * metadata service of the router.
  *
@@ -63,8 +64,8 @@ object DlnaMediaUri {
         if (scheme !in ALLOWED_SCHEMES) return Result.Rejected("unsupported URI scheme")
         // The renderer fetches the URI itself, so the address has to be checked as well.
         // Without this, a hostile control point could point the TV at the cloud metadata
-        // service of the router. See DlnaMediaAddressPolicy for the rules.
-        DlnaMediaAddressPolicy.check(trimmed)?.let { return Result.Rejected(it) }
+        // service of the router. See HostAddressPolicy for the rules.
+        HostAddressPolicy.check(trimmed)?.let { return Result.Rejected(it) }
         return Result.Accepted(trimmed)
     }
 
