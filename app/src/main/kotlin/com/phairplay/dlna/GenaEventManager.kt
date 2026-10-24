@@ -6,10 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.OutputStream
-import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URI
-import java.net.URL
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -179,23 +178,41 @@ class GenaEventManager(
             </e:propertyset>
         """.trimIndent()
         return runCatching {
-            val connection = (URL(subscription.callbackUrl).openConnection() as HttpURLConnection).apply {
-                requestMethod = "NOTIFY"
-                connectTimeout = HTTP_TIMEOUT_MS
-                readTimeout = HTTP_TIMEOUT_MS
-                doOutput = true
-                setRequestProperty("CONTENT-TYPE", "text/xml; charset=\"utf-8\"")
-                setRequestProperty("NT", "upnp:event")
-                setRequestProperty("NTS", "upnp:propchange")
-                setRequestProperty("SID", subscription.sid)
-                setRequestProperty("SEQ", subscription.nextSequence().toString())
+            val uri = URI(subscription.callbackUrl)
+            val host = uri.host ?: error("callback without host")
+            val port = if (uri.port > 0) uri.port else 80
+            val target = uri.rawPath.orEmpty().ifEmpty { "/" } +
+                (uri.rawQuery?.let { "?$it" } ?: "")
+
+            // WHY a raw socket instead of HttpURLConnection: the JDK refuses every HTTP
+            // method outside GET/POST/HEAD/OPTIONS/PUT/DELETE/TRACE, and "NOTIFY" is
+            // exactly the method the UPnP eventing specification requires. With
+            // HttpURLConnection the event was never delivered at all.
+            val request = buildString {
+                append("NOTIFY ").append(target).append(" HTTP/1.1\r\n")
+                append("HOST: ").append(host).append(':').append(port).append("\r\n")
+                append("CONTENT-TYPE: text/xml; charset=\"utf-8\"\r\n")
+                append("NT: upnp:event\r\n")
+                append("NTS: upnp:propchange\r\n")
+                append("SID: ").append(subscription.sid).append("\r\n")
+                append("SEQ: ").append(subscription.nextSequence()).append("\r\n")
+                append("CONTENT-LENGTH: ").append(body.toByteArray(Charsets.UTF_8).size).append("\r\n")
+                append("CONNECTION: close\r\n\r\n")
             }
-            connection.outputStream.use { output: OutputStream ->
-                output.write(body.toByteArray(Charsets.UTF_8))
+            val bodyBytes = body.toByteArray(Charsets.UTF_8)
+
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), HTTP_TIMEOUT_MS)
+                socket.soTimeout = HTTP_TIMEOUT_MS
+                val output = socket.getOutputStream()
+                output.write(request.toByteArray(Charsets.US_ASCII))
+                output.write(bodyBytes)
+                output.flush()
+
+                // The control point answers with a status line; 2xx means "accepted".
+                val statusLine = socket.getInputStream().bufferedReader(Charsets.US_ASCII).readLine()
+                statusLine != null && statusLine.contains(" 2")
             }
-            val code = connection.responseCode
-            connection.disconnect()
-            code in 200..299
         }.onFailure {
             Logger.w("GENA notify failed for ${subscription.sid}: ${it.javaClass.simpleName}")
         }.getOrDefault(false)

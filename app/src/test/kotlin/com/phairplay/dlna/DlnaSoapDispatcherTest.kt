@@ -154,6 +154,21 @@ class DlnaSoapDispatcherTest {
     }
 
     @Test
+    fun `a body that starts with a newline is still answered`() {
+        // WHY: a control point that puts whitespace in front of the XML declaration must
+        // not be answered with an error - otherwise the renderer silently disappears
+        // from the device list of that control point.
+        val result = dispatch(
+            "/upnp/control/ConnectionManager",
+            "urn:schemas-upnp-org:service:ConnectionManager:1#GetProtocolInfo",
+            "\n" + envelope("ConnectionManager", "GetProtocolInfo")
+        )
+
+        assertEquals(200, result.statusCode)
+        assertTrue(result.body.contains("<Source>http-get:*:video/mp4:*"))
+    }
+
+    @Test
     fun `GetMediaInfo reports the loaded media`() {
         val dispatcher = DlnaSoapDispatcher()
         dispatcher.dispatch(
@@ -329,6 +344,9 @@ class DlnaSoapDispatcherTest {
         """.trimIndent()
 
     private fun didl(duration: String, protocolInfo: String): String =
+        // WHY one line: a control point sends the escaped DIDL-Lite document on a single
+        // line, and a multi-line document would break the indentation of the SOAP
+        // envelope that carries it.
         """
         <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
           <item id="1" parentID="0" restricted="1">
@@ -337,7 +355,7 @@ class DlnaSoapDispatcherTest {
             <res protocolInfo="$protocolInfo" duration="$duration" size="1024">http://192.168.1.4/movie.mp4</res>
           </item>
         </DIDL-Lite>
-        """.trimIndent()
+        """.trimIndent().replace("\n", " ")
 
     private fun String.xmlEscaped(): String =
         replace("&", "&amp;")

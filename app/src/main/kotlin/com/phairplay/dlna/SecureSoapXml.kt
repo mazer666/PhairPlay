@@ -51,7 +51,11 @@ internal object SecureSoapXml {
             // external entity would resolve to this empty document instead of a file.
             org.xml.sax.InputSource(ByteArrayInputStream(ByteArray(0)))
         }
-        val document = builder.parse(ByteArrayInputStream(body.toByteArray(Charsets.UTF_8)))
+        // Leading whitespace is skipped on purpose. The XML specification wants the
+        // declaration on the very first character, but a control point that puts a
+        // newline in front of its body is common enough that refusing the whole
+        // request would lose the renderer from the control point's device list.
+        val document = builder.parse(ByteArrayInputStream(body.trimStart().toByteArray(Charsets.UTF_8)))
         require(depth(document.documentElement) <= MAX_XML_DEPTH) { "XML nesting too deep" }
         return document
     }
