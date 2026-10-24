@@ -128,7 +128,10 @@ enforces it. They are the checklist a reviewer can verify.
    references, and rejects a body above 64 KB or nested deeper than 32 levels.
 5. **Restricted outbound requests.** A GENA callback URL is accepted only if it
    is `http`, resolves to a private IPv4 address, and lies in the same /24 as
-   the receiver.
+   the receiver. The media URI of `SetAVTransportURI` follows its own address
+   rules: loopback, link-local (and with it the cloud metadata address
+   `169.254.169.254`), multicast, broadcast, the reserved ranges and the
+   non-standard notations of an IPv4 address are refused.
 6. **Image payloads are sniffed, not trusted.** A photo must be a JPEG or a PNG
    by magic bytes, and a declared `Content-Type` that contradicts the payload
    is rejected.

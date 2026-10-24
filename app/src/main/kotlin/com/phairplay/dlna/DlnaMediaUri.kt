@@ -12,10 +12,14 @@ import java.util.Locale
  * media stack or a log line.
  *
  * The accepted scheme list is deliberately wide (HTTP(S) for the normal case, plus
- * the streaming and file schemes real control points emit).
+ * the streaming and file schemes real control points emit). The *address* of the URI is
+ * checked separately by [DlnaMediaAddressPolicy], because the renderer fetches the media
+ * itself and a hostile control point must not be able to aim the TV at the cloud
+ * metadata service of the router.
  *
  * Example:
  *   DlnaMediaUri.validate("http://192.168.1.5/movie.mp4")  // Accepted
+ *   DlnaMediaUri.validate("http://169.254.169.254/latest")  // Rejected("link-local address")
  *   DlnaMediaUri.validate("")                               // Rejected("empty")
  */
 object DlnaMediaUri {
@@ -57,6 +61,10 @@ object DlnaMediaUri {
             return Result.Rejected("URI scheme is malformed")
         }
         if (scheme !in ALLOWED_SCHEMES) return Result.Rejected("unsupported URI scheme")
+        // The renderer fetches the URI itself, so the address has to be checked as well.
+        // Without this, a hostile control point could point the TV at the cloud metadata
+        // service of the router. See DlnaMediaAddressPolicy for the rules.
+        DlnaMediaAddressPolicy.check(trimmed)?.let { return Result.Rejected(it) }
         return Result.Accepted(trimmed)
     }
 

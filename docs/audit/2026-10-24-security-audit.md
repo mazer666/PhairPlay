@@ -330,6 +330,29 @@ fun `SetAVTransportURI rejects a file url`() {
 }
 ```
 
+**Status as of 2026-10-24 (implemented by the DLNA track, verified by the lead):**
+the scheme allow-list and the address policy exist.
+`DlnaMediaUri.validate` refuses a `CurrentURI` with an unknown scheme, with control
+characters, that is too long, or whose address is not allowed. The address rules live in
+`DlnaMediaAddressPolicy`:
+
+* loopback, the reserved range `0.0.0.0/8`, link-local (`169.254/16`, which contains
+  the cloud metadata address `169.254.169.254`), multicast, broadcast and the reserved
+  range `240.0.0.0/4` are refused,
+* the cloud metadata addresses `100.100.100.200`, `192.0.0.192` and `fd00:ec2::254` and
+  the known metadata host names are refused by name,
+* the decimal, octal and hexadecimal notations of an IPv4 address are refused, so an
+  address always means what it looks like,
+* a URI with a user info part is refused, because it hides the real host.
+
+`SetAVTransportURI` answers such a URI with the SOAP fault `402 Invalid Args`.
+Tests: `DlnaMediaAddressPolicyTest` (10 cases) and `DlnaMediaUriTest`.
+
+**Still open:** a public address is accepted, because the control point decides which
+media the owner wants to see and PhairPlay itself sends nothing. A *name* is not
+resolved, because resolving it would send a DNS query from the television; a name that
+points at a link-local address therefore stays a residual risk.
+
 ---
 
 #### SEC-05 — Personal data is written to the log
@@ -796,6 +819,8 @@ and the first two are addressed to a peer that the protocol itself designates.
 | `app/src/main/kotlin/com/phairplay/util/Logger.kt` | Every message now passes through the reduction; the exception is copied and sanitised; the mode is switchable | `LoggerTest` (6 cases) |
 | `app/src/main/kotlin/com/phairplay/util/NetworkUtils.kt` | The unused `WifiManager` import is gone (it made the manifest comment wrong), the log goes through `Logger`, and the KDoc states that the MAC address is a device identifier that leaves the device in cleartext | covered by the existing `NetworkUtilsTest` |
 | `app/src/main/AndroidManifest.xml` | The location permissions are capped at API 32, `NEARBY_WIFI_DEVICES` carries `neverForLocation`, the permission comment is corrected and names the evidence | manifest inspection |
+| `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaAddressPolicy.kt` | New — the address rules for the media URI the renderer fetches itself (SEC-04) | `DlnaMediaAddressPolicyTest` (10 cases) |
+| `app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt` | The address rules are applied to the `CurrentURI` of `SetAVTransportURI` | `DlnaMediaUriTest` |
 
 ---
 
