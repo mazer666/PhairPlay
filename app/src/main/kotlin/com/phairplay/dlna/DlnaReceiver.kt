@@ -21,7 +21,8 @@ import java.net.URL
  *
  * WHY: this class ties the UPnP control plane to the Android media stack. It
  * publishes the renderer (SSDP + description server), forwards the transport
- * commands to the player and shows photos.
+ * commands to the player and shows photos. After a network loss the renderer
+ * publishes itself again (see [readvertise]).
  *
  * The three media kinds need different pipelines:
  * - video and audio are played by [AirPlayVideoPlayer]; an audio-only stream is
@@ -46,6 +47,16 @@ class DlnaReceiver(
 
     private var descriptionServer: DlnaDescriptionServer? = null
     private var ssdpAdvertiser: SsdpAdvertiser? = null
+
+    /** The name of the renderer in the device description — needed for a rebuild. */
+    @Volatile private var friendlyName: String = ""
+
+    /** The UDN of the renderer — needed for a rebuild. */
+    @Volatile private var rendererUdn: String = ""
+
+    /** The address the running description server advertises. */
+    @Volatile private var advertisedHost: String = ""
+
     private val mediaPlayer = AirPlayVideoPlayer(
         surfaceProvider = surfaceProvider,
         onEnded = {
@@ -59,19 +70,20 @@ class DlnaReceiver(
     fun start() {
         try {
             val localHost = DlnaNetworkAddress.localIpv4Address()
-            val friendlyName = displayName.ifBlank { NetworkUtils.getDeviceName(context) }
-            val udn = "uuid:${NetworkUtils.getPersistentUuid(context)}"
-            val server = DlnaDescriptionServer(friendlyName, udn, localHost, this).also {
+            friendlyName = displayName.ifBlank { NetworkUtils.getDeviceName(context) }
+            rendererUdn = "uuid:${NetworkUtils.getPersistentUuid(context)}"
+            val server = DlnaDescriptionServer(friendlyName, rendererUdn, localHost, this).also {
                 it.start(scope)
             }
             val advertiser = SsdpAdvertiser(
                 location = server.descriptionUrl,
-                udn = udn
+                udn = rendererUdn
             ).also {
                 it.start(scope)
             }
             descriptionServer = server
             ssdpAdvertiser = advertiser
+            advertisedHost = localHost
             Logger.i("DLNA MediaRenderer advertised as '$friendlyName' at ${server.descriptionUrl}")
             onStateChanged(ProtocolState.ADVERTISING)
         } catch (e: Exception) {
@@ -79,6 +91,65 @@ class DlnaReceiver(
             stop()
             onStateChanged(ProtocolState.ERROR)
         }
+    }
+
+    /**
+     * Repeats the advertisement after the network came back.
+     *
+     * WHY the description server may have to be rebuilt: the description URL of the
+     * renderer contains the IP address of the device. When the device comes back with
+     * a different address — a new DHCP lease, another Wi-Fi network — the advertised
+     * URL points to an address that does not exist any more. The control point finds
+     * the renderer and then waits for a description that never arrives.
+     *
+     * WHY the decision lives in [DlnaReadvertisePlan]: the socket part of the recovery
+     * cannot be tested without a device, but the decision can — and the decision is
+     * where the bug was.
+     */
+    fun readvertise() {
+        val advertiser = ssdpAdvertiser ?: run {
+            Logger.d("DLNA re-advertisement skipped — the renderer is not running")
+            return
+        }
+        val currentHost = DlnaNetworkAddress.localIpv4Address()
+        val approvedHost = DlnaReadvertisePlan.approveAddress(currentHost)
+        if (approvedHost == null) {
+            // The device has no usable LAN address right now — the interface is
+            // probably still coming up. The description server that already runs stays
+            // as it is, only the announcement is repeated.
+            Logger.w("DLNA re-advertisement: no usable LAN address — the running description is kept")
+            advertiser.readvertise()
+            return
+        }
+        when (DlnaReadvertisePlan.decide(advertisedHost, approvedHost)) {
+            DlnaReadvertisePlan.Action.ANNOUNCE_ONLY -> advertiser.readvertise()
+            DlnaReadvertisePlan.Action.REBUILD_DESCRIPTION ->
+                rebuildDescription(approvedHost, advertiser)
+        }
+    }
+
+    /**
+     * Builds a new description server for a new address and advertises it.
+     *
+     * WHY the new server is started before the old one is stopped: a control point
+     * that is already connected keeps a working description until the new URL has
+     * been announced.
+     *
+     * @param host the address the new server describes.
+     * @param advertiser the advertiser that carries the new URL from now on.
+     */
+    private fun rebuildDescription(host: String, advertiser: SsdpAdvertiser) {
+        val oldServer = descriptionServer
+        val server = DlnaDescriptionServer(friendlyName, rendererUdn, host, this).also {
+            it.start(scope)
+        }
+        descriptionServer = server
+        advertisedHost = host
+        advertiser.updateLocation(server.descriptionUrl)
+        advertiser.readvertise()
+        runCatching { oldServer?.stop() }
+            .onFailure { Logger.w("DLNA description server restart failed: ${it.message}") }
+        Logger.i("DLNA MediaRenderer re-advertised at ${server.descriptionUrl}")
     }
 
     /** Stops the renderer and releases every resource. */
@@ -91,6 +162,7 @@ class DlnaReceiver(
             .onFailure { Logger.w("DLNA media player release failed: ${it.message}") }
         ssdpAdvertiser = null
         descriptionServer = null
+        advertisedHost = ""
         job.cancel()
         onStateChanged(ProtocolState.DISABLED)
     }
