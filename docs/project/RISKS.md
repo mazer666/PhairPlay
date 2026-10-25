@@ -157,18 +157,18 @@ links here instead of carrying a second, drifting copy.
 | **Impact** | **high** — a lost key means users cannot upgrade in place. |
 | **Countermeasure** | `scripts/release.sh --setup` creates the keystore and stores the credentials outside the repository; the script refuses to run without them. The key must be backed up by the owner in a place the team does not control. |
 | **Owner** | Owner |
-| **Status** | **open** — reason: the backup of the release key is an owner action that has not been confirmed. This must be settled before v1.0.0, because after v1.0.0 the key becomes the identity of the project. |
+| **Status** | **open** — reason: the backup of the release key is an owner action that has not been confirmed. The alpha release `v1.0.0-alpha.1` (2026-10-25) was signed with a **new** key that was handed to the owner together with its password; this key must be kept, because every later version has to be signed with it. It is still not the production key of the Play Store build, so the owner has to uninstall the store version before installing the alpha. |
 
 ### R-11 — Release signing and the version number drift
 
 | Field | Value |
 |---|---|
-| **Risk** | `app/build.gradle.kts` carries `versionCode = 3` / `versionName = "1.0.0-beta.3"`, while `CHANGELOG.md` also lists a `[Unreleased]` section with content that has not been versioned yet. A release cut from the wrong state publishes a binary whose version does not match the changelog. |
+| **Risk** | `app/build.gradle.kts` carries the version of the next release, while `CHANGELOG.md` also lists an `[Unreleased]` section with content that has not been versioned yet. A release cut from the wrong state publishes a binary whose version does not match the changelog. |
 | **Likelihood** | **medium** |
 | **Impact** | **medium** — a mislabelled release; AC-M11.7 requires version name and tag to be equal. |
 | **Countermeasure** | `scripts/release.sh` takes the version as its argument and the changelog uses the Keep a Changelog format, so the two can be checked against each other before the tag is pushed. |
 | **Owner** | Release owner |
-| **Status** | **open** — reason: the version bump to `1.0.0` has not happened yet. It is on the release checklist. |
+| **Status** | **open** — reason: the version bump to `1.0.0` has not happened yet. The alpha train keeps the version in step: `v1.0.0-alpha.1` shipped with `versionCode = 4` / `versionName = "1.0.0-alpha.1"` and a matching changelog entry, and the [release schedule](../spec/PROJECT_PLAN.md#release-schedule) binds every release to its own version bump. |
 
 ---
 

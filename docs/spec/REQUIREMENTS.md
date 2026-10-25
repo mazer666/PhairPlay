@@ -32,7 +32,7 @@ Date: 2026-10-24
 - FR-08: Accept Screen Mirroring connections from **macOS 12+** and **iOS/iPadOS 13+** via RTSP on TCP port 7000.
 - FR-09: Complete the RTSP handshake (OPTIONS → SETUP → ANNOUNCE → RECORD) without errors.
 - FR-10: Reject second concurrent AirPlay connection with RTSP 503.
-- FR-11: Auto-reconnect and resume advertising after connection loss. *(Status: implemented for the AirPlay receiver — `PhairPlayService.registerNetworkCallback` re-advertises when the last network was lost. The other receivers do not re-advertise yet; FR-61 makes this binding for every enabled receiver.)*
+- FR-11: Auto-reconnect and resume advertising after connection loss. *(Status: implemented for the AirPlay receiver and the DLNA renderer — `PhairPlayService.registerNetworkCallback` re-advertises when the last network was lost; the DLNA renderer additionally rebuilds its description server when the device came back with a new address. FR-61 makes this binding for every enabled receiver. The Miracast and Cast receivers have no re-advertisement path — Miracast is a control plane only (ADR-004) and Cast needs a registered application ID.)*
 - FR-12: Accept **audio-only AirPlay** streams (music, podcasts) from macOS and iOS senders, playing audio through the TV speakers without requiring a video stream.
 
 #### AirPlay 2 Codec Requirements
@@ -194,7 +194,7 @@ PhairPlay actually does — not what a Miracast sink would do.
 
 ### 1.11 Resilience and re-advertisement
 
-- FR-61: After the last network interface is lost and comes back (Wi-Fi off/on, TV standby, VPN up/down), every enabled receiver MUST re-advertise within 5 seconds — without an app restart and without dropping the open sockets. *Implementation: `PhairPlayService.registerNetworkCallback`, `AirPlayReceiver.readvertise`. Deviation: only AirPlay re-advertises today; the DLNA receiver has no re-advertisement path — documented as a change request.*
+- FR-61: After the last network interface is lost and comes back (Wi-Fi off/on, TV standby, VPN up/down), every enabled receiver MUST re-advertise within 5 seconds — without an app restart and without dropping the open sockets. *Implementation: `PhairPlayService.registerNetworkCallback`, `NetworkRecoveryMonitor`, `ReceiverSupervisor.readvertiseAll`, `AirPlayReceiver.readvertise`, `DlnaReceiver.readvertise`, `SsdpAdvertiser.readvertise`. The DLNA renderer rebuilds its description server when the device came back with a different address, because the description URL contains that address. Proof: `DlnaReadvertisePlanTest` (the decision what has to be rebuilt); the socket behaviour itself needs a device and is listed in `docs/guides/DEVICE_TEST_PLAN.md`.*
 - FR-62: A failed advertisement MUST be retried with a bounded backoff and MUST end in an explicit error state. A receiver MUST NOT disappear silently from the sender pickers while the UI claims that it is advertising. *Implementation: `MdnsRegistrationTracker` (retry after 1 s / 3 s / 6 s), `MdnsService`. Proof: `MdnsRegistrationTrackerTest`, `MdnsServiceTest`.*
 
 ### 1.12 Resource budgets
