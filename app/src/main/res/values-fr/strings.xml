@@ -193,4 +193,17 @@
     <string name="setting_diagnostics">Diagnostic</string>
     <string name="setting_diagnostics_subtitle">Afficher l\'état du récepteur et lancer un auto-test local</string>
 
+    <!-- Les valeurs mesurées du processus de l\'application face à leurs budgets -->
+    <string name="diagnostics_status_over_budget">au-dessus du budget</string>
+    <string name="diagnostics_section_resources">Ressources</string>
+    <string name="diagnostics_resource_memory">RAM</string>
+    <string name="diagnostics_resource_cpu">CPU</string>
+    <!-- %1$s = la taille mesurée, %2$s = le budget, %3$s = le résultat -->
+    <string name="diagnostics_resource_memory_value">%1$s / %2$s (%3$s)</string>
+    <!-- %1$s = la charge mesurée, %2$s = le budget, %3$s = le résultat -->
+    <string name="diagnostics_resource_cpu_value">%1$s %% / %2$s %% (%3$s)</string>
+    <string name="diagnostics_resources_button">Mesurer les ressources</string>
+    <string name="diagnostics_resources_measuring">Mesure des ressources…</string>
+    <string name="diagnostics_resources_measured">Ressources mesurées</string>
+
 </resources>

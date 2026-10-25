@@ -13,7 +13,7 @@
     │  │ Local address: 192.168.1.42                       │  │
     │  │ …                                                 │  │
     │  └────────────────────────────────────────────────────┘  │
-    │  [ Copy to clipboard ]  [ Run self-test ]                │
+    │  [ Copy to clipboard ]  [ Run self-test ]  [ Measure resources ] │
     └──────────────────────────────────────────────────────────┘
 
     TV notes:
@@ -103,7 +103,21 @@
                 android:textSize="18sp"
                 android:background="@drawable/btn_control_selector"
                 android:focusable="true"
-                android:nextFocusLeft="@id/btn_copy_report" />
+                android:nextFocusLeft="@id/btn_copy_report"
+                android:nextFocusRight="@id/btn_measure_resources" />
+
+            <Button
+                android:id="@+id/btn_measure_resources"
+                android:layout_width="wrap_content"
+                android:layout_height="56dp"
+                android:layout_marginStart="12dp"
+                android:paddingHorizontal="24dp"
+                android:text="@string/diagnostics_resources_button"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:background="@drawable/btn_control_selector"
+                android:focusable="true"
+                android:nextFocusLeft="@id/btn_run_self_test" />
 
         </LinearLayout>
 

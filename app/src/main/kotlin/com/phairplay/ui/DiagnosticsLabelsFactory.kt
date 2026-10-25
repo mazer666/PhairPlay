@@ -55,6 +55,7 @@ internal object DiagnosticsLabelsFactory {
         selfTestProcess = context.getString(R.string.diagnostics_selftest_process),
         statusOk = context.getString(R.string.diagnostics_status_ok),
         statusFailed = context.getString(R.string.diagnostics_status_failed),
+        statusOverBudget = context.getString(R.string.diagnostics_status_over_budget),
         notRunYet = context.getString(R.string.diagnostics_not_run_yet),
         reasonNoAddress = context.getString(R.string.diagnostics_reason_no_address),
         reasonNoListener = context.getString(R.string.diagnostics_reason_no_listener),
@@ -74,8 +75,19 @@ internal object DiagnosticsLabelsFactory {
         detailResidentMemory = context.getString(R.string.diagnostics_detail_resident_memory),
         sectionSession = context.getString(R.string.diagnostics_section_session),
         sessionNone = context.getString(R.string.diagnostics_session_none),
+        sectionResources = context.getString(R.string.diagnostics_section_resources),
+        resourceMemory = context.getString(R.string.diagnostics_resource_memory),
+        resourceCpu = context.getString(R.string.diagnostics_resource_cpu),
+        resourceMemoryValue = context.getString(R.string.diagnostics_resource_memory_value),
+        resourceCpuValue = context.getString(R.string.diagnostics_resource_cpu_value),
         formatDuration = { millis ->
             LocaleFormatting.formatDuration(millis, appLocale(context))
+        },
+        formatBytes = { bytes ->
+            LocaleFormatting.formatBytes(bytes, appLocale(context))
+        },
+        formatPercent = { percent ->
+            LocaleFormatting.formatDecimal(percent, appLocale(context))
         }
     )
 

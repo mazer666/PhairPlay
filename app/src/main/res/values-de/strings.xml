@@ -185,4 +185,17 @@
     <string name="setting_diagnostics">Diagnose</string>
     <string name="setting_diagnostics_subtitle">Zustand des Empfängers anzeigen und lokalen Selbsttest ausführen</string>
 
+    <!-- Die gemessenen Werte des App-Prozesses im Vergleich zu ihren Budgets -->
+    <string name="diagnostics_status_over_budget">über Budget</string>
+    <string name="diagnostics_section_resources">Ressourcen</string>
+    <string name="diagnostics_resource_memory">RAM</string>
+    <string name="diagnostics_resource_cpu">CPU</string>
+    <!-- %1$s = die gemessene Größe, %2$s = das Budget, %3$s = das Ergebnis -->
+    <string name="diagnostics_resource_memory_value">%1$s / %2$s (%3$s)</string>
+    <!-- %1$s = die gemessene Last, %2$s = das Budget, %3$s = das Ergebnis -->
+    <string name="diagnostics_resource_cpu_value">%1$s %% / %2$s %% (%3$s)</string>
+    <string name="diagnostics_resources_button">Ressourcen messen</string>
+    <string name="diagnostics_resources_measuring">Ressourcen werden gemessen…</string>
+    <string name="diagnostics_resources_measured">Ressourcen gemessen</string>
+
 </resources>

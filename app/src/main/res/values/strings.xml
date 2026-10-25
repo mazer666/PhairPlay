@@ -184,4 +184,17 @@
     <string name="setting_diagnostics">Diagnostics</string>
     <string name="setting_diagnostics_subtitle">Show the state of the receiver and run a local self-test</string>
 
+    <!-- The measured values of the app process against their budgets -->
+    <string name="diagnostics_status_over_budget">over budget</string>
+    <string name="diagnostics_section_resources">Resources</string>
+    <string name="diagnostics_resource_memory">RAM</string>
+    <string name="diagnostics_resource_cpu">CPU</string>
+    <!-- %1$s = the measured size, %2$s = the budget, %3$s = the outcome -->
+    <string name="diagnostics_resource_memory_value">%1$s / %2$s (%3$s)</string>
+    <!-- %1$s = the measured load, %2$s = the budget, %3$s = the outcome -->
+    <string name="diagnostics_resource_cpu_value">%1$s %% / %2$s %% (%3$s)</string>
+    <string name="diagnostics_resources_button">Measure resources</string>
+    <string name="diagnostics_resources_measuring">Measuring the resources…</string>
+    <string name="diagnostics_resources_measured">Resources measured</string>
+
 </resources>

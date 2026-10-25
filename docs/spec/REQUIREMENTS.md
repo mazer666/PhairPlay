@@ -224,8 +224,8 @@ PhairPlay actually does — not what a Miracast sink would do.
 ### 2.1 Performance (unchanged)
 - NFR-01: Video latency ≤ 100ms on local 5 GHz Wi-Fi.
 - NFR-02: Frame rate ≥ 25fps sustained.
-- NFR-03: Peak RAM ≤ 150 MB (single active stream).
-- NFR-04: Average CPU ≤ 30% on mid-range TV SoC.
+- NFR-03: Peak RAM ≤ 150 MB (single active stream). *The budget is implemented as the constant `PerformanceBudgets.MAX_RESIDENT_BYTES`; the app measures its own resident memory and shows it against the budget in the diagnostics report.*
+- NFR-04: Average CPU ≤ 30% on mid-range TV SoC. *The budget is implemented as the constant `PerformanceBudgets.MAX_CPU_PERCENT`; the app measures its own CPU load and shows it against the budget in the diagnostics report.*
 
 ### 2.2 UI / UX
 - NFR-05: UI design MUST follow the **Google TV Streamer** design language: dark background, card-based layout, large focus indicators, D-pad navigable.
