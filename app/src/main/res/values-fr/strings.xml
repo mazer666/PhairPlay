@@ -146,7 +146,7 @@
     <string name="diagnostics_selftest_ssdp">Multicast SSDP</string>
     <string name="diagnostics_selftest_airplay_port">Port AirPlay</string>
     <string name="diagnostics_selftest_process">Processus de l\'application</string>
-    <string name="diagnostics_status_ok">ok</string>
+    <string name="diagnostics_status_ok">OK</string>
     <string name="diagnostics_status_failed">échec</string>
     <string name="diagnostics_not_run_yet">pas encore exécuté</string>
     <!-- %1$s = l\'adresse trouvée -->
@@ -160,7 +160,17 @@
     <string name="diagnostics_reason_socket_failed">échec du socket multicast : %1$s</string>
     <string name="diagnostics_reason_not_measured">non mesuré</string>
     <!-- %1$d = le statut HTTP, %2$d = le nombre d\'octets de la réponse -->
-    <string name="diagnostics_detail_http_ok">HTTP %1$d, %2$d octets</string>
+    <!-- %1$d = le statut HTTP, %2$d = la longueur de la réponse en octets -->
+    <plurals name="diagnostics_detail_http_ok">
+        <item quantity="one">HTTP %1$d, %2$d octet</item>
+        <item quantity="other">HTTP %1$d, %2$d octets</item>
+        <!--
+            The French locale of CLDR has a third category "many" for the round millions
+            (1 000 000, 1 000 000 000). The text is the same as "other" — the French
+            plural of "octet" does not change with the number.
+        -->
+        <item quantity="many">HTTP %1$d, %2$d octets</item>
+    </plurals>
     <!-- %1$d = le statut HTTP -->
     <string name="diagnostics_detail_http_failed">HTTP %1$d</string>
     <!-- %1$d = la mémoire résidente du processus de l\'application en kilo-octets -->
@@ -169,7 +179,13 @@
     <string name="diagnostics_selftest_button">Lancer l\'auto-test</string>
     <string name="diagnostics_running">Auto-test en cours…</string>
     <!-- %1$d = le nombre de vérifications en échec, %2$d = le nombre de vérifications -->
-    <string name="diagnostics_finished">Auto-test terminé : %1$d vérifications sur %2$d ont échoué</string>
+    <!-- %1$d = le nombre de contrôles échoués, %2$d = le nombre de contrôles -->
+    <plurals name="diagnostics_finished">
+        <item quantity="one">Auto-test terminé : %1$d contrôle en échec sur %2$d</item>
+        <item quantity="other">Auto-test terminé : %1$d contrôles en échec sur %2$d</item>
+        <!-- Categorie CLDR "many" du francais : meme texte que "other". -->
+        <item quantity="many">Auto-test terminé : %1$d contrôles en échec sur %2$d</item>
+    </plurals>
     <string name="diagnostics_copied">Le rapport a été copié dans le presse-papiers</string>
     <string name="diagnostics_copy_failed">Le presse-papiers n\'est pas disponible</string>
     <string name="setting_diagnostics">Diagnostic</string>

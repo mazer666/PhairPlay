@@ -60,7 +60,14 @@ internal object DiagnosticsLabelsFactory {
         reasonNoSsdpAnswer = context.getString(R.string.diagnostics_reason_no_ssdp_answer),
         reasonSocketFailed = context.getString(R.string.diagnostics_reason_socket_failed),
         reasonNotMeasured = context.getString(R.string.diagnostics_reason_not_measured),
-        detailHttpOk = context.getString(R.string.diagnostics_detail_http_ok),
+        detailHttpOk = { statusCode, bodyBytes ->
+            context.resources.getQuantityString(
+                R.plurals.diagnostics_detail_http_ok,
+                bodyBytes,
+                statusCode,
+                bodyBytes
+            )
+        },
         detailHttpFailed = context.getString(R.string.diagnostics_detail_http_failed),
         detailResidentMemory = context.getString(R.string.diagnostics_detail_resident_memory)
     )

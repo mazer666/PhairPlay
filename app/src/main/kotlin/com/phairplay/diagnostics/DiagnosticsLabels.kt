@@ -129,8 +129,19 @@ data class DiagnosticsLabels(
     /** The detail when a value could not be measured. */
     val reasonNotMeasured: String,
 
-    /** The detail of a successful HTTP request. `%1$d` is the status, `%2$d` the byte count. */
-    val detailHttpOk: String,
+    /**
+     * The detail of a successful HTTP request.
+     *
+     * WHY a function and not a string: the byte count is a quantity, and a quantity
+     * needs a plural form — "1 byte" and "1842 bytes" are different words. The
+     * plural resource can only be resolved with the count, so the caller passes it
+     * in.
+     *
+     * @param statusCode the HTTP status the server answered with.
+     * @param bodyBytes the length of the answer in bytes.
+     * @return the filled detail.
+     */
+    val detailHttpOk: (statusCode: Int, bodyBytes: Int) -> String,
 
     /** The detail of an HTTP request that was answered with an error. `%1$d` is the status. */
     val detailHttpFailed: String,

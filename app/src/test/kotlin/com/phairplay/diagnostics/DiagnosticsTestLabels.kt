@@ -42,7 +42,7 @@ internal fun englishDiagnosticsLabels() = DiagnosticsLabels(
     reasonNoSsdpAnswer = "no answer from %1\$s within %2\$d ms",
     reasonSocketFailed = "multicast socket failed: %1\$s",
     reasonNotMeasured = "not measured",
-    detailHttpOk = "HTTP %1\$d, %2\$d bytes",
+    detailHttpOk = { statusCode, bodyBytes -> "HTTP $statusCode, $bodyBytes bytes" },
     detailHttpFailed = "HTTP %1\$d",
     detailResidentMemory = "resident memory %1\$d kB"
 )

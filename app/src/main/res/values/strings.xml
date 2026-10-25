@@ -145,7 +145,7 @@
     <string name="diagnostics_selftest_ssdp">SSDP multicast</string>
     <string name="diagnostics_selftest_airplay_port">AirPlay port</string>
     <string name="diagnostics_selftest_process">App process</string>
-    <string name="diagnostics_status_ok">ok</string>
+    <string name="diagnostics_status_ok">OK</string>
     <string name="diagnostics_status_failed">failed</string>
     <string name="diagnostics_not_run_yet">not run yet</string>
     <!-- %1$s = the address that was found -->
@@ -159,7 +159,11 @@
     <string name="diagnostics_reason_socket_failed">multicast socket failed: %1$s</string>
     <string name="diagnostics_reason_not_measured">not measured</string>
     <!-- %1$d = the HTTP status, %2$d = the number of bytes of the answer -->
-    <string name="diagnostics_detail_http_ok">HTTP %1$d, %2$d bytes</string>
+    <!-- %1$d = the HTTP status, %2$d = the length of the answer in bytes -->
+    <plurals name="diagnostics_detail_http_ok">
+        <item quantity="one">HTTP %1$d, %2$d byte</item>
+        <item quantity="other">HTTP %1$d, %2$d bytes</item>
+    </plurals>
     <!-- %1$d = the HTTP status -->
     <string name="diagnostics_detail_http_failed">HTTP %1$d</string>
     <!-- %1$d = the resident memory of the app process in kilobytes -->
@@ -168,7 +172,11 @@
     <string name="diagnostics_selftest_button">Run self-test</string>
     <string name="diagnostics_running">Running the self-test…</string>
     <!-- %1$d = the number of failed checks, %2$d = the number of checks -->
-    <string name="diagnostics_finished">Self-test finished: %1$d of %2$d checks failed</string>
+    <!-- %1$d = the number of failed checks, %2$d = the number of checks -->
+    <plurals name="diagnostics_finished">
+        <item quantity="one">Self-test finished: %1$d of %2$d check failed</item>
+        <item quantity="other">Self-test finished: %1$d of %2$d checks failed</item>
+    </plurals>
     <string name="diagnostics_copied">The report was copied to the clipboard</string>
     <string name="diagnostics_copy_failed">The clipboard is not available</string>
     <string name="setting_diagnostics">Diagnostics</string>

@@ -123,7 +123,7 @@ class SelfTest(
             answer.statusCode == HTTP_OK -> SelfTestResult(
                 labels.selfTestDescriptionServer,
                 ok = true,
-                detail = labels.format(labels.detailHttpOk, answer.statusCode, answer.bodyBytes)
+                detail = labels.detailHttpOk(answer.statusCode, answer.bodyBytes)
             )
             else -> SelfTestResult(
                 labels.selfTestDescriptionServer,

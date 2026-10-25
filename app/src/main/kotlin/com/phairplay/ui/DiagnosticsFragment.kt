@@ -284,8 +284,9 @@ class DiagnosticsFragment : Fragment() {
             buttonSelfTest.isEnabled = true
             renderReport()
             val failed = outcome.results.count { !it.ok }
-            textStatus.text = getString(
-                R.string.diagnostics_finished,
+            textStatus.text = resources.getQuantityString(
+                R.plurals.diagnostics_finished,
+                outcome.results.size,
                 failed,
                 outcome.results.size
             )

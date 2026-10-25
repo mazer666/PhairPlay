@@ -146,7 +146,7 @@
     <string name="diagnostics_selftest_ssdp">SSDP-Multicast</string>
     <string name="diagnostics_selftest_airplay_port">AirPlay-Port</string>
     <string name="diagnostics_selftest_process">App-Prozess</string>
-    <string name="diagnostics_status_ok">ok</string>
+    <string name="diagnostics_status_ok">OK</string>
     <string name="diagnostics_status_failed">fehlgeschlagen</string>
     <string name="diagnostics_not_run_yet">noch nicht ausgeführt</string>
     <!-- %1$s = die gefundene Adresse -->
@@ -160,7 +160,11 @@
     <string name="diagnostics_reason_socket_failed">Multicast-Socket fehlgeschlagen: %1$s</string>
     <string name="diagnostics_reason_not_measured">nicht gemessen</string>
     <!-- %1$d = der HTTP-Status, %2$d = die Anzahl der Bytes der Antwort -->
-    <string name="diagnostics_detail_http_ok">HTTP %1$d, %2$d Bytes</string>
+    <!-- %1$d = der HTTP-Status, %2$d = die Länge der Antwort in Bytes -->
+    <plurals name="diagnostics_detail_http_ok">
+        <item quantity="one">HTTP %1$d, %2$d Byte</item>
+        <item quantity="other">HTTP %1$d, %2$d Bytes</item>
+    </plurals>
     <!-- %1$d = der HTTP-Status -->
     <string name="diagnostics_detail_http_failed">HTTP %1$d</string>
     <!-- %1$d = die Speicherbelegung des App-Prozesses in Kilobyte -->
@@ -169,7 +173,11 @@
     <string name="diagnostics_selftest_button">Selbsttest ausführen</string>
     <string name="diagnostics_running">Selbsttest läuft…</string>
     <!-- %1$d = die Anzahl der fehlgeschlagenen Prüfungen, %2$d = die Anzahl der Prüfungen -->
-    <string name="diagnostics_finished">Selbsttest beendet: %1$d von %2$d Prüfungen fehlgeschlagen</string>
+    <!-- %1$d = die Zahl der fehlgeschlagenen Prüfungen, %2$d = die Zahl der Prüfungen -->
+    <plurals name="diagnostics_finished">
+        <item quantity="one">Selbsttest beendet: %1$d von %2$d Prüfung fehlgeschlagen</item>
+        <item quantity="other">Selbsttest beendet: %1$d von %2$d Prüfungen fehlgeschlagen</item>
+    </plurals>
     <string name="diagnostics_copied">Der Bericht wurde in die Zwischenablage kopiert</string>
     <string name="diagnostics_copy_failed">Die Zwischenablage ist nicht verfügbar</string>
     <string name="setting_diagnostics">Diagnose</string>
