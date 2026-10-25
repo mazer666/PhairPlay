@@ -60,6 +60,7 @@ class SettingsFragment : Fragment() {
     private lateinit var rowDebugOverlay: View
     private lateinit var rowForceHighRes: View
     private lateinit var textVersionValue: TextView
+    private lateinit var rowDiagnostics: View
     private lateinit var rowReset: LinearLayout
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
@@ -99,6 +100,7 @@ class SettingsFragment : Fragment() {
         rowDebugOverlay     = view.findViewById(R.id.row_debug_overlay)
         rowForceHighRes     = view.findViewById(R.id.row_force_high_res)
         textVersionValue    = view.findViewById(R.id.text_version_value)
+        rowDiagnostics      = view.findViewById(R.id.row_diagnostics)
         rowReset            = view.findViewById(R.id.row_reset)
     }
 
@@ -204,7 +206,27 @@ class SettingsFragment : Fragment() {
         setToggleListener(rowDebugOverlay) { enabled -> save { it.copy(showDebugOverlay = enabled) } }
         setToggleListener(rowForceHighRes) { enabled -> save { it.copy(forceHighResolution = enabled) } }
 
+        rowDiagnostics.setOnClickListener { openDiagnostics() }
         rowReset.setOnClickListener { resetSettings() }
+    }
+
+    /**
+     * Opens the diagnostics screen.
+     *
+     * WHY the transaction is on the back stack: the owner walks through the
+     * settings with the remote control and wants to come back to the settings with
+     * the back button — not to leave the app and stop the receiver.
+     *
+     * WHY the content container is replaced: the diagnostics screen is a screen, not
+     * a dialog. The navigation panel of the activity stays visible, so the owner
+     * always sees where he is.
+     */
+    private fun openDiagnostics() {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.content_container, DiagnosticsFragment())
+            .addToBackStack(null)
+            .commit()
+        Logger.d("Settings: opening the diagnostics screen")
     }
 
     private fun setToggleListener(row: View, onChanged: (Boolean) -> Unit) {

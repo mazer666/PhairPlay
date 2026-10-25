@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    fragment_diagnostics.xml — Diagnostics screen layout.
+
+    Layout:
+    ┌──────────────────────────────────────────────────────────┐
+    │  Diagnostics                                            │
+    │  Self-test finished: 1 of 5 checks failed                │
+    │  ┌────────────────────────────────────────────────────┐  │
+    │  │ PhairPlay diagnostics                              │  │
+    │  │                                                    │  │
+    │  │ Device: Living Room TV                            │  │
+    │  │ Local address: 192.168.1.42                       │  │
+    │  │ …                                                 │  │
+    │  └────────────────────────────────────────────────────┘  │
+    │  [ Copy to clipboard ]  [ Run self-test ]                │
+    └──────────────────────────────────────────────────────────┘
+
+    TV notes:
+    - The report is one scrollable block of text in a monospace font, so that the
+      owner can read a line without hunting for the value in it.
+    - The report itself is focusable: the D-pad scrolls it, and the focus moves on
+      to the buttons when the end of the report is reached.
+    - The buttons are large, have a visible focus ring and need no pointer.
+-->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll_diagnostics"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <!-- Page title -->
+        <TextView
+            android:id="@+id/text_page_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_diagnostics"
+            android:textColor="@color/text_primary"
+            android:textSize="32sp"
+            android:fontFamily="sans-serif-light" />
+
+        <!-- Status line of the self test -->
+        <TextView
+            android:id="@+id/text_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp" />
+
+        <!-- The report itself -->
+        <TextView
+            android:id="@+id/text_report"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/focus_ring_selector"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusDown="@id/btn_copy_report"
+            android:fontFamily="monospace"
+            android:lineSpacingExtra="6dp"
+            android:padding="16dp"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp" />
+
+        <!-- Actions -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:baselineAligned="false"
+            android:orientation="horizontal"
+            android:layout_marginTop="32dp">
+
+            <Button
+                android:id="@+id/btn_copy_report"
+                android:layout_width="wrap_content"
+                android:layout_height="56dp"
+                android:layout_marginEnd="12dp"
+                android:paddingHorizontal="24dp"
+                android:text="@string/diagnostics_copy_button"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:background="@drawable/btn_control_selector"
+                android:focusable="true"
+                android:nextFocusRight="@id/btn_run_self_test" />
+
+            <Button
+                android:id="@+id/btn_run_self_test"
+                android:layout_width="wrap_content"
+                android:layout_height="56dp"
+                android:paddingHorizontal="24dp"
+                android:text="@string/diagnostics_selftest_button"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:background="@drawable/btn_control_selector"
+                android:focusable="true"
+                android:nextFocusLeft="@id/btn_copy_report" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

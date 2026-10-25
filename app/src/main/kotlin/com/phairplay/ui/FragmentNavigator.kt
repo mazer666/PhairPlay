@@ -81,6 +81,12 @@ internal class FragmentNavigator(
      * @param navItem   The nav panel TextView that was clicked (for highlight update).
      */
     private fun navigateTo(fragment: Fragment, navItem: TextView) {
+        // A screen that was opened from another screen (the diagnostics screen) sits on
+        // the back stack. The navigation panel is the way out of every screen, so its
+        // entries are removed before the new screen is shown — otherwise the back
+        // button would return to a screen the owner has already left.
+        fragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+
         // Update nav highlight
         setNavSelected(navItemHome, navItem == navItemHome)
         setNavSelected(navItemSettings, navItem == navItemSettings)

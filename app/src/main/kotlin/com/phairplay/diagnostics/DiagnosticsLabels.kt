@@ -1,0 +1,155 @@
+package com.phairplay.diagnostics
+
+import java.util.Locale
+
+/**
+ * DiagnosticsLabels — every text the diagnostics report is built from.
+ *
+ * WHY the labels are data and not resources: the report is built by code that must
+ * run without Android. The UI layer reads the labels from `R.string` and hands them
+ * in, so the same builder produces an English report on an English television and a
+ * German report on a German one — and the builder itself stays testable on a plain
+ * JVM.
+ *
+ * HOW the placeholders work: a label that carries a value uses the positional
+ * `String.format` placeholders (`%1$s`, `%2$d`). The values are filled in with
+ * `Locale.US`, so a report reads the same on every device.
+ *
+ * Example:
+ *   val labels = DiagnosticsLabels(
+ *       title = "PhairPlay diagnostics",
+ *       unknown = "unknown",
+ *       // … every other label …
+ *   )
+ *   val text = DiagnosticsReportBuilder.build(report, labels)
+ */
+data class DiagnosticsLabels(
+    // ── The report itself ───────────────────────────────────────────────────
+
+    /** The title line of the report. */
+    val title: String,
+
+    /** The label of the device name. */
+    val device: String,
+
+    /** The label of the local IPv4 address. */
+    val address: String,
+
+    /** The label of the app version. */
+    val version: String,
+
+    /** The label of the product platform. */
+    val platform: String,
+
+    /** The label of the service state. */
+    val service: String,
+
+    /** The heading of the protocol section. */
+    val sectionProtocols: String,
+
+    /** The heading of the port section. */
+    val sectionPorts: String,
+
+    /** The heading of the self test section. */
+    val sectionSelfTest: String,
+
+    /** The text that replaces a value that is not known. */
+    val unknown: String,
+
+    // ── The names of the protocols ──────────────────────────────────────────
+
+    /** The name of the AirPlay protocol. */
+    val protocolAirPlay: String,
+
+    /** The name of the Miracast protocol. */
+    val protocolMiracast: String,
+
+    /** The name of the Cast protocol. */
+    val protocolCast: String,
+
+    /** The name of the DLNA protocol. */
+    val protocolDlna: String,
+
+    // ── The ports ───────────────────────────────────────────────────────────
+
+    /** The label of the AirPlay port. */
+    val portAirPlay: String,
+
+    /** The label of the port of the DLNA description server. */
+    val portDlnaDescription: String,
+
+    /** The label of the SSDP port. */
+    val portSsdp: String,
+
+    // ── The checks of the self test ────────────────────────────────────────
+
+    /** The name of the address check. */
+    val selfTestAddress: String,
+
+    /** The name of the description server check. */
+    val selfTestDescriptionServer: String,
+
+    /** The name of the SSDP check. */
+    val selfTestSsdp: String,
+
+    /** The name of the AirPlay port check. */
+    val selfTestAirPlayPort: String,
+
+    /** The name of the process check. */
+    val selfTestProcess: String,
+
+    // ── The outcome of a check ──────────────────────────────────────────────
+
+    /** The word that marks a check that passed. */
+    val statusOk: String,
+
+    /** The word that marks a check that failed. */
+    val statusFailed: String,
+
+    /** The detail of a check that was not run yet. */
+    val notRunYet: String,
+
+    // ── The details of a check ──────────────────────────────────────────────
+
+    /** The detail when no usable IPv4 address was found. `%1$s` is the address. */
+    val reasonNoAddress: String,
+
+    /** The detail when nothing listens on the address. `%1$s` is the endpoint. */
+    val reasonNoListener: String,
+
+    /** The detail when the port of the description server is not known. */
+    val reasonPortUnknown: String,
+
+    /** The detail when the SSDP search was not answered. `%1$s` is the group, `%2$d` the timeout. */
+    val reasonNoSsdpAnswer: String,
+
+    /** The detail when the multicast socket could not be opened. `%1$s` is the reason. */
+    val reasonSocketFailed: String,
+
+    /** The detail when a value could not be measured. */
+    val reasonNotMeasured: String,
+
+    /** The detail of a successful HTTP request. `%1$d` is the status, `%2$d` the byte count. */
+    val detailHttpOk: String,
+
+    /** The detail of an HTTP request that was answered with an error. `%1$d` is the status. */
+    val detailHttpFailed: String,
+
+    /** The detail of the measured memory of the app process. `%1$d` is the size in kB. */
+    val detailResidentMemory: String
+) {
+
+    /**
+     * Fills the placeholders of a label.
+     *
+     * WHY `Locale.US`: the report is a technical document that is compared between
+     * devices. A number that is written with a comma in one language and with a dot
+     * in another would make two reports look different when they are not.
+     *
+     * @param template the label with its placeholders.
+     * @param arguments the values of the placeholders.
+     * @return the filled label.
+     */
+    fun format(template: String, vararg arguments: Any): String =
+        String.format(Locale.US, template, *arguments)
+}
