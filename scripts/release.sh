@@ -1,230 +1,324 @@
 #!/usr/bin/env bash
-# PhairPlay local release script
+# PhairPlay release script
 #
-# Builds signed release APKs for GoogleTV and FireTV locally, then publishes
-# a GitHub Release with both APKs attached.
+# Cuts a release: quality gate → version → build → verify → tag → publish.
 #
 # Usage:
-#   ./scripts/release.sh v1.2.0
+#   ./scripts/release.sh --setup            # once: keystore and credentials
+#   ./scripts/release.sh v1.0.0-alpha.3    # cut a release
 #
-# First-time setup — run once to create your release keystore:
-#   ./scripts/release.sh --setup
+# The script is written for the owner, who is not an Android developer. It
+# refuses to publish anything it has not checked itself:
 #
-# Credentials are stored in ~/.config/phairplay/release.env (outside the repo).
+#   1. the quality gate (the four scripts/check-*.sh) has to be green,
+#   2. the version in app/build.gradle.kts is set to the version of the tag and
+#      committed together with the tag,
+#   3. both flavours are built — one Gradle call each, capped heap, no daemon,
+#   4. the built APKs are verified: the version inside the APK has to be the
+#      version of the tag, and the APK has to be signed,
+#   5. the release is published through the GitHub REST API (curl + token);
+#      the GitHub CLI is only the fallback.
+#
+# Credentials live outside the repository:
+#   ~/.config/phairplay/phairplay-release.jks   the signing key
+#   ~/.config/phairplay/release.env             the passwords and the token
+#
+# The documentation for the owner is docs/guides/RELEASING.md.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+RELEASE_LIB="$SCRIPT_DIR/release"
+
 CREDS_FILE="${HOME}/.config/phairplay/release.env"
 KEYSTORE_FILE="${HOME}/.config/phairplay/phairplay-release.jks"
 
-# ── helpers ─────────────────────────────────────────────────────────────────
+# shellcheck source=release/common.sh
+. "$RELEASE_LIB/common.sh"
+# shellcheck source=release/version.sh
+. "$RELEASE_LIB/version.sh"
+# shellcheck source=release/build.sh
+. "$RELEASE_LIB/build.sh"
+# shellcheck source=release/verify.sh
+. "$RELEASE_LIB/verify.sh"
+# shellcheck source=release/github.sh
+. "$RELEASE_LIB/github.sh"
 
-red()   { printf '\033[0;31m%s\033[0m\n' "$*"; }
-green() { printf '\033[0;32m%s\033[0m\n' "$*"; }
-bold()  { printf '\033[1m%s\033[0m\n' "$*"; }
-die()   { red "ERROR: $*"; exit 1; }
+GH_OWNER=""
+GH_REPO=""
+RELEASE_BRANCH=""
+TEST_STATUS="green"
+SKIP_TESTS="false"
 
-require_cmd() {
-    command -v "$1" >/dev/null 2>&1 || die "'$1' not found. Install it and try again."
+usage() {
+    cat <<'EOF'
+PhairPlay release script
+
+Usage:
+  ./scripts/release.sh --setup                     set up the keystore and the credentials (once)
+  ./scripts/release.sh v1.0.0-alpha.3             cut a release
+  ./scripts/release.sh v1.0.0-alpha.3 --skip-tests  cut a release without the JVM test suite
+
+Options:
+  --setup, -s     create the release keystore and store the credentials outside the repository
+  --skip-tests    do not run the JVM protocol suite; the release notes state that it was not run
+  -h, --help      show this help and exit
+
+The version has to follow the release scheme of docs/spec/PROJECT_PLAN.md:
+  v1.0.0-alpha.N   a prerelease ("alpha")
+  v1.0.0-beta.N    a prerelease ("beta")
+  v1.0.0           the stable release, published as "latest"
+
+Everything the script does is documented in docs/guides/RELEASING.md.
+EOF
 }
 
-# ── first-time keystore setup ────────────────────────────────────────────────
+# ── first-time setup ─────────────────────────────────────────────────────────
 
 cmd_setup() {
-    bold "=== PhairPlay release keystore setup ==="
+    bold "=== PhairPlay release setup ==="
+    echo ""
+    echo "This creates the signing key and stores the credentials outside the repository."
+    echo ""
+    echo "  Keystore:    $KEYSTORE_FILE"
+    echo "  Credentials: $CREDS_FILE"
+    echo ""
+    echo "Neither of the two files belongs into the repository — they stay on this machine."
     echo ""
 
-    if [[ -f "$KEYSTORE_FILE" ]]; then
-        echo "Keystore already exists at $KEYSTORE_FILE"
-        read -rp "Overwrite? [y/N] " overwrite
-        [[ "$overwrite" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+    if [ -f "$KEYSTORE_FILE" ]; then
+        echo "The keystore already exists at $KEYSTORE_FILE"
+        local overwrite
+        read -rp "Overwrite it? [y/N] " overwrite
+        case "$overwrite" in
+            [Yy]*) : ;;
+            *) echo "Aborted."; exit 0 ;;
+        esac
     fi
 
     mkdir -p "$(dirname "$KEYSTORE_FILE")"
 
-    echo "You will be asked a few questions to create your signing key."
-    echo "Remember the passwords — they will be saved to $CREDS_FILE"
+    local key_alias keystore_password key_password token
+    read -rp "Key alias [phairplay]: " key_alias
+    [ -n "$key_alias" ] || key_alias="phairplay"
+    read -rsp "Keystore password: " keystore_password; echo
+    read -rsp "Key password (Enter = the same as the keystore password): " key_password; echo
+    [ -n "$key_password" ] || key_password="$keystore_password"
+
     echo ""
-
-    read -rp "Key alias (e.g. phairplay): " KEY_ALIAS
-    read -rsp "Keystore password: " KEYSTORE_PASSWORD; echo
-    read -rsp "Key password (Enter = same as keystore): " KEY_PASSWORD; echo
-    [[ -z "$KEY_PASSWORD" ]] && KEY_PASSWORD="$KEYSTORE_PASSWORD"
-
+    echo "Creating the key..."
     keytool -genkey -v \
         -keystore "$KEYSTORE_FILE" \
-        -alias "$KEY_ALIAS" \
+        -alias "$key_alias" \
         -keyalg RSA -keysize 2048 -validity 10000 \
-        -storepass "$KEYSTORE_PASSWORD" \
-        -keypass "$KEY_PASSWORD" \
-        -dname "CN=PhairPlay, O=PhairPlay, C=DE"
+        -storepass "$keystore_password" \
+        -keypass "$key_password" \
+        -dname "CN=PhairPlay, O=PhairPlay, C=DE" \
+        || die "The keystore could not be created."
+
+    token="${GITHUB_TOKEN:-}"
+    if [ -z "$token" ]; then
+        echo ""
+        echo "A GitHub token is needed to publish the release."
+        echo "Create one at https://github.com/settings/tokens (scope: repo)."
+        read -rsp "GitHub token (Enter to skip it): " token; echo
+    fi
 
     mkdir -p "$(dirname "$CREDS_FILE")"
     chmod 700 "$(dirname "$CREDS_FILE")"
-    cat > "$CREDS_FILE" <<EOF
-KEYSTORE_PATH=${KEYSTORE_FILE}
-KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
-KEY_ALIAS=${KEY_ALIAS}
-KEY_PASSWORD=${KEY_PASSWORD}
-EOF
+    {
+        printf 'KEYSTORE_PATH=%s\n' "$(shell_quote "$KEYSTORE_FILE")"
+        printf 'KEYSTORE_PASSWORD=%s\n' "$(shell_quote "$keystore_password")"
+        printf 'KEY_ALIAS=%s\n' "$(shell_quote "$key_alias")"
+        printf 'KEY_PASSWORD=%s\n' "$(shell_quote "$key_password")"
+        printf 'GITHUB_TOKEN=%s\n' "$(shell_quote "$token")"
+    } > "$CREDS_FILE"
     chmod 600 "$CREDS_FILE"
 
-    green "Done! Credentials saved to $CREDS_FILE"
+    green "The credentials are stored in $CREDS_FILE (mode 600)."
+    if [ -n "$token" ]; then
+        local repository
+        repository=$(detect_repository || true)
+        if [ -n "$repository" ]; then
+            GH_OWNER="${repository%%/*}"
+            GH_REPO="${repository#*/}"
+            github_check_token || true
+        else
+            yellow "The GitHub repository could not be read out of the remote — the token was not checked."
+        fi
+    else
+        yellow "No GitHub token was stored. Add GITHUB_TOKEN to $CREDS_FILE or export it before the release."
+    fi
+
     echo ""
-    echo "Run ./scripts/release.sh v1.0.0 to build and publish your first release."
+    green "Done. Cut a release with: ./scripts/release.sh v1.0.0-alpha.3"
+    echo "The guide for the whole flow is docs/guides/RELEASING.md."
 }
 
-# ── main release flow ─────────────────────────────────────────────────────────
+# ── the release flow ─────────────────────────────────────────────────────────
 
 cmd_release() {
-    local VERSION="$1"
+    local tag="$1"
+    version_validate "$tag"
 
-    # Validate tag format
-    [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9] ]] \
-        || die "Version must start with 'v' and follow semver, e.g. v1.2.0 (got: $VERSION)"
+    bold "=== PhairPlay $VERSION_TAG ==="
+    echo ""
 
-    require_cmd gh
-    require_cmd keytool
-    require_cmd git
+    step "Preflight"
+    require_cmd git "Install Git."
+    require_cmd curl "Install curl — the release is published through the GitHub REST API."
+    require_cmd keytool "Install a JDK 17 — keytool reads and creates the keystore."
 
-    # Load signing credentials and export them so Gradle picks them up
-    [[ -f "$CREDS_FILE" ]] || die "No credentials found. Run: ./scripts/release.sh --setup"
-    set -a; source "$CREDS_FILE"; set +a
-    [[ -f "${KEYSTORE_PATH:-}" ]] || die "Keystore not found at $KEYSTORE_PATH"
+    local repository
+    repository=$(detect_repository) \
+        || die "The GitHub repository could not be read. Set GITHUB_REPOSITORY=owner/repo or check the remote of the checkout."
+    GH_OWNER="${repository%%/*}"
+    GH_REPO="${repository#*/}"
+    green "Repository:  $GH_OWNER/$GH_REPO"
 
-    # Auto-detect Android SDK if ANDROID_HOME is not set
-    if [[ -z "${ANDROID_HOME:-}" ]]; then
-        if [[ -d "$HOME/Android/Sdk" ]]; then
-            export ANDROID_HOME="$HOME/Android/Sdk"
-        elif [[ -d "$HOME/Library/Android/sdk" ]]; then
-            export ANDROID_HOME="$HOME/Library/Android/sdk"
-        else
-            die "ANDROID_HOME not set and no SDK found. Install Android Studio or set ANDROID_HOME."
+    load_credentials
+    [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ] \
+        || die "The keystore $KEYSTORE_PATH does not exist. Run: ./scripts/release.sh --setup"
+    [ -n "${GITHUB_TOKEN:-}" ] \
+        || die "No GitHub token found. Put GITHUB_TOKEN into $CREDS_FILE or export it in the shell."
+    green "Token:       $TOKEN_SOURCE"
+    green "Keystore:    $KEYSTORE_PATH"
+
+    RELEASE_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
+    if [ "$RELEASE_BRANCH" = "HEAD" ]; then
+        die "The checkout is detached — check out the branch the release is cut from."
+    fi
+    green "Branch:      $RELEASE_BRANCH"
+
+    local dirty
+    dirty=$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)
+    if [ -n "$dirty" ]; then
+        printf '%s\n' "$dirty" >&2
+        die "The working tree has uncommitted changes. Commit or stash them and run the release again."
+    fi
+
+    build_prepare_environment
+    github_check_token
+
+    # A tag that exists already must point at the commit that is built now —
+    # a release that moves an existing tag is a release that lies.
+    git -C "$REPO_ROOT" fetch --tags --quiet origin 2>/dev/null || true
+    local tag_state tag_sha head_sha
+    tag_state=$(version_tag_state "$VERSION_TAG")
+    if [ "$tag_state" != "none" ]; then
+        tag_sha=$(git -C "$REPO_ROOT" rev-list -n 1 "$VERSION_TAG" 2>/dev/null || true)
+        head_sha=$(git -C "$REPO_ROOT" rev-parse HEAD)
+        if [ "$tag_sha" != "$head_sha" ]; then
+            die "The tag $VERSION_TAG already exists and points at ${tag_sha:0:8}, but the checkout is at ${head_sha:0:8}. A release is always built from the commit of its tag. Delete the tag and the release, then run the release again:
+  git tag -d $VERSION_TAG
+  git push origin :refs/tags/$VERSION_TAG"
         fi
+        yellow "The tag $VERSION_TAG exists already and points at the current commit — the release is rebuilt."
     fi
 
-    # Auto-detect Homebrew JDK if JAVA_HOME is not set
-    if [[ -z "${JAVA_HOME:-}" ]]; then
-        for jdk in /opt/homebrew/opt/openjdk@17 /opt/homebrew/opt/openjdk /usr/libexec/java_home; do
-            if [[ -d "$jdk" ]]; then export JAVA_HOME="$jdk"; break; fi
-        done
-    fi
-    [[ -n "${JAVA_HOME:-}" ]] && export PATH="$JAVA_HOME/bin:$PATH"
+    step "Quality gate"
+    build_run_quality_gate
 
-    cd "$REPO_ROOT"
-
-    # Write local.properties so Gradle finds the Android SDK
-    echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-    # Ensure working tree is clean (local.properties is gitignored)
-    if ! git diff --quiet -- ':!local.properties' || ! git diff --cached --quiet; then
-        die "Working tree has uncommitted changes. Commit or stash them first."
-    fi
-
-    # Check gh auth
-    gh auth status >/dev/null 2>&1 || die "Not logged in to GitHub. Run: gh auth login"
-
-    bold "=== Building PhairPlay $VERSION ==="
-    echo ""
-
-    # Build both flavors
-    echo "▸ Building GoogleTV release APK..."
-    KEYSTORE_PATH="$KEYSTORE_PATH" \
-    KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
-    KEY_ALIAS="$KEY_ALIAS" \
-    KEY_PASSWORD="$KEY_PASSWORD" \
-    ./gradlew :app:assembleGoogletvRelease --quiet --stacktrace
-
-    echo "▸ Building FireTV release APK..."
-    KEYSTORE_PATH="$KEYSTORE_PATH" \
-    KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
-    KEY_ALIAS="$KEY_ALIAS" \
-    KEY_PASSWORD="$KEY_PASSWORD" \
-    ./gradlew :app:assembleFiretvRelease --quiet --stacktrace
-
-    # Locate and rename APKs
-    GOOGLETV_SRC="app/build/outputs/apk/googletv/release/app-googletv-release.apk"
-    FIRETV_SRC="app/build/outputs/apk/firetv/release/app-firetv-release.apk"
-    GOOGLETV_APK="PhairPlay-${VERSION}-googletv.apk"
-    FIRETV_APK="PhairPlay-${VERSION}-firetv.apk"
-
-    [[ -f "$GOOGLETV_SRC" ]] || die "GoogleTV APK not found at $GOOGLETV_SRC"
-    [[ -f "$FIRETV_SRC"   ]] || die "FireTV APK not found at $FIRETV_SRC"
-
-    cp "$GOOGLETV_SRC" "$GOOGLETV_APK"
-    cp "$FIRETV_SRC"   "$FIRETV_APK"
-
-    green "▸ APKs built:"
-    echo "    $GOOGLETV_APK ($(du -sh "$GOOGLETV_APK" | cut -f1))"
-    echo "    $FIRETV_APK   ($(du -sh "$FIRETV_APK"   | cut -f1))"
-    echo ""
-
-    # Create and push git tag
-    if git tag -l "$VERSION" | grep -q "$VERSION"; then
-        echo "Tag $VERSION already exists locally — skipping tag creation."
+    if [ "$SKIP_TESTS" = "true" ]; then
+        yellow "The JVM protocol suite is NOT run (--skip-tests). The release notes will say that."
+        TEST_STATUS="not run"
     else
-        echo "▸ Creating git tag $VERSION..."
-        git tag -a "$VERSION" -m "Release $VERSION"
-        git push origin "$VERSION"
+        build_run_tests
     fi
 
-    # Generate changelog from git log since last tag
-    PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${VERSION}$" | head -1)
-    if [[ -n "$PREV_TAG" ]]; then
-        COMMITS=$(git log --pretty=format:"- %s" "${PREV_TAG}..${VERSION}" 2>/dev/null | head -30)
-        SINCE_TEXT="since $PREV_TAG"
+    step "Version $VERSION_NUMBER"
+    version_bump "$REPO_ROOT/app/build.gradle.kts" "$VERSION_NUMBER"
+    version_commit "$REPO_ROOT/app/build.gradle.kts" "app/build.gradle.kts"
+    if ! grep -q "$VERSION_NUMBER" "$REPO_ROOT/CHANGELOG.md"; then
+        yellow "CHANGELOG.md has no entry for $VERSION_NUMBER — add one (PROJECT_PLAN: every release gets an entry)."
+    fi
+
+    step "Build"
+    build_release_apks
+
+    local googletv_source firetv_source workdir
+    googletv_source=$(build_locate_apk googletv)
+    firetv_source=$(build_locate_apk firetv)
+
+    verify_find_tools
+    verify_release_artifact "$googletv_source" googletv "$VERSION_NUMBER" "$VERSION_CODE"
+    verify_release_artifact "$firetv_source" firetv "$VERSION_NUMBER" "$VERSION_CODE"
+
+    workdir=$(mktemp -d "${TMPDIR:-/tmp}/phairplay-assets.XXXXXX") \
+        || die "A temporary directory could not be created."
+    local googletv_asset="$workdir/PhairPlay-$VERSION_NUMBER-GoogleTV.apk"
+    local firetv_asset="$workdir/PhairPlay-$VERSION_NUMBER-FireTV.apk"
+    cp "$googletv_source" "$googletv_asset"
+    cp "$firetv_source" "$firetv_asset"
+    green "Assets: PhairPlay-$VERSION_NUMBER-GoogleTV.apk, PhairPlay-$VERSION_NUMBER-FireTV.apk"
+
+    step "Tag and push"
+    if [ "$tag_state" = "none" ]; then
+        version_tag_create "$VERSION_TAG"
     else
-        COMMITS=$(git log --pretty=format:"- %s" "$VERSION" 2>/dev/null | head -30)
-        SINCE_TEXT="initial release"
+        green "The tag $VERSION_TAG exists already."
     fi
+    git -C "$REPO_ROOT" push origin "HEAD:refs/heads/$RELEASE_BRANCH" \
+        || die "The commit could not be pushed — the release is aborted."
+    git -C "$REPO_ROOT" push origin "refs/tags/$VERSION_TAG" \
+        || die "The tag could not be pushed — the release is aborted."
+    green "The commit and the tag $VERSION_TAG are on the remote."
 
-    RELEASE_NOTES="## What's changed (${SINCE_TEXT})
+    step "Publish"
+    local notes
+    notes=$(github_build_notes "$VERSION_TAG" "$VERSION_PRERELEASE" "$TEST_STATUS" \
+        "$(basename "$googletv_asset")" "$(basename "$firetv_asset")")
+    github_publish "$VERSION_TAG" "PhairPlay $VERSION_TAG" "$notes" "$VERSION_PRERELEASE" \
+        "$googletv_asset" "$firetv_asset"
 
-${COMMITS}
-
----
-### Installation
-Side-load the APK that matches your device:
-- **${GOOGLETV_APK}** — Google TV / Android TV (Android 10+)
-- **${FIRETV_APK}** — Amazon Fire TV (Android 7.1+)
-
-Use [adb](https://developer.android.com/tools/adb) or a sideloading app like *Downloader* to install."
-
-    # Determine if pre-release (contains a dash, e.g. v1.0.0-beta.1)
-    PRERELEASE_FLAG=""
-    [[ "$VERSION" == *-* ]] && PRERELEASE_FLAG="--prerelease"
-
-    echo "▸ Publishing GitHub Release $VERSION..."
-    gh release create "$VERSION" \
-        --title "PhairPlay $VERSION" \
-        --notes "$RELEASE_NOTES" \
-        $PRERELEASE_FLAG \
-        "$GOOGLETV_APK" \
-        "$FIRETV_APK"
-
-    # Clean up local APK copies
-    rm -f "$GOOGLETV_APK" "$FIRETV_APK"
+    rm -rf "$workdir"
 
     echo ""
-    green "=== Release $VERSION published! ==="
-    gh release view "$VERSION" --web 2>/dev/null || true
+    green "=== The release $VERSION_TAG is published ==="
+    echo "https://github.com/$GH_OWNER/$GH_REPO/releases/tag/$VERSION_TAG"
+    echo ""
+    echo "Check it: the tag, the two assets, the version inside the APK and the"
+    echo "signature. The guide for that is docs/guides/RELEASING.md."
 }
 
 # ── entry point ───────────────────────────────────────────────────────────────
 
-case "${1:-}" in
-    --setup|-s)
-        cmd_setup
-        ;;
-    v*)
-        cmd_release "$1"
-        ;;
-    *)
-        echo "Usage:"
-        echo "  ./scripts/release.sh --setup       # first-time keystore + credentials setup"
-        echo "  ./scripts/release.sh v1.2.0        # build APKs and publish GitHub Release"
+main() {
+    local tag=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --setup|-s)
+                cmd_setup
+                exit 0
+                ;;
+            --skip-tests)
+                SKIP_TESTS="true"
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -*)
+                usage >&2
+                die "Unknown option: $1"
+                ;;
+            *)
+                if [ -n "$tag" ]; then
+                    usage >&2
+                    die "Only one version can be released at a time."
+                fi
+                tag="$1"
+                ;;
+        esac
+        shift
+    done
+
+    if [ -z "$tag" ]; then
+        usage >&2
         exit 1
-        ;;
-esac
+    fi
+    cmd_release "$tag"
+}
+
+main "$@"

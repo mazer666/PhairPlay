@@ -506,6 +506,9 @@ does not meet its trigger never gets built.
 5. **Every release gets an entry in [`../../CHANGELOG.md`](../../CHANGELOG.md)**,
    written for a user, not for a colleague.
 
+**How a release is cut:** [`../guides/RELEASING.md`](../guides/RELEASING.md) —
+one command, and it refuses to publish an unchecked build.
+
 ---
 
 ## Risk Register
