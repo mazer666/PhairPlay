@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.0.0-alpha.1] — 2026-10-25
+
+> **What this release is.** The first build that carries the M6–M12 cycle with the
+> three security findings closed, the quality gate green and the documentation
+> brought onto the state of the code. It ships **both platforms** — a Google TV APK
+> (Android 10+) and a Fire TV APK (Android 7.1+).
+>
+> **It is an alpha.** No television has ever run this build: 0 of the 15 device test
+> cases of `docs/guides/DEVICE_TEST_PLAN.md` have been executed, because no hardware
+> was available where it was built. The release notes of the tag list every case
+> that is still open.
+>
+> **The release plan is binding.** When alpha, beta and stable releases are built,
+> which conditions trigger them and which platform each of them ships is documented
+> in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
+
+### Security
+- The DLNA media URI is checked against an address policy: loopback, link-local
+  (including the cloud metadata address), multicast, broadcast, reserved ranges and
+  obfuscated IPv4 notations are refused.
+- A media URL that the receiver would have to fetch itself is limited to `http`
+  and `https`; everything else is answered with `400 Bad Request`.
+- Image decoding is bounded: an edge length of 4096 px and a pixel budget keep a
+  malicious photo from exhausting the memory of the television.
+- A fragmented RTP unit is capped at 8 MB; the check happens before the unit is
+  appended, and an incomplete unit is discarded instead of being carried over.
+
+### Added
+- A binding release schedule with the triggers for alpha, beta and stable releases
+  and the platform each of them ships.
+- `docs/acceptance/M06-ACCEPTANCE.md` … `docs/acceptance/M12-ACCEPTANCE.md` — the
+  acceptance records of the milestones M6 … M12.
+- `docs/guides/DEVICE_TEST_PLAN.md` — 15 copy-pasteable device test cases.
+
+### Changed
+- The documentation now describes the state the code is actually in: the README no
+  longer calls the DLNA renderer "planned", the architecture overview lists the real
+  classes, and every number in a document is a measurement with its command next
+  to it.
+- The CI quality gate checks the file size, the KDoc headers, the documentation
+  links and the language completeness; the Android lint runs for both flavours.
+
+### Known limitations
+- Miracast is a control plane only — a real media path needs a system-level WFD
+  stack that a sideloaded app cannot register for (`docs/decisions/ADR-004-miracast-media-path.md`).
+- Google Cast is not included: the Cast SDK needs a registered application ID.
+- The release APKs are signed with a new key. An installation from the Play Store
+  has to be removed first.
+
+---
+
 ## [Unreleased]
 
 > **Scope of this entry.** This entry describes the cycle that produced the

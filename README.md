@@ -18,7 +18,7 @@ PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and 
 
 ## Current Status
 
-**The last published release is `1.0.0-beta.3` (2026-10-24).** The code in `main` is newer than that release and **has not been published yet** — it has no version number and no APK of its own. The download links under [Installation](#installation) therefore point at `1.0.0-beta.3`.
+**The latest published release is [`v1.0.0-alpha.1`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.1) (2026-10-25)** — the M6–M12 cycle with the three security findings closed, the quality gate green and the documentation brought onto the state of the code. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+). It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
 
 The AirPlay 2 stack is implemented end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote.
 
@@ -146,12 +146,17 @@ never run on a device either.
 
 Go to the [Releases page](https://github.com/mazer666/PhairPlay/releases) and download the APK for your device:
 
-| APK | Device |
-|-----|--------|
-| `PhairPlay-vX.Y.Z-googletv.apk` | Google TV, Android TV (Android 10+) |
-| `PhairPlay-vX.Y.Z-firetv.apk` | Amazon Fire TV (Android 7.1+) |
+| APK | Device | Latest release |
+|-----|--------|----------------|
+| `PhairPlay-1.0.0-alpha.1-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.1`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.1) |
+| `PhairPlay-1.0.0-alpha.1-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.1`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.1) |
 
 Then install it via ADB (see the Sideloading Guide below) or a sideloading app like *Downloader* on Fire TV.
+
+> **The alpha is signed with a new release key.** If PhairPlay is already installed
+> (for example from the Play Store), uninstall it first — Android refuses to replace
+> an app that was signed with a different key:
+> `adb uninstall com.phairplay.googletv` / `adb uninstall com.phairplay.firetv`
 
 ### Option B: Build from Source
 
