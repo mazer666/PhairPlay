@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.0.0-alpha.3] — 2026-10-25
+
+> **What this release is.** Three things that make the project easier to ship and
+> easier to debug: the owner can cut a release himself with one command, the
+> owner can check from a laptop whether the television sees the phone, and the
+> diagnostics screen shows the session that is streaming right now.
+>
+> **It is an alpha.** No television has ever run this build: 0 of the 15 device
+> test cases of `docs/guides/DEVICE_TEST_PLAN.md` have been executed.
+>
+> **Platforms:** Google TV (Android 10+) and Fire TV (Android 7.1+), signed with
+> the same key as alpha.1 and alpha.2 — the installation updates in place.
+
+### Added
+- **`scripts/release.sh` cuts a release in one command** and refuses to publish
+  anything it has not checked itself: the quality gate has to be green, the
+  version inside the APK has to match the tag, the APK has to be signed. It
+  publishes through the GitHub REST API, so the GitHub CLI is no longer needed.
+- **`docs/guides/RELEASING.md`** — the guide for the owner: the three commands,
+  where the key and the token live (and where they must not), what to do when
+  the gate is red, and a table of the errors that can happen.
+- **`scripts/device-check.sh`** — a network check the owner runs from a laptop in
+  the same WLAN: it searches for the renderer over SSDP, fetches the device
+  description, compares the address in the description URL with the laptop's
+  own address, and tests the AirPlay port. It ends with a verdict and a sentence
+  naming the next action.
+- **`docs/guides/NETWORK_CHECK.md`** — the guide for that check, with realistic
+  example output.
+- **`scripts/test-device-check.sh`** — the self-test of the check: 28 assertions
+  over 7 cases, positive and negative, running in seconds without a television.
+
+### Changed
+- The diagnostics report names the sender that is streaming right now, the
+  protocol and the duration of the session — formatted for the language of the
+  reader.
+- The CI gate applies the file size rule to the shell scripts as well; until now
+  it only checked Kotlin files.
+
+---
+
 ## [v1.0.0-alpha.2] — 2026-10-25
 
 > **What this release is.** Three milestones on top of `v1.0.0-alpha.1`: the receiver
