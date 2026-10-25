@@ -103,6 +103,19 @@
         android:name="android.hardware.location.network"
         android:required="false" />
 
+    <!--
+        supportsRtl — the layouts mirror in a right-to-left locale: the navigation panel
+        sits at the start edge, the text is aligned to the start and the drawables follow
+        the reading direction. The layout audit found no hardcoded left/right geometry —
+        every margin and padding uses the logical Start/End variants.
+
+        localeConfig — the languages the app offers. Android 13+ (API 33) reads the file
+        and lets the user pick the app language in the system settings ("App languages").
+        Below API 33 the attribute is ignored and the device language decides, which is
+        the previous behaviour. The attribute needs API 33, so tools:targetApi tells the
+        lint that the attribute is intentional — the same trick the NEARBY_WIFI_DEVICES
+        permission uses above.
+    -->
     <application
         android:name=".PhairPlayApp"
         android:allowBackup="false"
@@ -110,7 +123,9 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.PhairPlay"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:localeConfig="@xml/locales_config"
+        tools:targetApi="33">
 
         <!--
             MainActivity is the single entry point for the app.

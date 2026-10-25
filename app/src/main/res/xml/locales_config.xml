@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    locales_config.xml — the languages the app offers to the system.
+
+    WHY: On Android 13+ (API 33) the system reads this file and shows the app in the
+    per-app language picker of the system settings ("App languages"). The user can then run
+    PhairPlay in a language that is not the device language, without changing the whole
+    system. Below API 33 the attribute is ignored and the device language decides — that
+    is the behaviour PhairPlay had before.
+
+    The list must name every locale the app actually ships a translation for, plus the
+    base locale of res/values/strings.xml. A language that is listed here but has no
+    translation file would fall back to the English base texts.
+
+    The BCP-47 tags below match the resource folders:
+      en → res/values/strings.xml        (base, English)
+      de → res/values-de/strings.xml     (German)
+      fr → res/values-fr/strings.xml     (French)
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <locale android:name="en" />
+    <locale android:name="de" />
+    <locale android:name="fr" />
+
+</locale-config>
