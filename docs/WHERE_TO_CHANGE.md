@@ -149,7 +149,7 @@ and ALAC). `test-runner/` holds the **JVM test module** that CI runs — see
 | …the **Miracast** receiver (Wi-Fi Display) | `app/src/main/kotlin/com/phairplay/miracast/MiracastReceiver.kt` | ADR-001; **SEC-06: non-functional on Android 10+** |
 | …the **WFD RTSP control server** (port 7236) | `app/src/main/kotlin/com/phairplay/miracast/WfdRtspServer.kt` | ADR-001 |
 | …the **Cast** receiver | `app/src/googletv/kotlin/com/phairplay/cast/CastReceiver.kt` and `app/src/googletv/kotlin/com/phairplay/cast/CastReceiverOptionsProvider.kt` (Google TV) · `app/src/firetv/kotlin/com/phairplay/cast/CastReceiver.kt` (Fire TV) | FR-19…FR-23 |
-| …the **Cast app ID** | the Gradle property `phairplay.castAppId` in `app/build.gradle.kts`, and the guide [`guides/CAST_APP_ID.md`](guides/CAST_APP_ID.md) | — |
+| …the **Cast app ID** | the Gradle property `phairplay.castAppId` in `app/build.gradle.kts`, and the guide [`guides/CAST_APP_ID.md`](guides/CAST_APP_ID.md) | `scripts/cast-registration-info.sh` prints the values the console asks for |
 | …**what this device can decode** (the codec list) | `app/src/main/kotlin/com/phairplay/media/MediaCapabilities.kt` | FR-33 |
 | …the **logging** and the **log redaction** | `app/src/main/kotlin/com/phairplay/util/Logger.kt`, `app/src/main/kotlin/com/phairplay/util/LogRedactor.kt`, `app/src/main/kotlin/com/phairplay/util/LogRedactionMode.kt` | SEC-07 in [`SECURITY.md`](../SECURITY.md) |
 | …the **address policy** (which host the receiver may fetch) | `app/src/main/kotlin/com/phairplay/util/HostAddressPolicy.kt` | SEC-01 and SEC-04 in the audit |
