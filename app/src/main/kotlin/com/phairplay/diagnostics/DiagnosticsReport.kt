@@ -73,6 +73,26 @@ data class DiagnosticsPort(
 )
 
 /**
+ * DiagnosticSession — the streaming session that is running right now.
+ *
+ * WHY a separate model: the session is the one part of the report that changes
+ * every second. Keeping it apart lets the screen show the duration without
+ * rebuilding the whole report, and lets the report be built without a service.
+ *
+ * @param senderName     The name of the sender that streams right now.
+ * @param protocol       The protocol the session uses.
+ * @param durationMillis How long the session has been running, in milliseconds.
+ *
+ * Example:
+ *   DiagnosticSession("Living Room MacBook", DiagnosticProtocol.AIRPLAY, 252_000)
+ */
+data class DiagnosticSession(
+    val senderName: String,
+    val protocol: DiagnosticProtocol,
+    val durationMillis: Long
+)
+
+/**
  * DiagnosticsReport — the state of the receiver, as data.
  *
  * WHY a data model and not a text: the report is built from values that come from
@@ -113,7 +133,9 @@ data class DiagnosticsReport(
     val serviceState: String,
     val protocolStates: Map<DiagnosticProtocol, String>,
     val ports: List<DiagnosticsPort>,
-    val selfTestResults: List<SelfTestResult>
+    val selfTestResults: List<SelfTestResult>,
+    /** The session that is streaming right now, or null when nothing streams. */
+    val activeSession: DiagnosticSession? = null
 )
 
 /**

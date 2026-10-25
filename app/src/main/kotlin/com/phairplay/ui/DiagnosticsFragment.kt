@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.phairplay.BuildConfig
 import com.phairplay.R
 import com.phairplay.diagnostics.DiagnosticProtocol
+import com.phairplay.diagnostics.DiagnosticSession
 import com.phairplay.diagnostics.DiagnosticsLabels
 import com.phairplay.diagnostics.DiagnosticsPlatform
 import com.phairplay.diagnostics.DiagnosticsPort
@@ -30,6 +31,7 @@ import com.phairplay.diagnostics.SelfTestResult
 import com.phairplay.dlna.DlnaNetworkAddress
 import com.phairplay.dlna.SsdpMessages
 import com.phairplay.service.PhairPlayService
+import com.phairplay.service.Protocol
 import com.phairplay.service.ProtocolState
 import com.phairplay.service.ServiceState
 import com.phairplay.settings.SettingsRepository
@@ -76,6 +78,9 @@ class DiagnosticsFragment : Fragment() {
     private var localAddress: String = ""
     private var serviceState: ServiceState = ServiceState.Stopped
     private val protocolStates = mutableMapOf<DiagnosticProtocol, String>()
+
+    /** The session that is streaming right now — null when nothing streams. */
+    private var activeSession: DiagnosticSession? = null
     private var selfTestResults: List<SelfTestResult> = emptyList()
     private var descriptionPort: Int? = null
     private var selfTestRunning = false
@@ -189,7 +194,40 @@ class DiagnosticsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             svc.dlnaState.collectLatest { state -> updateProtocol(DiagnosticProtocol.DLNA, state) }
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            // The session is followed separately: it changes every second, the states
+            // above change rarely. A report that is rebuilt on every tick would make
+            // the screen flicker.
+            svc.activeConnection.collectLatest { connection ->
+                activeSession = connection?.let {
+                    DiagnosticSession(
+                        senderName = it.senderName,
+                        protocol = diagnosticProtocolOf(it.protocol),
+                        durationMillis = it.durationSeconds * 1000L
+                    )
+                }
+                renderReport()
+            }
+        }
     }
+
+    /**
+     * Maps the protocol of the service onto the protocol of the report.
+     *
+     * WHY the mapping instead of a cast: the report must not depend on the service
+     * package, so the two enums stay separate and this function is the single
+     * place where they meet.
+     *
+     * @param protocol the protocol of the running connection.
+     * @return the protocol as the report knows it.
+     */
+    private fun diagnosticProtocolOf(protocol: Protocol): DiagnosticProtocol =
+        when (protocol) {
+            Protocol.AIRPLAY -> DiagnosticProtocol.AIRPLAY
+            Protocol.MIRACAST -> DiagnosticProtocol.MIRACAST
+            Protocol.CAST -> DiagnosticProtocol.CAST
+            Protocol.DLNA -> DiagnosticProtocol.DLNA
+        }
 
     /** Stores the state of one protocol and rebuilds the report. */
     private fun updateProtocol(protocol: DiagnosticProtocol, state: ProtocolState) {
@@ -211,7 +249,8 @@ class DiagnosticsFragment : Fragment() {
             serviceState = DiagnosticsLabelsFactory.serviceStateText(context, serviceState),
             protocolStates = protocolStates.toMap(),
             ports = ports(labels),
-            selfTestResults = selfTestResults
+            selfTestResults = selfTestResults,
+            activeSession = activeSession
         )
         textReport.text = DiagnosticsReportBuilder.build(report, labels)
     }

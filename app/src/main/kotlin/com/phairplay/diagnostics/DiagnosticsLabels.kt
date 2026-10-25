@@ -53,6 +53,26 @@ data class DiagnosticsLabels(
     /** The heading of the self test section. */
     val sectionSelfTest: String,
 
+    /** The heading of the session section. */
+    val sectionSession: String,
+
+    /** The text that replaces a session that is not running. */
+    val sessionNone: String,
+
+    /**
+     * Formats a duration in milliseconds for the language of the reader.
+     *
+     * WHY a function and not a string: the duration is a number that has to be
+     * written with the digits and the separators of the language — "00:04:12" in
+     * German and in English, "٠٠:٠٤:١٢" in Arabic. The formatter is built by the
+     * UI layer, which knows the language of the app, and handed in here, so this
+     * package stays free of Android.
+     *
+     * @param millis the duration in milliseconds.
+     * @return the formatted duration.
+     */
+    val formatDuration: (millis: Long) -> String,
+
     /** The text that replaces a value that is not known. */
     val unknown: String,
 

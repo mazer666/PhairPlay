@@ -38,7 +38,8 @@ object DiagnosticsReportBuilder {
             deviceSection(report, labels),
             protocolSection(report, labels),
             portSection(report, labels),
-            selfTestSection(report, labels)
+            selfTestSection(report, labels),
+            sessionSection(report, labels)
         )
         return sections.joinToString("\n\n")
     }
@@ -72,6 +73,25 @@ object DiagnosticsReportBuilder {
             val value = if (port.port > 0) port.port.toString() else ""
             lines += line(port.name, value, labels)
         }
+        return lines.joinToString("\n")
+    }
+
+    /**
+     * The section with the session that is streaming right now.
+     *
+     * WHY the duration is formatted here and not in the model: the model stays free
+     * of the language of the reader, so the report can be built and compared on any
+     * device. The labels carry the formatter.
+     */
+    private fun sessionSection(report: DiagnosticsReport, labels: DiagnosticsLabels): String {
+        val lines = mutableListOf(labels.sectionSession)
+        val session = report.activeSession
+        if (session == null) {
+            lines += line(labels.sectionSession, labels.sessionNone, labels)
+            return lines.joinToString("\n")
+        }
+        lines += line(labels.protocolLabel(session.protocol), session.senderName, labels)
+        lines += line(labels.sectionSession, labels.formatDuration(session.durationMillis), labels)
         return lines.joinToString("\n")
     }
 

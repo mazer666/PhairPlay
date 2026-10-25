@@ -128,6 +128,8 @@
     <string name="content_desc_dlna_icon">DLNA protocol icon</string>
     <string name="content_desc_status_dot">Status indicator</string>
 
+    <string name="diagnostics_section_session">Active session</string>
+    <string name="diagnostics_session_none">nothing is streaming</string>
     <!-- ── Diagnostics screen (M14) ────────────────────────────────────── -->
     <string name="diagnostics_title">PhairPlay diagnostics</string>
     <string name="diagnostics_device">Device</string>

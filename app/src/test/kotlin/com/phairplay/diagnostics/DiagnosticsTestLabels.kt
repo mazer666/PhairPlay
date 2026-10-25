@@ -43,6 +43,9 @@ internal fun englishDiagnosticsLabels() = DiagnosticsLabels(
     reasonSocketFailed = "multicast socket failed: %1\$s",
     reasonNotMeasured = "not measured",
     detailHttpOk = { statusCode, bodyBytes -> "HTTP $statusCode, $bodyBytes bytes" },
+    sectionSession = "Active session",
+    sessionNone = "nothing is streaming",
+    formatDuration = { millis -> "T+${millis / 1000}s" },
     detailHttpFailed = "HTTP %1\$d",
     detailResidentMemory = "resident memory %1\$d kB"
 )

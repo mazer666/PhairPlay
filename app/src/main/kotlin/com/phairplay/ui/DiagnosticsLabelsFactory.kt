@@ -5,6 +5,8 @@ import com.phairplay.R
 import com.phairplay.diagnostics.DiagnosticsLabels
 import com.phairplay.service.ProtocolState
 import com.phairplay.service.ServiceState
+import com.phairplay.util.LocaleFormatting
+import java.util.Locale
 
 /**
  * DiagnosticsLabelsFactory — reads the labels of the diagnostics report from the resources.
@@ -69,8 +71,33 @@ internal object DiagnosticsLabelsFactory {
             )
         },
         detailHttpFailed = context.getString(R.string.diagnostics_detail_http_failed),
-        detailResidentMemory = context.getString(R.string.diagnostics_detail_resident_memory)
+        detailResidentMemory = context.getString(R.string.diagnostics_detail_resident_memory),
+        sectionSession = context.getString(R.string.diagnostics_section_session),
+        sessionNone = context.getString(R.string.diagnostics_session_none),
+        formatDuration = { millis ->
+            LocaleFormatting.formatDuration(millis, appLocale(context))
+        }
     )
+
+    /**
+     * The language of the app.
+     *
+     * WHY the configuration locale and not [java.util.Locale.getDefault]: on
+     * Android 13+ the user can pick a language per app, so the language of the app
+     * is not necessarily the language of the device. The numbers on the screen have
+     * to follow the language the reader actually sees.
+     *
+     * @param context the context to read the configuration from.
+     * @return the language of the app.
+     */
+    private fun appLocale(context: Context): Locale {
+        val configuration = context.resources.configuration
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            configuration.locales[0]
+        } else {
+            Locale.getDefault()
+        }
+    }
 
     /**
      * The text of a protocol state.

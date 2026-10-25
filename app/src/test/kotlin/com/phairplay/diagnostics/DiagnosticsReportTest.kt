@@ -193,6 +193,29 @@ class DiagnosticsReportTest {
     }
 
     @Test
+    fun `the report names the session that is streaming and its duration`() {
+        val report = fullReport(
+            activeSession = DiagnosticSession(
+                senderName = "Living Room MacBook",
+                protocol = DiagnosticProtocol.AIRPLAY,
+                durationMillis = 252_000
+            )
+        )
+
+        val text = DiagnosticsReportBuilder.build(report, labels)
+
+        assertTrue(text.contains("Living Room MacBook"))
+        assertTrue(text.contains("T+252s"))
+    }
+
+    @Test
+    fun `the report says that nothing streams when there is no session`() {
+        val text = DiagnosticsReportBuilder.build(fullReport(activeSession = null), labels)
+
+        assertTrue(text.contains("nothing is streaming"))
+    }
+
+    @Test
     fun `the sections keep their order in the report`() {
         val text = DiagnosticsReportBuilder.build(fullReport(), labels)
 
@@ -249,7 +272,8 @@ class DiagnosticsReportTest {
             SelfTestResult(labels.selfTestSsdp, ok = true, detail = "239.255.255.250:1900"),
             SelfTestResult(labels.selfTestAirPlayPort, ok = false, detail = "no listener on 127.0.0.1:7000"),
             SelfTestResult(labels.selfTestProcess, ok = true, detail = "resident memory 48256 kB")
-        )
+        ),
+        activeSession: DiagnosticSession? = null
     ): DiagnosticsReport = DiagnosticsReport(
         deviceName = deviceName,
         localAddress = localAddress,
@@ -258,6 +282,7 @@ class DiagnosticsReportTest {
         serviceState = serviceState,
         protocolStates = protocolStates,
         ports = ports,
-        selfTestResults = selfTestResults
+        selfTestResults = selfTestResults,
+        activeSession = activeSession
     )
 }

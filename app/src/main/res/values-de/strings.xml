@@ -138,6 +138,8 @@
     <string name="diagnostics_service">Dienst</string>
     <string name="diagnostics_section_protocols">Protokolle</string>
     <string name="diagnostics_section_ports">Ports</string>
+    <string name="diagnostics_section_session">Aktive Sitzung</string>
+    <string name="diagnostics_session_none">es streamt gerade nichts</string>
     <string name="diagnostics_section_self_test">Selbsttest</string>
     <string name="diagnostics_unknown">unbekannt</string>
     <string name="diagnostics_port_dlna_description">DLNA-Beschreibung</string>
