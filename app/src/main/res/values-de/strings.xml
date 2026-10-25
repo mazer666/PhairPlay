@@ -129,4 +129,50 @@
     <string name="content_desc_dlna_icon">DLNA-Protokoll-Symbol</string>
     <string name="content_desc_status_dot">Statusanzeige</string>
 
+    <!-- ── Diagnose-Bildschirm (M14) ────────────────────────────────────── -->
+    <string name="diagnostics_title">PhairPlay-Diagnose</string>
+    <string name="diagnostics_device">Gerät</string>
+    <string name="diagnostics_address">Lokale Adresse</string>
+    <string name="diagnostics_version">Version</string>
+    <string name="diagnostics_platform">Plattform</string>
+    <string name="diagnostics_service">Dienst</string>
+    <string name="diagnostics_section_protocols">Protokolle</string>
+    <string name="diagnostics_section_ports">Ports</string>
+    <string name="diagnostics_section_self_test">Selbsttest</string>
+    <string name="diagnostics_unknown">unbekannt</string>
+    <string name="diagnostics_port_dlna_description">DLNA-Beschreibung</string>
+    <string name="diagnostics_port_ssdp">SSDP</string>
+    <string name="diagnostics_selftest_description">Beschreibungsserver</string>
+    <string name="diagnostics_selftest_ssdp">SSDP-Multicast</string>
+    <string name="diagnostics_selftest_airplay_port">AirPlay-Port</string>
+    <string name="diagnostics_selftest_process">App-Prozess</string>
+    <string name="diagnostics_status_ok">ok</string>
+    <string name="diagnostics_status_failed">fehlgeschlagen</string>
+    <string name="diagnostics_not_run_yet">noch nicht ausgeführt</string>
+    <!-- %1$s = die gefundene Adresse -->
+    <string name="diagnostics_reason_no_address">keine nutzbare IPv4-Adresse (%1$s)</string>
+    <!-- %1$s = der Endpunkt, z. B. 127.0.0.1:7000 -->
+    <string name="diagnostics_reason_no_listener">kein Listener auf %1$s</string>
+    <string name="diagnostics_reason_port_unknown">Port unbekannt — keine SSDP-Antwort</string>
+    <!-- %1$s = die Multicast-Gruppe, %2$d = das Zeitlimit in Millisekunden -->
+    <string name="diagnostics_reason_no_ssdp_answer">keine Antwort von %1$s innerhalb von %2$d ms</string>
+    <!-- %1$s = der Grund, warum der Socket nicht geöffnet werden konnte -->
+    <string name="diagnostics_reason_socket_failed">Multicast-Socket fehlgeschlagen: %1$s</string>
+    <string name="diagnostics_reason_not_measured">nicht gemessen</string>
+    <!-- %1$d = der HTTP-Status, %2$d = die Anzahl der Bytes der Antwort -->
+    <string name="diagnostics_detail_http_ok">HTTP %1$d, %2$d Bytes</string>
+    <!-- %1$d = der HTTP-Status -->
+    <string name="diagnostics_detail_http_failed">HTTP %1$d</string>
+    <!-- %1$d = die Speicherbelegung des App-Prozesses in Kilobyte -->
+    <string name="diagnostics_detail_resident_memory">Speicherbelegung %1$d kB</string>
+    <string name="diagnostics_copy_button">In die Zwischenablage kopieren</string>
+    <string name="diagnostics_selftest_button">Selbsttest ausführen</string>
+    <string name="diagnostics_running">Selbsttest läuft…</string>
+    <!-- %1$d = die Anzahl der fehlgeschlagenen Prüfungen, %2$d = die Anzahl der Prüfungen -->
+    <string name="diagnostics_finished">Selbsttest beendet: %1$d von %2$d Prüfungen fehlgeschlagen</string>
+    <string name="diagnostics_copied">Der Bericht wurde in die Zwischenablage kopiert</string>
+    <string name="diagnostics_copy_failed">Die Zwischenablage ist nicht verfügbar</string>
+    <string name="setting_diagnostics">Diagnose</string>
+    <string name="setting_diagnostics_subtitle">Zustand des Empfängers anzeigen und lokalen Selbsttest ausführen</string>
+
 </resources>
