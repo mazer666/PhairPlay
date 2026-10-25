@@ -55,6 +55,7 @@ android_sdk_dir() {
     for candidate in \
         "$HOME/Library/Android/sdk" \
         "$HOME/Android/Sdk" \
+        "/opt/homebrew/share/android-commandlinetools" \
         "/usr/local/lib/android/sdk" \
         "/opt/android-sdk"
     do
@@ -148,6 +149,9 @@ load_credentials() {
     # shellcheck disable=SC1090
     . "$CREDS_FILE"
     export KEYSTORE_PATH KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD
+    if [ -n "${PHAIRPLAY_CAST_APP_ID:-}" ]; then
+        export PHAIRPLAY_CAST_APP_ID
+    fi
     if [ -n "$env_token" ]; then
         GITHUB_TOKEN="$env_token"
         TOKEN_SOURCE="the environment variable GITHUB_TOKEN"

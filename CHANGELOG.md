@@ -9,32 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> **What this is.** The app measures its own resources and shows them against the
-> budget. The owner reads the resident memory and the CPU load of the app process
-> off the diagnostics screen while the 30-minute test runs — two of the four
-> performance budgets become readable without a laptop.
->
-> **It is not a measurement on a television.** No television has ever run this
-> build; the numbers on the screen are **not measured** until somebody reads
-> them off a real device.
+---
+
+## [v1.0.0-alpha.5] — 2026-10-25
+
+> **What this release is.** Google Play Store preparation and macOS release
+> hardening. The release pipeline now builds and verifies the signed Google Play
+> Store Android App Bundle (`PhairPlay-1.0.0-alpha.5-GoogleTV.aab`) alongside
+> both release APKs, ships with the store graphics and submission guide, and is
+> signed with the owner's primary release keystore.
 
 ### Added
-- **The diagnostics screen measures the own resources** — the resident memory
-  (`Debug.getMemoryInfo()`) and the CPU load (the counters of `/proc/self/stat`,
-  turned into a percentage by a pure, unit-tested calculation). Both values are
-  shown against their budget (NFR-03 and NFR-04) with a traffic light: "OK",
-  "over budget" or "not measured". A value that could not be measured is
-  reported as "not measured" — never as 0 and never as a green tick for a
-  measurement that did not happen.
-- **A "Measure resources" button** next to "Run self-test": the measurement is
-  taken once when the screen is opened and again whenever the owner asks for
-  it. There is no timer that refreshes the report, so the screen does not
-  flicker while the owner reads it.
+- **Google Play Store bundle (`.aab`) in the release pipeline** — `scripts/release.sh`
+  now builds `:app:bundleGoogletvRelease`, verifies the bundle signature with
+  `jarsigner`, and uploads `PhairPlay-<version>-GoogleTV.aab` to the GitHub
+  release alongside the Google TV and Fire TV APKs.
+- **`docs/guides/GOOGLE_PLAY_STORE.md` and `docs/playstore/assets/`** — step-by-step
+  Play Console submission guide (Android TV form factor opt-in, Data Safety and
+  Foreground Service declarations, store listing copy) and pixel-accurate store
+  graphics (`512x512` icon, `1024x500` feature graphic, `1280x720` TV banner,
+  and two `1920x1080` 16:9 TV screenshots).
 
-### Changed
-- The performance budgets of NFR-03 and NFR-04 now live in one place in the code
-  (`com.phairplay.diagnostics.PerformanceBudgets`), and the requirement points
-  at it.
+### Fixed
+- **`scripts/cast-registration-info.sh` on macOS** — locates a working JDK 17
+  `keytool` before falling back to the macOS `/usr/bin/keytool` stub, forces
+  English `keytool` output (`-J-Duser.language=en`) so certificate owner parsing
+  succeeds on non-English locales, and supports single-quoted values in
+  `release.env`.
+- **`scripts/check-kdoc-headers.sh` and `scripts/check-i18n-completeness.sh` on
+  macOS Bash 3.2** — reads embedded AWK programs via `read -r -d ''` instead of
+  `$(cat <<'AWK')` so Bash 3.2 does not fail on literal `)` inside heredocs.
 
 ---
 

@@ -103,6 +103,8 @@ a pull request.
 | [`guides/CAST_APP_ID.md`](guides/CAST_APP_ID.md) | How to register a Google Cast receiver app ID, which is required to test the Cast stack end to end. `scripts/cast-registration-info.sh` prints the values the console asks for. |
 | [`guides/CASTING_TO_A_TV.md`](guides/CASTING_TO_A_TV.md) | The step-by-step guide for getting a picture onto the television — from macOS, from Windows, from VLC and from a mobile UPnP controller — including the honest `file:///` limitation and the HTTP workaround. |
 | [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) | The 15 copy-pasteable hardware cases DT-01 … DT-15: the exact commands, the expected result, the time limit and the evidence per case — plus the result sheet for the Google TV and the Fire TV. |
+| [`guides/RELEASING.md`](guides/RELEASING.md) | How the owner cuts a signed release (`.apk` and `.aab`) and publishes it to GitHub Releases with `./scripts/release.sh`. |
+| [`guides/GOOGLE_PLAY_STORE.md`](guides/GOOGLE_PLAY_STORE.md) | Step-by-step guide for publishing the `googletv` Android App Bundle (`.aab`) on the Google Play Store, including Android TV opt-in, Data Safety answers, store listing texts and store graphics in `docs/playstore/assets/`. |
 
 > **One honest limitation applies to every user-facing guide:** a UPnP renderer
 > fetches the media itself. A `file:///` URI points at the *sender's* disk and

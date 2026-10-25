@@ -79,7 +79,7 @@ github_build_notes() {
     # WHY the notes say what was not tested: the project plan demands it
     #      ("Every release lists the device test cases that are still open").
     #      A release that hides an open case is a defect.
-    local tag="$1" prerelease="$2" test_status="$3" asset_googletv="$4" asset_firetv="$5"
+    local tag="$1" prerelease="$2" test_status="$3" asset_googletv="$4" asset_firetv="$5" asset_googletv_aab="${6:-}"
     local previous commits since plan_url
     plan_url="https://github.com/$GH_OWNER/$GH_REPO/blob/main/docs/guides/DEVICE_TEST_PLAN.md"
 
@@ -103,10 +103,11 @@ $commits
 
 ### Installation
 
-Side-load the APK that matches your device:
+Side-load the APK that matches your device (or upload the AAB to Google Play Console):
 
-- **$asset_googletv** — Google TV / Android TV (Android 10+)
-- **$asset_firetv** — Amazon Fire TV (Android 7.1+)
+- **$asset_googletv** — Google TV / Android TV APK (Android 10+)
+- **$asset_firetv** — Amazon Fire TV APK (Android 7.1+)
+${asset_googletv_aab:+- **$asset_googletv_aab** — Google Play Store Android App Bundle (Google TV)}
 
 Use [adb](https://developer.android.com/tools/adb) or a sideloading app like *Downloader* to install.
 

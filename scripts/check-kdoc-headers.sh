@@ -116,7 +116,7 @@ done
 #   last_end   — line number where the most recent KDoc block ended
 #   gap        — lines seen since that KDoc ended (must be annotations only)
 
-AWK_PROGRAM="$(cat <<'AWK'
+IFS= read -r -d '' AWK_PROGRAM <<'AWK' || true
 function trim(s) {
   sub(/^[ \t]+/, "", s)
   sub(/[ \t]+$/, "", s)
@@ -264,7 +264,6 @@ END {
   printf "### declarations=%d violations=%d\n", total_declarations, total_violations
 }
 AWK
-)"
 
 FILES="$(find . -type f \( "${find_args[@]}" \) \
   -not -path './.git/*' \

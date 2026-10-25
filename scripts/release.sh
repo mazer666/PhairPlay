@@ -237,21 +237,25 @@ cmd_release() {
     step "Build"
     build_release_apks
 
-    local googletv_source firetv_source workdir
+    local googletv_source firetv_source googletv_aab_source workdir
     googletv_source=$(build_locate_apk googletv)
     firetv_source=$(build_locate_apk firetv)
+    googletv_aab_source=$(build_locate_aab googletv)
 
     verify_find_tools
     verify_release_artifact "$googletv_source" googletv "$VERSION_NUMBER" "$VERSION_CODE"
     verify_release_artifact "$firetv_source" firetv "$VERSION_NUMBER" "$VERSION_CODE"
+    verify_aab_signature "$googletv_aab_source" googletv
 
     workdir=$(mktemp -d "${TMPDIR:-/tmp}/phairplay-assets.XXXXXX") \
         || die "A temporary directory could not be created."
     local googletv_asset="$workdir/PhairPlay-$VERSION_NUMBER-GoogleTV.apk"
     local firetv_asset="$workdir/PhairPlay-$VERSION_NUMBER-FireTV.apk"
+    local googletv_aab_asset="$workdir/PhairPlay-$VERSION_NUMBER-GoogleTV.aab"
     cp "$googletv_source" "$googletv_asset"
     cp "$firetv_source" "$firetv_asset"
-    green "Assets: PhairPlay-$VERSION_NUMBER-GoogleTV.apk, PhairPlay-$VERSION_NUMBER-FireTV.apk"
+    cp "$googletv_aab_source" "$googletv_aab_asset"
+    green "Assets: PhairPlay-$VERSION_NUMBER-GoogleTV.apk, PhairPlay-$VERSION_NUMBER-FireTV.apk, PhairPlay-$VERSION_NUMBER-GoogleTV.aab"
 
     step "Tag and push"
     if [ "$tag_state" = "none" ]; then
@@ -268,9 +272,9 @@ cmd_release() {
     step "Publish"
     local notes
     notes=$(github_build_notes "$VERSION_TAG" "$VERSION_PRERELEASE" "$TEST_STATUS" \
-        "$(basename "$googletv_asset")" "$(basename "$firetv_asset")")
+        "$(basename "$googletv_asset")" "$(basename "$firetv_asset")" "$(basename "$googletv_aab_asset")")
     github_publish "$VERSION_TAG" "PhairPlay $VERSION_TAG" "$notes" "$VERSION_PRERELEASE" \
-        "$googletv_asset" "$firetv_asset"
+        "$googletv_asset" "$firetv_asset" "$googletv_aab_asset"
 
     rm -rf "$workdir"
 

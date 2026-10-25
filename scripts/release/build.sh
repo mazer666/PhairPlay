@@ -93,14 +93,18 @@ build_gradle() {
 
 build_release_apks() {
     # Builds the two release flavours — one Gradle call each, one after the
-    # other. Both flavours always ship (PROJECT_PLAN § "Release Schedule":
-    # "One version, both platforms.").
+    # other — plus the Google Play Store Android App Bundle (.aab) for the
+    # googletv flavour. Both flavours always ship (PROJECT_PLAN § "Release
+    # Schedule": "One version, both platforms.").
     local flavor
     for flavor in googletv firetv; do
         step "Building the $flavor release APK"
         build_gradle ":app:assemble${flavor}Release" --stacktrace \
             || die "The $flavor release build failed — the release is aborted."
     done
+    step "Building the googletv release AAB (Google Play Store bundle)"
+    build_gradle ":app:bundleGoogletvRelease" --stacktrace \
+        || die "The googletv release AAB build failed — the release is aborted."
 }
 
 build_locate_apk() {
@@ -109,5 +113,14 @@ build_locate_apk() {
     local path="$REPO_ROOT/app/build/outputs/apk/$flavor/release/app-$flavor-release.apk"
     [ -f "$path" ] \
         || die "The $flavor APK was not found at $path — the release is aborted."
+    printf '%s\n' "$path"
+}
+
+build_locate_aab() {
+    # build_locate_aab <flavour> — prints the path of the built AAB.
+    local flavor="$1"
+    local path="$REPO_ROOT/app/build/outputs/bundle/${flavor}Release/app-$flavor-release.aab"
+    [ -f "$path" ] \
+        || die "The $flavor AAB was not found at $path — the release is aborted."
     printf '%s\n' "$path"
 }

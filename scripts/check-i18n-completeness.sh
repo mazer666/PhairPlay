@@ -102,7 +102,7 @@ BASE_FILE="$RES_DIR/values/strings.xml"
 #
 # One awk program prints "key<TAB>line<TAB>value" for every <string> element.
 
-AWK_PROGRAM="$(cat <<'AWK'
+IFS= read -r -d '' AWK_PROGRAM <<'AWK' || true
 {
   line = $0
 
@@ -139,13 +139,12 @@ AWK_PROGRAM="$(cat <<'AWK'
   }
 }
 AWK
-)"
 
 # ── the comparison ───────────────────────────────────────────────────────────
 #
 # The first file holds the base keys, the second file the translated keys.
 
-COMPARE_PROGRAM="$(cat <<'AWK'
+IFS= read -r -d '' COMPARE_PROGRAM <<'AWK' || true
 BEGIN { FS = "\t" }
 
 function placeholders(s,   parts, n, i, token, list) {
@@ -207,7 +206,6 @@ END {
   printf "### base=%d errors=%d\n", base_count, errors
 }
 AWK
-)"
 
 TMP_DIR="$(mktemp -d)"
 cleanup() { rm -rf "$TMP_DIR"; }

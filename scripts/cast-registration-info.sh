@@ -22,7 +22,7 @@
 # Example:
 #   ./scripts/cast-registration-info.sh
 #   # Application ID (Google TV):  com.phairplay.googletv
-#   # SHA-1 fingerprint:          F4:BF:7B:...
+#   # SHA-1 fingerprint:          D3:79:31:...
 #
 # The guide for the registration itself is docs/guides/CAST_APP_ID.md.
 
@@ -57,7 +57,7 @@ find_keystore() {
     fi
     if [ -f "$CREDS_FILE" ]; then
         local from_file
-        from_file=$(sed -n 's/^KEYSTORE_PATH="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$CREDS_FILE" | head -1)
+        from_file=$(sed -n "s/^KEYSTORE_PATH=['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" "$CREDS_FILE" | head -1)
         if [ -n "$from_file" ] && [ -f "$from_file" ]; then
             printf '%s\n' "$from_file"
             return 0
@@ -73,16 +73,19 @@ find_keystore() {
 }
 
 find_keytool() {
-    if command -v keytool >/dev/null 2>&1; then
-        command -v keytool
-        return 0
-    fi
+    local candidate
     for candidate in \
         "${JAVA_HOME:-}/bin/keytool" \
+        "/opt/homebrew/opt/openjdk@17/bin/keytool" \
+        "/opt/homebrew/opt/openjdk/bin/keytool" \
+        "/usr/local/opt/openjdk@17/bin/keytool" \
         "/usr/lib/jvm/default-java/bin/keytool" \
-        "/opt/homebrew/opt/openjdk@17/bin/keytool"
+        "$(command -v keytool 2>/dev/null || true)"
     do
-        [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+        if [ -n "$candidate" ] && [ -x "$candidate" ] && "$candidate" -help >/dev/null 2>&1; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
     done
     return 1
 }
@@ -109,7 +112,7 @@ green "Keystore: $KEYSTORE"
 # The password is needed for the keytool call, but it is never printed.
 STORE_PASSWORD="${KEYSTORE_PASSWORD:-}"
 if [ -z "$STORE_PASSWORD" ] && [ -f "$CREDS_FILE" ]; then
-    STORE_PASSWORD=$(sed -n 's/^KEYSTORE_PASSWORD="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$CREDS_FILE" | head -1)
+    STORE_PASSWORD=$(sed -n "s/^KEYSTORE_PASSWORD=['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}$/\1/p" "$CREDS_FILE" | head -1)
 fi
 if [ -z "$STORE_PASSWORD" ]; then
     red "No keystore password available — the fingerprint cannot be read automatically."
@@ -120,7 +123,7 @@ if [ -z "$STORE_PASSWORD" ]; then
 fi
 
 ALIAS="${KEY_ALIAS:-phairplay}"
-DETAIL=$("$KEYTOOL" -list -v -keystore "$KEYSTORE" -alias "$ALIAS" -storepass "$STORE_PASSWORD" 2>/dev/null)
+DETAIL=$("$KEYTOOL" -J-Duser.language=en -list -v -keystore "$KEYSTORE" -alias "$ALIAS" -storepass "$STORE_PASSWORD" 2>/dev/null)
 if [ -z "$DETAIL" ]; then
     red "The alias '$ALIAS' could not be read from the keystore."
     echo ""

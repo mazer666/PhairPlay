@@ -84,3 +84,29 @@ verify_release_artifact() {
     fi
     verify_apk_signature "$apk" "$flavor"
 }
+
+verify_aab_signature() {
+    # verify_aab_signature <aab> <flavour>
+    #
+    # WHY: Google Play requires the Android App Bundle (.aab) to be signed with
+    #      the upload/release key. AAB files use JAR signing, so jarsigner
+    #      verifies that the bundle is signed before it is published.
+    local aab="$1" flavor="$2" output
+    step "Verifying the $flavor AAB (Google Play Store bundle)"
+    if command -v jarsigner >/dev/null 2>&1; then
+        if ! output=$(jarsigner -J-Duser.language=en -verify "$aab" 2>&1); then
+            printf '%s\n' "$output" >&2
+            die "The $flavor AAB is not signed correctly — the release is aborted."
+        fi
+        case "$output" in
+            *"jar verified."*)
+                green "$flavor AAB: signed (jarsigner verify passed)"
+                ;;
+            *)
+                die "The $flavor AAB is unsigned — the release is aborted."
+                ;;
+        esac
+    else
+        yellow "jarsigner was not found — the AAB signature was not checked separately."
+    fi
+}

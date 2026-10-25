@@ -97,7 +97,11 @@ The script publishes the assets under these names:
 ```
 PhairPlay-<version>-GoogleTV.apk
 PhairPlay-<version>-FireTV.apk
+PhairPlay-<version>-GoogleTV.aab
 ```
+
+For uploading `PhairPlay-<version>-GoogleTV.aab` to the Google Play Store, see
+[`GOOGLE_PLAY_STORE.md`](GOOGLE_PLAY_STORE.md).
 
 ---
 

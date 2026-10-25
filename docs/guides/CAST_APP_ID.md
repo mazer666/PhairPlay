@@ -19,7 +19,7 @@ to an account that registers a receiver application in the
 |---|---|---|
 | Google account | your own | — |
 | Android package name | `com.phairplay.googletv` | fixed in the project |
-| SHA-1 fingerprint of the signing certificate | `F4:BF:7B:F0:E1:40:1D:0C:33:EE:85:C2:51:FF:24:12:1B:D5:7C:E4` | `scripts/cast-registration-info.sh` |
+| SHA-1 fingerprint of the signing certificate | `D3:79:31:20:0D:67:7A:58:C1:58:17:27:65:B2:49:84:2A:3B:F8:77` | `scripts/cast-registration-info.sh` |
 | Serial number of the test television | e.g. `ABCD1234` | on the TV: *Settings → About → Build → Serial number* |
 
 **Get the fingerprint yourself** — it changes if the signing key changes:
@@ -61,7 +61,7 @@ reads the fingerprint out of the keystore, so it cannot be a typo.
    ```
 6. In the **SHA-1 fingerprint** field enter the fingerprint **without colons**:
    ```
-   F4BF7BF0E1401D0C33EE85C251FF24121BD57CE4
+   D37931200D677A58C158172765B249842A3BF877
    ```
    The script prints this exact line for you.
 7. The console now shows an **Application ID** — a number like `1234567890`.
