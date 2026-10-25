@@ -8,16 +8,21 @@ import android.net.NetworkRequest
 import com.phairplay.util.Logger
 
 /**
- * NetworkRecoveryMonitor — Re-advertises over mDNS when the network comes back.
+ * NetworkRecoveryMonitor — Re-advertises the receivers when the network comes back.
  *
  * WHAT: Registers a [ConnectivityManager.NetworkCallback] and tells the service to
- * re-advertise the AirPlay receiver as soon as the network is available again.
+ * re-advertise its receivers as soon as the network is available again.
  *
  * WHY: The TV going into standby takes its Wi-Fi interface down with it. An NsdManager
  * registration does not survive that, and nothing in the app noticed: on wake the
  * receiver was still listening on port 7000, still reported itself as running, and was
  * invisible to every Apple device until the app was restarted by hand. This monitor is
  * that missing piece of recovery.
+ *
+ * The DLNA renderer is affected in the same way — and a second way besides: the
+ * description URL of the renderer contains the IP address of the device, so a device
+ * that comes back with a new address needs a new description server. That decision is
+ * made by the DLNA receiver itself (see `DlnaReceiver.readvertise`).
  *
  * HOW: The service creates one monitor, registers it in `onCreate()` and unregisters it
  * in `onDestroy()`. The monitor only asks for a re-advertisement when the service is
@@ -27,7 +32,7 @@ import com.phairplay.util.Logger
  *   val monitor = NetworkRecoveryMonitor(
  *       context = applicationContext,
  *       isServiceRunning = { stateBus.serviceState.value == ServiceState.Running },
- *       onNetworkRestored = { receivers.readvertiseAirPlay() }
+ *       onNetworkRestored = { receivers.readvertiseAll() }
  *   )
  *   monitor.registerNetworkCallback()
  */
@@ -35,7 +40,7 @@ internal class NetworkRecoveryMonitor(
     private val context: Context,
     /** True while the service is running — only then is a re-advertisement useful. */
     private val isServiceRunning: () -> Boolean,
-    /** Called when the network came back and the mDNS advertisement has to be repeated. */
+    /** Called when the network came back and the receivers have to advertise themselves again. */
     private val onNetworkRestored: () -> Unit
 ) {
 
@@ -51,7 +56,7 @@ internal class NetworkRecoveryMonitor(
     @Volatile private var networkWasLost = false
 
     /**
-     * Re-registers the mDNS advertisement whenever a network becomes available again.
+     * Re-registers the advertisements whenever a network becomes available again.
      *
      * WHY THE FIRST onAvailable IS IGNORED:
      * [ConnectivityManager.NetworkCallback.onAvailable] also fires for the very first
@@ -88,12 +93,12 @@ internal class NetworkRecoveryMonitor(
                 }
                 if (!networkWasLost) {
                     // The first network of this process: the receiver registers on its own.
-                    Logger.d("First network available — mDNS registers on its own")
+                    Logger.d("First network available — the receivers register on their own")
                     return
                 }
                 networkWasLost = false
                 if (!isServiceRunning()) return
-                Logger.i("Network available again — re-advertising over mDNS")
+                Logger.i("Network available again — re-advertising the receivers")
                 onNetworkRestored()
             }
 
@@ -105,7 +110,7 @@ internal class NetworkRecoveryMonitor(
                     knownNetworks.isEmpty()
                 }
                 if (allLost) networkWasLost = true
-                Logger.i("Network lost — mDNS advertisement is gone until it returns")
+                Logger.i("Network lost — the advertisements are gone until it returns")
             }
         }
         runCatching { cm.registerNetworkCallback(request, callback) }

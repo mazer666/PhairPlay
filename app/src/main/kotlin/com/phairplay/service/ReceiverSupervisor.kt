@@ -278,4 +278,22 @@ internal class ReceiverSupervisor(
     internal fun readvertiseAirPlay() {
         airPlayReceiver?.readvertise()
     }
+
+    /**
+     * Repeats the advertisements of every receiver that has one.
+     *
+     * WHY both protocols: after a network outage the mDNS registration of the AirPlay
+     * receiver is gone, and the DLNA renderer has to announce itself again — with a
+     * new description URL when the device came back with a different IP address.
+     * FR-61 asks every enabled receiver to re-advertise; a receiver that fails must
+     * not keep the other one from advertising itself.
+     */
+    internal fun readvertiseAll() {
+        readvertiseAirPlay()
+        try {
+            dlnaReceiver?.readvertise()
+        } catch (e: Exception) {
+            Logger.e("DLNA re-advertisement error", e)
+        }
+    }
 }

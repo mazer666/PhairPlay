@@ -106,7 +106,7 @@ class PhairPlayService : Service() {
         networkRecovery = NetworkRecoveryMonitor(
             context = applicationContext,
             isServiceRunning = { stateBus.serviceState.value == ServiceState.Running },
-            onNetworkRestored = { receivers.readvertiseAirPlay() }
+            onNetworkRestored = { receivers.readvertiseAll() }
         )
         notifications.createNotificationChannel()
         networkRecovery.registerNetworkCallback()
