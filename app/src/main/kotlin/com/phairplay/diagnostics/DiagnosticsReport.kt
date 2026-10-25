@@ -112,6 +112,8 @@ data class DiagnosticSession(
  * @param protocolStates The state of every protocol, as text.
  * @param ports          The ports the receiver listens on.
  * @param selfTestResults The results of the last self test run.
+ * @param resourceSample The last measurement of the memory and the CPU load of
+ *   the app process, or null when nothing has been measured yet.
  *
  * Example:
  *   val report = DiagnosticsReport(
@@ -135,7 +137,9 @@ data class DiagnosticsReport(
     val ports: List<DiagnosticsPort>,
     val selfTestResults: List<SelfTestResult>,
     /** The session that is streaming right now, or null when nothing streams. */
-    val activeSession: DiagnosticSession? = null
+    val activeSession: DiagnosticSession? = null,
+    /** The last measurement of the own resources, or null when nothing was measured yet. */
+    val resourceSample: ResourceSample? = null
 )
 
 /**

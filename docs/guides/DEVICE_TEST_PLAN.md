@@ -712,6 +712,7 @@ adb shell cmd notification list
 
 ```bash
 # enable the debug overlay in the settings (GUI step)
+# open Diagnostics in the settings and press "Measure resources" (GUI step)
 # start a stream (DT-03) and let it run for 10 minutes
 adb shell dumpsys meminfo "$PKG" | head -25
 adb shell top -n 1 -b | grep -i phairplay
@@ -723,6 +724,10 @@ adb exec-out screencap -p > /tmp/phairplay-debug-overlay.png
 1. The overlay shows a frame rate and the queue statistics.
 2. The Java heap of the app stays below **150 MB** during the run.
 3. The app is not killed by the system and the stream does not stop.
+4. The diagnostics report shows the resident memory and the CPU load of the app
+   process against their budget — "RAM: … / 150 MB (OK)" and "CPU: … / 30 % (OK)".
+   A value that could not be measured reads "not measured"; that is not a proof
+   and does not replace `dumpsys meminfo` and `top`.
 
 **Time limit:** 10 minutes of continuous streaming without an interruption.
 **Evidence:** the `meminfo` output, the screenshot, the duration.

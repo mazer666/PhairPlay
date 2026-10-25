@@ -1,5 +1,7 @@
 package com.phairplay.diagnostics
 
+import java.util.Locale
+
 /**
  * englishDiagnosticsLabels — the English labels of the report, for the tests.
  *
@@ -35,6 +37,7 @@ internal fun englishDiagnosticsLabels() = DiagnosticsLabels(
     selfTestProcess = "App process",
     statusOk = "ok",
     statusFailed = "failed",
+    statusOverBudget = "over budget",
     notRunYet = "not run yet",
     reasonNoAddress = "no usable IPv4 address (%1\$s)",
     reasonNoListener = "no listener on %1\$s",
@@ -45,7 +48,17 @@ internal fun englishDiagnosticsLabels() = DiagnosticsLabels(
     detailHttpOk = { statusCode, bodyBytes -> "HTTP $statusCode, $bodyBytes bytes" },
     sectionSession = "Active session",
     sessionNone = "nothing is streaming",
+    sectionResources = "Resources",
+    resourceMemory = "RAM",
+    resourceCpu = "CPU",
+    resourceMemoryValue = "%1\$s / %2\$s (%3\$s)",
+    resourceCpuValue = "%1\$s %% / %2\$s %% (%3\$s)",
     formatDuration = { millis -> "T+${millis / 1000}s" },
+    formatBytes = { bytes ->
+        val text = String.format(Locale.US, "%.1f", bytes / 1_000_000.0)
+        text.removeSuffix(".0") + " MB"
+    },
+    formatPercent = { percent -> String.format(Locale.US, "%.0f", percent) },
     detailHttpFailed = "HTTP %1\$d",
     detailResidentMemory = "resident memory %1\$d kB"
 )

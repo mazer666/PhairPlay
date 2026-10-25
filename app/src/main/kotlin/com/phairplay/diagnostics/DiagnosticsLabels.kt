@@ -59,6 +59,9 @@ data class DiagnosticsLabels(
     /** The text that replaces a session that is not running. */
     val sessionNone: String,
 
+    /** The heading of the resource section. */
+    val sectionResources: String,
+
     /**
      * Formats a duration in milliseconds for the language of the reader.
      *
@@ -72,6 +75,31 @@ data class DiagnosticsLabels(
      * @return the formatted duration.
      */
     val formatDuration: (millis: Long) -> String,
+
+    /**
+     * Formats a byte count for the language of the reader.
+     *
+     * WHY a function and not a string: a byte count is a quantity and a quantity
+     * has to be written with the digits and the separator of the language — "84,2
+     * MB" in German and "84.2 MB" in English. The formatter is built by the UI
+     * layer, which knows the language of the app, and handed in here, so this
+     * package stays free of Android.
+     *
+     * @param bytes the number of bytes.
+     * @return the formatted size.
+     */
+    val formatBytes: (bytes: Long) -> String,
+
+    /**
+     * Formats a percentage for the language of the reader.
+     *
+     * WHY a function and not a string: the same reason as for the byte count —
+     * the decimal separator of the language decides how the number is written.
+     *
+     * @param percent the value in percent.
+     * @return the formatted number.
+     */
+    val formatPercent: (percent: Double) -> String,
 
     /** The text that replaces a value that is not known. */
     val unknown: String,
@@ -126,6 +154,9 @@ data class DiagnosticsLabels(
     /** The word that marks a check that failed. */
     val statusFailed: String,
 
+    /** The word that marks a measured value that is above its budget. */
+    val statusOverBudget: String,
+
     /** The detail of a check that was not run yet. */
     val notRunYet: String,
 
@@ -167,7 +198,29 @@ data class DiagnosticsLabels(
     val detailHttpFailed: String,
 
     /** The detail of the measured memory of the app process. `%1$d` is the size in kB. */
-    val detailResidentMemory: String
+    val detailResidentMemory: String,
+
+    // ── The resources ───────────────────────────────────────────────────────
+
+    /** The name of the resident memory in the report. */
+    val resourceMemory: String,
+
+    /** The name of the CPU load in the report. */
+    val resourceCpu: String,
+
+    /**
+     * The value of the memory line: the measured size, the budget and the outcome.
+     *
+     * `%1$s` is the measured size, `%2$s` the budget and `%3$s` the outcome.
+     */
+    val resourceMemoryValue: String,
+
+    /**
+     * The value of the CPU line: the measured load, the budget and the outcome.
+     *
+     * `%1$s` is the measured load, `%2$s` the budget and `%3$s` the outcome.
+     */
+    val resourceCpuValue: String
 ) {
 
     /**

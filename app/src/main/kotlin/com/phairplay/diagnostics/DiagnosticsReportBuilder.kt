@@ -39,6 +39,7 @@ object DiagnosticsReportBuilder {
             protocolSection(report, labels),
             portSection(report, labels),
             selfTestSection(report, labels),
+            resourceSection(report, labels),
             sessionSection(report, labels)
         )
         return sections.joinToString("\n\n")
@@ -109,6 +110,54 @@ object DiagnosticsReportBuilder {
             lines += line(result.name, value, labels)
         }
         return lines.joinToString("\n")
+    }
+
+    /**
+     * The section with the memory and the CPU load of the app process, each of
+     * them against its budget.
+     *
+     * WHY the two values are compared here and not in the measurement: the
+     * comparison needs the budgets and the localized outcome texts, and both are
+     * in the labels. The report therefore carries the measurement, and the
+     * builder decides what it means — one place, so that two reports can never
+     * judge the same number differently.
+     */
+    private fun resourceSection(report: DiagnosticsReport, labels: DiagnosticsLabels): String {
+        val lines = mutableListOf(labels.sectionResources)
+        val sample = report.resourceSample
+        val memory = ResourceAssessment.memory(sample?.memoryBytes, labels)
+        val cpu = ResourceAssessment.cpu(sample?.cpuPercent, labels)
+        lines += line(labels.resourceMemory, memoryValue(memory, labels), labels)
+        lines += line(labels.resourceCpu, cpuValue(cpu, labels), labels)
+        return lines.joinToString("\n")
+    }
+
+    /**
+     * The value of the memory line: the measured size, the budget and the outcome.
+     *
+     * WHY a value that was not measured is written alone: "84,2 MB / 150 MB
+     * (not measured)" would put two numbers next to a word that denies them.
+     * The line says "not measured" and nothing else.
+     */
+    private fun memoryValue(assessment: ResourceAssessment, labels: DiagnosticsLabels): String {
+        val measured = assessment.measuredValue ?: return labels.reasonNotMeasured
+        return labels.format(
+            labels.resourceMemoryValue,
+            labels.formatBytes(measured.toLong()),
+            labels.formatBytes(assessment.budget.toLong()),
+            assessment.text
+        )
+    }
+
+    /** The value of the CPU line: the measured load, the budget and the outcome. */
+    private fun cpuValue(assessment: ResourceAssessment, labels: DiagnosticsLabels): String {
+        val measured = assessment.measuredValue ?: return labels.reasonNotMeasured
+        return labels.format(
+            labels.resourceCpuValue,
+            labels.formatPercent(measured),
+            labels.formatPercent(assessment.budget),
+            assessment.text
+        )
     }
 
     /** Builds one "Name: Value" line. */

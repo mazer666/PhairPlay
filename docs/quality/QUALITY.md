@@ -205,12 +205,29 @@ of [`docs/spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md).
 | A/V drift | A/V sync test video (clapper board) | ≤ 40 ms (NFR-… / FR-35) |
 | Connection time | Stopwatch from the AirPlay click to the first frame | ≤ 5 s |
 
+### What the app measures by itself
+
+The app can measure its own resident memory (`Debug.getMemoryInfo()`) and its own
+CPU load (the counters of `/proc/self/stat`) and show both against their budget
+in the diagnostics report. The owner reads the two values off the screen while
+the 30-minute test runs — the button "Measure resources" takes a new measurement
+whenever he wants one. The budgets are the constants of
+`com.phairplay.diagnostics.PerformanceBudgets`.
+
+What this measurement is **not**: it is a snapshot of the app process and not the
+peak of a stream, and the CPU load is the share of the ticks of the second the
+measurement was taken in — not the average of the whole test. It replaces
+neither `dumpsys meminfo` nor `top` of the table above; it is the second pair of
+eyes that needs no laptop. And the numbers it shows are **not measured** until
+somebody reads them off a real television.
+
 ### Current state (measured 2026-10-24)
 
 | Fact | Value |
 |---|---|
 | **Measured on a device in this cycle** | **not measured** — no television and no hardware were available in the working environment. **0 of the 15** cases of the device test plan were executed. |
 | RAM, CPU, frame rate, latency, A/V drift, connection time | **not measured** — no value is available, and no *measured* value is quoted anywhere in this repository; every number that appears is a budget or is marked "not measured" |
+| The app's own measurement of RAM and CPU | implemented and unit-tested (`ResourceAssessmentTest`, `ResourceProbeTest`) — the diagnostics report shows both values against their budget. The values are still **not measured**: no television has ever run this build |
 | Bounded memory that *is* implemented and unit-tested | the mirror frame queue (32 MB byte budget, 90-item limit), the reassembled FU-A unit (8 MB), the mirror payload cap (8 MB), the RTP packet cap (2 MB), the RTSP message budget (1 MB), the photo payload cap (25 MB), the SOAP body cap (64 KB) |
 | Performance claims in the documentation | every one of them points at a budget and a measurement script — none of them is a "feels fast" |
 

@@ -26,6 +26,8 @@ import com.phairplay.diagnostics.DiagnosticsPort
 import com.phairplay.diagnostics.DiagnosticsPorts
 import com.phairplay.diagnostics.DiagnosticsReport
 import com.phairplay.diagnostics.DiagnosticsReportBuilder
+import com.phairplay.diagnostics.ProcessMemoryProbe
+import com.phairplay.diagnostics.ResourceSample
 import com.phairplay.diagnostics.SelfTest
 import com.phairplay.diagnostics.SelfTestResult
 import com.phairplay.dlna.DlnaNetworkAddress
@@ -65,6 +67,7 @@ class DiagnosticsFragment : Fragment() {
     private lateinit var textStatus: TextView
     private lateinit var buttonCopy: Button
     private lateinit var buttonSelfTest: Button
+    private lateinit var buttonResources: Button
 
     // The labels of the report — read once from the resources.
     private var labels: DiagnosticsLabels? = null
@@ -84,6 +87,13 @@ class DiagnosticsFragment : Fragment() {
     private var selfTestResults: List<SelfTestResult> = emptyList()
     private var descriptionPort: Int? = null
     private var selfTestRunning = false
+
+    /** The last measurement of the memory and the CPU load of the app process. */
+    private var resourceSample: ResourceSample? = null
+
+    /** The probe that measures the resources — built on the first measurement. */
+    @Volatile
+    private var resourceProbe: ProcessMemoryProbe? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -111,6 +121,7 @@ class DiagnosticsFragment : Fragment() {
         loadDisplayName()
         loadLocalAddress()
         renderReport()
+        measureResources()
     }
 
     override fun onStart() {
@@ -134,12 +145,14 @@ class DiagnosticsFragment : Fragment() {
         textStatus = view.findViewById(R.id.text_status)
         buttonCopy = view.findViewById(R.id.btn_copy_report)
         buttonSelfTest = view.findViewById(R.id.btn_run_self_test)
+        buttonResources = view.findViewById(R.id.btn_measure_resources)
     }
 
-    /** Installs the click listeners of the two buttons. */
+    /** Installs the click listeners of the three buttons. */
     private fun configureButtons() {
         buttonCopy.setOnClickListener { copyReportToClipboard() }
         buttonSelfTest.setOnClickListener { runSelfTest() }
+        buttonResources.setOnClickListener { measureResources() }
     }
 
     /**
@@ -250,7 +263,8 @@ class DiagnosticsFragment : Fragment() {
             protocolStates = protocolStates.toMap(),
             ports = ports(labels),
             selfTestResults = selfTestResults,
-            activeSession = activeSession
+            activeSession = activeSession,
+            resourceSample = resourceSample
         )
         textReport.text = DiagnosticsReportBuilder.build(report, labels)
     }
@@ -330,6 +344,49 @@ class DiagnosticsFragment : Fragment() {
                 outcome.results.size
             )
         }
+    }
+
+    /**
+     * Measures the memory and the CPU load of the app process and writes the
+     * result into the report.
+     *
+     * WHY the owner presses a button and the screen does not poll: the report is
+     * read while the 30-minute test runs. A report that refreshes itself every
+     * second would make the screen flicker and would take the number away from
+     * the moment the owner wants to look at. The values are therefore taken once
+     * when the screen is opened and again whenever the owner asks for them.
+     *
+     * WHY it runs in the background: the measurement reads the process statistics
+     * twice and waits a moment between the two readings. It must not block the
+     * screen.
+     */
+    private fun measureResources() {
+        buttonResources.isEnabled = false
+        textStatus.setText(R.string.diagnostics_resources_measuring)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val sample = withContext(Dispatchers.IO) { probe().measure() }
+            resourceSample = sample
+            buttonResources.isEnabled = true
+            renderReport()
+            textStatus.setText(R.string.diagnostics_resources_measured)
+        }
+    }
+
+    /**
+     * The probe that measures the resources.
+     *
+     * WHY it is built on the first measurement and not in the constructor: the
+     * probe asks the system for its clock tick rate when it is built, and that
+     * is a call to another program. It must not run on the main thread.
+     *
+     * @return the probe of the resources.
+     */
+    private fun probe(): ProcessMemoryProbe {
+        val existing = resourceProbe
+        if (existing != null) return existing
+        val created = ProcessMemoryProbe()
+        resourceProbe = created
+        return created
     }
 
     companion object {

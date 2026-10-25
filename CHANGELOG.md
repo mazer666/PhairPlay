@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+> **What this is.** The app measures its own resources and shows them against the
+> budget. The owner reads the resident memory and the CPU load of the app process
+> off the diagnostics screen while the 30-minute test runs — two of the four
+> performance budgets become readable without a laptop.
+>
+> **It is not a measurement on a television.** No television has ever run this
+> build; the numbers on the screen are **not measured** until somebody reads
+> them off a real device.
+
+### Added
+- **The diagnostics screen measures the own resources** — the resident memory
+  (`Debug.getMemoryInfo()`) and the CPU load (the counters of `/proc/self/stat`,
+  turned into a percentage by a pure, unit-tested calculation). Both values are
+  shown against their budget (NFR-03 and NFR-04) with a traffic light: "OK",
+  "over budget" or "not measured". A value that could not be measured is
+  reported as "not measured" — never as 0 and never as a green tick for a
+  measurement that did not happen.
+- **A "Measure resources" button** next to "Run self-test": the measurement is
+  taken once when the screen is opened and again whenever the owner asks for
+  it. There is no timer that refreshes the report, so the screen does not
+  flicker while the owner reads it.
+
+### Changed
+- The performance budgets of NFR-03 and NFR-04 now live in one place in the code
+  (`com.phairplay.diagnostics.PerformanceBudgets`), and the requirement points
+  at it.
+
+---
+
 ## [v1.0.0-alpha.3] — 2026-10-25
 
 > **What this release is.** Three things that make the project easier to ship and
