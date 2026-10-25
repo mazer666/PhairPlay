@@ -66,19 +66,63 @@ android_sdk_dir() {
     return 1
 }
 
+version_is_newer() {
+    # version_is_newer <a> <b> — true when the version a is newer than b.
+    #
+    # WHY this exists: the build-tools versions are compared numerically, because
+    # "9.0.0" is newer than "35.0.0" for a plain string sort. The comparison
+    # uses parameter expansion and a here-string, without a pipeline: a glob
+    # that is piped into another command does not survive every shell
+    # environment, and the tool lookup has to work everywhere.
+    local v1="$1" v2="$2" m1 p1 r1 m2 p2 r2
+    [ -n "$v1" ] || return 1
+    [ -n "$v2" ] || return 0
+    IFS=. read -r m1 p1 r1 <<< "$v1"
+    IFS=. read -r m2 p2 r2 <<< "$v2"
+    m1=$((10#${m1:-0})); p1=$((10#${p1:-0})); r1=$((10#${r1:-0}))
+    m2=$((10#${m2:-0})); p2=$((10#${p2:-0})); r2=$((10#${r2:-0}))
+    [ "$m1" -gt "$m2" ] && return 0
+    [ "$m1" -lt "$m2" ] && return 1
+    [ "$p1" -gt "$p2" ] && return 0
+    [ "$p1" -lt "$p2" ] && return 1
+    [ "$r1" -gt "$r2" ] && return 0
+    return 1
+}
+
 find_build_tool() {
     # find_build_tool <aapt2|apksigner>
     #
-    # WHY: the tools are part of the Android build-tools and are therefore not
+    # WHY the tools are part of the Android build-tools and are therefore not
     #      on the PATH of a normal shell. The newest build-tools directory
-    #      wins; its version is sorted numerically, because "9.0.0" is newer
-    #      than "35.0.0" for a plain string sort.
-    local tool="$1" sdk version candidate
+    #      wins — and "newest" is compared numerically, because "9.0.0" is
+    #      newer than "35.0.0" for a plain string sort.
+    local tool="$1" sdk dir version candidate best="" best_version=""
     if command -v "$tool" >/dev/null 2>&1; then
         command -v "$tool"
         return 0
     fi
     sdk=$(android_sdk_dir) || return 1
+
+    # The directories are walked with a glob and without a pipeline, so the
+    # lookup also works in shells where a glob does not survive a pipe.
+    for dir in "$sdk"/build-tools/*/; do
+        [ -d "$dir" ] || continue
+        candidate="$dir$tool"
+        [ -x "$candidate" ] || continue
+        version="${dir%/}"
+        version="${version##*/}"
+        if [ -z "$best" ] || version_is_newer "$version" "$best_version"; then
+            best="$candidate"
+            best_version="$version"
+        fi
+    done
+    if [ -n "$best" ]; then
+        printf '%s\n' "$best"
+        return 0
+    fi
+
+    # Fallback for the case that the glob found nothing: the same search with
+    # a pipeline.
     version=$(ls -1d "$sdk"/build-tools/*/ 2>/dev/null \
         | sed 's|.*/||; s|/||' \
         | sort -t. -k1,1n -k2,2n -k3,3n \
