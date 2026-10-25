@@ -99,6 +99,7 @@ a pull request.
 |---|---|
 | [`guides/INSTALLATION.md`](guides/INSTALLATION.md) | Every installation path: ADB, the sideloading apps, both flavours, and the developer options that have to be enabled first. |
 | [`guides/TROUBLESHOOTING.md`](guides/TROUBLESHOOTING.md) | The failure catalogue: the device does not appear in the picker, the TV sleeps during streaming, no audio, no video, and the router settings that cause each. |
+| [`guides/NETWORK_CHECK.md`](guides/NETWORK_CHECK.md) | The network check the owner runs from the laptop before a playback test: the discovery, the description document, the advertised address and the AirPlay port — with the expected output for every verdict. |
 | [`guides/CAST_APP_ID.md`](guides/CAST_APP_ID.md) | How to register a Google Cast receiver app ID, which is required to test the Cast stack end to end. |
 | [`guides/CASTING_TO_A_TV.md`](guides/CASTING_TO_A_TV.md) | The step-by-step guide for getting a picture onto the television — from macOS, from Windows, from VLC and from a mobile UPnP controller — including the honest `file:///` limitation and the HTTP workaround. |
 | [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) | The 15 copy-pasteable hardware cases DT-01 … DT-15: the exact commands, the expected result, the time limit and the evidence per case — plus the result sheet for the Google TV and the Fire TV. |

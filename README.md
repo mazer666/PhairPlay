@@ -318,6 +318,7 @@ document owns which question":
 | understand how it works | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | install it on a television | [`docs/guides/INSTALLATION.md`](docs/guides/INSTALLATION.md) |
 | get a picture onto the screen | [`docs/guides/CASTING_TO_A_TV.md`](docs/guides/CASTING_TO_A_TV.md) |
+| find out why the television does not appear | [`docs/guides/NETWORK_CHECK.md`](docs/guides/NETWORK_CHECK.md) — one command on the laptop, four verdicts |
 | fix a problem | [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) |
 | look up a term | [`GLOSSARY.md`](GLOSSARY.md) |
 | change the code | [`docs/WHERE_TO_CHANGE.md`](docs/WHERE_TO_CHANGE.md) and [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) |

@@ -13,6 +13,7 @@ summary table at the end and attaches the log output as evidence.
 - [Acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) — the acceptance criteria of the project
 - [Installation guide](INSTALLATION.md) — how the APK reaches the device
 - [Troubleshooting](TROUBLESHOOTING.md) — what to do when a step fails
+- [Network check](NETWORK_CHECK.md) — the command the owner runs from the laptop before a playback test
 - [Cast App ID](CAST_APP_ID.md) — what the Cast case needs
 - [QA acceptance records](../acceptance/) — the acceptance record of this cycle
 
@@ -144,6 +145,12 @@ adb exec-out screencap -p > /tmp/phairplay-home.png
 
 **Time limit:** 60 s from `adb install` to the screenshot.
 **Evidence:** the screenshot and the `logcat` excerpt.
+
+**Before the first playback test:** run the network check on the sender
+computer — `./scripts/device-check.sh`. It measures whether the television is
+visible in the network, whether the description document is readable and
+whether the advertised address is still the current one. The guide with the
+expected output is [NETWORK_CHECK.md](NETWORK_CHECK.md).
 
 ---
 
@@ -443,7 +450,11 @@ section 4.
 3. **PhairPlay must be listed** in that renderer list, under the device name
    that is shown on the PhairPlay home screen ("Visible as: …").
    - If it is not listed: run the SSDP script of case **DT-08** on the same
-     computer. If DT-08 fails as well, the problem is the network (multicast
+     computer, or run the network check (`./scripts/device-check.sh`) — it
+     tests the discovery, the description document, the advertised address and
+     the AirPlay port in one run and names the step that fails; the guide is
+     [NETWORK_CHECK.md](NETWORK_CHECK.md).
+     If DT-08 fails as well, the problem is the network (multicast
      blocked, client isolation) — see `docs/guides/TROUBLESHOOTING.md`.
      If DT-08 succeeds but VLC does not show the device, record it as a
      **VLC interoperability defect** with the DT-08 output attached.
