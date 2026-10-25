@@ -140,7 +140,7 @@ did not have — the list above minus the 23 that already existed
 | The base file has a key that `values-fr` does not have | exit code 1 | **PASS** | same message, per locale |
 | A translation has a key the base file does not know | exit code 1 ("stale key") | **PASS** | the same program path, verified with a deliberately removed key |
 | A translation has a placeholder the base file does not have | exit code 1, message with file name and line number | **PASS** | `ERROR: app/src/main/res/values-fr/strings.xml:4 — the key "home_title" has the placeholders "1$s|" but the base file expects "".` |
-| All locales are complete | exit code 0 | **PASS** | `./scripts/check-i18n-completeness.sh` → `OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
+| All locales are complete | exit code 0 | **PASS** | `./scripts/check-i18n-completeness.sh` → `OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
 | The placeholders of all three files are identical | 0 differences | **PASS** | `python3` comparison → `placeholder mismatches: 0`; the keys that use a placeholder are `home_device_visible_as`, `protocol_detail_connected`, `notification_status_streaming`, `setting_display_name_collision_note`, `now_playing_from` — each with `%1$s` |
 
 ---
@@ -174,7 +174,7 @@ the base file was not changed** — no key was added, removed or renamed.
 | Metric | Budget | Measured | Result |
 |---|---:|---:|---|
 | Duration of the i18n check | — | **not measured** | — |
-| Number of compared keys | — | 80 keys × 2 locales = 160 comparisons | — |
+| Number of compared keys | — | 114 keys × 2 locales = 228 comparisons | — |
 
 ---
 
@@ -255,7 +255,7 @@ the base file was not changed** — no key was added, removed or renamed.
 
 **accepted**
 
-Both languages carry all 80 keys of the base file, the placeholders match, the
+Both languages carry all 114 keys of the base file, the placeholders match, the
 XML is well-formed and the check that enforces it is in CI and turns red on a
 real gap. The visual check on the device is open and listed in the device
 test plan.
@@ -266,7 +266,7 @@ test plan.
 
 | File | Purpose |
 |---|---|
-| `app/src/main/res/values-de/strings.xml` | 58 → 80 keys, comment updated to the enforced rule |
-| `app/src/main/res/values-fr/strings.xml` | 23 → 80 keys, comment updated to the enforced rule |
+| `app/src/main/res/values-de/strings.xml` | 58 → 114 keys, comment updated to the enforced rule |
+| `app/src/main/res/values-fr/strings.xml` | 23 → 114 keys, comment updated to the enforced rule |
 | `app/src/main/res/values/strings.xml` | header comment only (the old comment allowed omitting keys) |
 | `scripts/check-i18n-completeness.sh` | new — the check that keeps both languages complete |

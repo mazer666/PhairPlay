@@ -18,7 +18,7 @@ PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and 
 
 ## Current Status
 
-**The latest published release is [`v1.0.0-alpha.1`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.1) (2026-10-25)** — the M6–M12 cycle with the three security findings closed, the quality gate green and the documentation brought onto the state of the code. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+). It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
+**The latest published release is [`v1.0.0-alpha.2`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.2) (2026-10-25)** — on top of the M6–M12 cycle it adds the **reconnect after a network loss** (the DLNA renderer becomes visible again), a **diagnostics screen with a self-test** that runs on the device, and the **language handling** (the app offers EN/DE/FR to the system, numbers and dates follow the language of the reader, the layouts are right-to-left capable). It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+). It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
 
 The AirPlay 2 stack is implemented end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote.
 
@@ -30,7 +30,7 @@ The **UPnP/DLNA MediaRenderer is implemented** — not planned. The package `com
 
 | Gate | Command | Result |
 |---|---|---|
-| JVM test suite | `./gradlew :test-runner:test` | 511 tests, 0 failures, 0 errors, 0 skipped (59 test classes) |
+| JVM test suite | `./gradlew :test-runner:test` | 549 tests, 0 failures, 0 errors, 0 skipped (63 test classes) |
 | Android lint | `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug` | `No issues found.` for both flavours |
 | Debug APKs | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug` | both build — Google TV 29.3 MB, Fire TV 16.3 MB |
 | Repository checks | the four `scripts/check-*.sh` (see [Option B](#option-b-build-from-source)) | all four green — file size, KDoc headers, documentation links, language completeness |
@@ -148,8 +148,8 @@ Go to the [Releases page](https://github.com/mazer666/PhairPlay/releases) and do
 
 | APK | Device | Latest release |
 |-----|--------|----------------|
-| `PhairPlay-1.0.0-alpha.1-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.1`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.1) |
-| `PhairPlay-1.0.0-alpha.1-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.1`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.1) |
+| `PhairPlay-1.0.0-alpha.2-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.2`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.2) |
+| `PhairPlay-1.0.0-alpha.2-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.2`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.2) |
 
 Then install it via ADB (see the Sideloading Guide below) or a sideloading app like *Downloader* on Fire TV.
 

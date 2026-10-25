@@ -8,6 +8,15 @@
   violation and **green** again when the violation is removed. A check that
   is always green is worthless.
 
+> **The numbers in this protocol are the values of the run on 2026-10-24.**
+> They describe the tree of that cycle — a file with 447 lines, 16 classes
+> without a KDoc header, 80 strings per locale. The tree has moved on since
+> then (204 files, 0 above the limit, 259 KDoc headers, 114 strings per
+> locale, 549 tests). What this document proves is not the size of the tree
+> but the **behaviour** of the four scripts: each one turns red on a real
+> violation and green again when the violation is removed. Re-running the
+> scripts on the current tree gives the current numbers.
+
 ## How the test was run
 
 The scripts were executed with `bash <script>` — the shell of this session
@@ -244,7 +253,7 @@ exit code: 1 (expected: 1)
 RESULT: as expected
 
 ### i18n: violation removed — ./scripts/check-i18n-completeness 
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit code: 0 (expected: 0)
 RESULT: as expected
 

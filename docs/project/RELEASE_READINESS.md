@@ -14,8 +14,8 @@ and are marked below with their measurement. Everything else stands as it was.
 
 ## 0. The one-paragraph version
 
-The code is in good shape: the JVM suite is green (**511 tests, 0 failures, 0 errors,
-0 skipped**, 59 test classes at the measured run), both debug flavours build, the four
+The code is in good shape: the JVM suite is green (**549 tests, 0 failures, 0 errors,
+0 skipped**, 63 test classes at the measured run), both debug flavours build, the four
 protocol stacks are separated, the DLNA renderer exists, the security documentation is
 complete, the three High findings of the security audit are **closed and measured**, and
 — since the second pass — **the CI
@@ -42,7 +42,7 @@ security findings are closed or carry a written owner decision.
 
 | # | Fact | How it was measured |
 |---|---|---|
-| 1 | The JVM protocol suite is green: **511 tests, 0 failures, 0 errors, 0 skipped**, 59 test classes | `./gradlew :test-runner:test` → `BUILD SUCCESSFUL in 3m 18s`, exit 0 (measured on the integrated tree). Before this cycle the suite had 277 tests. |
+| 1 | The JVM protocol suite is green: **549 tests, 0 failures, 0 errors, 0 skipped**, 63 test classes | `./gradlew :test-runner:test` → `BUILD SUCCESSFUL in 3m 18s`, exit 0 (measured on the integrated tree). Before this cycle the suite had 277 tests. |
 | 2 | Both debug flavours build | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --offline` → `BUILD SUCCESSFUL` (commit `51933eb`) |
 | 3 | The file-size check is green **and warning-free** | `bash scripts/check-file-size.sh` → exit 0, `OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.` |
 | 4 | The documentation-link check is green | `bash scripts/check-docs-links.sh` → exit 0, `192 internal link(s) resolve` |
@@ -138,7 +138,7 @@ The gate is defined in [`../quality/QUALITY.md`](../quality/QUALITY.md) §7.
 
 | # | Gate | Status | Blocking? |
 |---|---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (measured on the integrated tree, `BUILD SUCCESSFUL in 3m 18s`) | — |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (measured on the integrated tree, `BUILD SUCCESSFUL in 3m 18s`) | — |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, both reports `No issues found.`); both APKs build (measured) | — (R2 done) |
 | 3 | No known S4 finding | **yes** — SEC-01, SEC-02 and SEC-03 are closed and measured | — (R6c–R6e done) |
 | 4 | Every open S3 has a written owner decision | **partly** — SEC-04 (S3, the DLNA media URI) is *partly closed* by the address policy and still needs the scheme decision; SEC-10 (S2, cleartext) is open; SEC-09 (S2) is accepted | **yes** (R6a, R6b) |

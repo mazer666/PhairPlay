@@ -94,7 +94,7 @@ right on my TV" is not a result.
 
 | Fact | Value | Source |
 |---|---|---|
-| Tests in the CI gate | **511** — **0** failures, **0** errors, **0** skipped | `./gradlew :test-runner:test` → the report in `test-runner/build/reports/tests/test/index.html` |
+| Tests in the CI gate | **549** — **0** failures, **0** errors, **0** skipped | `./gradlew :test-runner:test` → the report in `test-runner/build/reports/tests/test/index.html` |
 | Test classes in that run | **59** | the same report |
 | The same gate before this cycle | **277** tests — the cycle added **234** | the earlier measurement of the same gate |
 | Test source files under `app/src/test/kotlin/com/phairplay/` | **68** | `find app/src/test/kotlin/com/phairplay -name "*.kt"` |
@@ -303,7 +303,7 @@ rule.
 | The largest file today | `airplay/SdpParser.kt` with **391** lines | the same script, sorted |
 | Classes with a KDoc header | **233 of 233** | `bash scripts/check-kdoc-headers.sh` → `OK: KDoc header check passed — 233 class declaration(s) checked, all of them have a KDoc header.` |
 | Internal documentation links that resolve | **all** of them — 281 at the time of the measurement | `bash scripts/check-docs-links.sh` → `OK: documentation link check passed — 281 internal link(s) resolve, 19 external link(s) skipped.` |
-| String keys in the language coverage | **80** — complete in `values/`, `values-de/` and `values-fr/` | `bash scripts/check-i18n-completeness.sh` → `OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
+| String keys in the language coverage | **80** — complete in `values/`, `values-de/` and `values-fr/` | `bash scripts/check-i18n-completeness.sh` → `OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
 
 **The link count is a snapshot, the exit code is the contract.** Every document
 that is added or extended adds links, so the number above grows with every
@@ -483,7 +483,7 @@ Two properties of the order are worth keeping:
 
 | # | Gate | Status | Blocking? |
 |---|---|---|---|
-| 1 | The JVM suite is green | **yes** — 511 tests, 0 failures, 0 errors, 0 skipped, 59 test classes | — |
+| 1 | The JVM suite is green | **yes** — 549 tests, 0 failures, 0 errors, 0 skipped, 63 test classes | — |
 | 2 | Lint and both debug APKs are green | **yes** — `No issues found.` in both flavours, both APKs build | — |
 | 3 | No known S4 finding | **yes** — SEC-01, SEC-02 and SEC-03 are closed, 0 open S4 | — |
 | 4 | Every open S3 has a written owner decision | **no** — SEC-04 (S3, the scheme list of the DLNA media URI) still needs the owner's decision; SEC-06 (S3) is open | **yes** |

@@ -18,8 +18,8 @@ above the line limit. The statements about the red gate, the missing KDoc
 headers, the 439-line file and the single lint finding were brought up to date
 in the same commit.
 **Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
-integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
-59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+integrated tree and measured: **549 tests, 0 failures, 0 errors, 0 skipped**,
+63 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
 277 tests. Both debug APKs build on that tree and the lint is green for both
 flavours.
 
@@ -74,8 +74,8 @@ Does the feature do what the requirement says?
 - Every new public method has a test: **partly** — five tests exist in
   `MiracastReceiverTest`; the `503` path (AC-M6.5) has none.
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
-  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
-  0 skipped, across 59 test classes. The five Miracast tests are part of that
+  tree: `BUILD SUCCESSFUL in 3m 41s`, **549 tests**, 0 failures, 0 errors,
+  0 skipped, across 63 test classes. The five Miracast tests are part of that
   run. Before this cycle the suite had 277 tests. The
   `com.phairplay.miracast` package still holds its 5 test methods.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
@@ -112,7 +112,7 @@ suite was run on.
 
 ```
 BUILD SUCCESSFUL in 3m 18s
-511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
+549 tests, 0 failures, 0 errors, 0 skipped (63 test classes)
 ```
 
 **Repository structure checks (measured in the second pass, current tree):**
@@ -131,7 +131,7 @@ OK: documentation link check passed — 192 internal link(s) resolve, 15 externa
 exit=0
 
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -333,7 +333,7 @@ defined in [`../quality/QUALITY.md`](../quality/QUALITY.md) §7.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured) |
 | 3 | **No known S4 finding** | **yes for this milestone** — the M6 surface has no S4 finding; the three S4 findings of the audit (SEC-01, SEC-02, SEC-03) belonged to the AirPlay and the UI track and are now **closed and measured** |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-06 and SEC-07 are the findings that touch M6; both carry a written decision in `docs/audit/2026-10-24-security-audit.md` §7 |

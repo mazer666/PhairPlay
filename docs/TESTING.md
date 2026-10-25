@@ -49,7 +49,7 @@ Measured on the integrated tree (2026-10-24):
 
 | Metric | Value |
 |---|---|
-| Test methods | **511** |
+| Test methods | **549** |
 | Failures | **0** |
 | Errors | **0** |
 | Skipped | **0** |
@@ -83,7 +83,7 @@ com.phairplay.service:             35
 com.phairplay.settings:            19
 com.phairplay.util:                75
                                  ----
-                                 511
+                                 549
 ```
 
 ### 1.3 What the JVM module compiles — and what it does **not**
@@ -143,7 +143,7 @@ well — and one test class lives there:
 
 `VideoAspectFit` itself is a **pure** function without a single Android type, so
 the test could run on the JVM. The exclusion `**/ui/**` is simply too coarse:
-it excludes the test together with the screens. The 511 measured tests do
+it excludes the test together with the screens. The 549 measured tests do
 **not** contain those 3 methods.
 
 If you want them in the suite, one of the two has to change (both are outside
@@ -204,7 +204,7 @@ The measured state of this cycle:
 OK: file size check passed — 189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
 OK: KDoc header check passed — 233 class declaration(s) checked, all of them have a KDoc header.
 OK: documentation link check passed — 245 internal link(s) resolve, 19 external link(s) skipped.
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 ```
 
 These four counts are a **snapshot of 2026-10-24**; the scripts print the

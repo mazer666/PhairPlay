@@ -17,8 +17,8 @@ above the line limit. The statements about the red gate, the missing KDoc
 header, the lint finding and the file-size warning were brought up to date in
 the same commit.
 **Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
-integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
-59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+integrated tree and measured: **549 tests, 0 failures, 0 errors, 0 skipped**,
+63 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
 277 tests. Both debug APKs build on that tree and the lint is green for both
 flavours.
 
@@ -80,8 +80,8 @@ Does the feature do what the requirement says?
   implementation of `isConfigured`. The logic is identical in both
   implementations, but the `googletv` class itself is not covered by the run.
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
-  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
-  0 skipped, 59 test classes. The three Cast tests are part of that run (see the
+  tree: `BUILD SUCCESSFUL in 3m 41s`, **549 tests**, 0 failures, 0 errors,
+  0 skipped, 63 test classes. The three Cast tests are part of that run (see the
   caveat above: they run against the Fire TV implementation). The
   `com.phairplay.cast` package still holds its 3 test methods. Before this
   cycle the suite had 277 tests.
@@ -115,7 +115,7 @@ BUILD SUCCESSFUL
 
 ```
 BUILD SUCCESSFUL in 3m 18s
-511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
+549 tests, 0 failures, 0 errors, 0 skipped (63 test classes)
 ```
 
 The test run and the APK build above describe the integrated tree. Before this
@@ -137,7 +137,7 @@ OK: documentation link check passed — 192 internal link(s) resolve, 15 externa
 exit=0
 
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -314,7 +314,7 @@ milestone stays a graceful degradation.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
 | 3 | **No known S4 finding** | **yes** — the M7 surface has no S4 finding; the SDK is a documented black box (SEC-13) |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-13 is an accepted Info finding; the Cast scope is written down in `docs/spec/REQUIREMENTS.md` §3 |

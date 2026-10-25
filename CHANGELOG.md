@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.0.0-alpha.2] — 2026-10-25
+
+> **What this release is.** Three milestones on top of `v1.0.0-alpha.1`: the receiver
+> becomes visible again after a network loss, the app explains (and checks) its own
+> state, and the language handling is completed.
+>
+> **It is an alpha.** No television has ever run this build: 0 of the 15 device test
+> cases of `docs/guides/DEVICE_TEST_PLAN.md` have been executed. The new diagnostics
+> screen exists to make those cases faster to diagnose — use it when you report a
+> problem.
+>
+> **Platforms:** Google TV (Android 10+) and Fire TV (Android 7.1+), both signed with
+> the same key as alpha.1 — an alpha.1 installation updates in place.
+
+### Added
+- **A diagnostics screen** (Settings → Diagnostics): the local address a television
+  must reach, the listening ports, the state of every protocol and of the service.
+- **A self-test that runs on the device**: is there a usable IPv4 address, does the
+  device answer its own SSDP search, does the description server answer with HTTP 200,
+  does something listen on the AirPlay port, how much memory does the app process
+  use. Every check reports a measured value; a check that cannot measure says
+  "not measured" instead of guessing.
+- **Copy to the clipboard** for the whole report, so it can be pasted into an issue.
+- The app now **offers its languages** (EN, DE, FR) to the system — on Android 13+
+  the language can be chosen per app.
+- `LocaleFormatting` — locale-aware formatting of numbers, byte sizes, durations and
+  timestamps. The Arabic case is proven by the test suite: the output uses
+  Arabic-Indic digits, not ASCII ones.
+
+### Fixed
+- **The receiver disappears after a network loss.** The AirPlay announcement recovered
+  before, the UPnP/DLNA renderer did not: its SSDP announcements were sent once at
+  startup, and the description URL still pointed at the IP address the device had
+  before the outage. Both receivers now re-advertise, and the DLNA renderer rebuilds
+  its description server when the address changed.
+
+### Changed
+- The diagnostic counts are expressed as plural resources (`1 byte` / `1842 bytes`),
+  which is what the Android lint asks for — and what is correct.
+- The FR-61 deviation in `docs/spec/REQUIREMENTS.md` is closed, and with it the
+  corresponding rows of `docs/acceptance/M08-ACCEPTANCE.md`.
+
+---
+
 ## [v1.0.0-alpha.1] — 2026-10-25
 
 > **What this release is.** The first build that carries the M6–M12 cycle with the

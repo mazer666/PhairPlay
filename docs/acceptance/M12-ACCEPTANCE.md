@@ -19,8 +19,8 @@ above the line limit — and the media URI got an **address policy**
 red gate, the lint finding, the missing KDoc header and the missing address
 policy were brought up to date in the same commit.
 **Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
-integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
-59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+integrated tree and measured: **549 tests, 0 failures, 0 errors, 0 skipped**,
+63 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
 277 tests. Both debug APKs build on that tree and the lint is green for both
 flavours. The three High findings of the audit — SEC-01, SEC-02 and SEC-03 —
 are closed and measured; **SEC-04** stays open and needs a written owner
@@ -106,8 +106,8 @@ Does the feature do what the requirement says?
   clients against the description server, and no test asserts that the media URI
   is refused for a non-HTTP scheme (scenario 17).
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
-  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
-  0 skipped, 59 test classes. The DLNA package alone accounts for **158** of
+  tree: `BUILD SUCCESSFUL in 3m 41s`, **549 tests**, 0 failures, 0 errors,
+  0 skipped, 63 test classes. The DLNA package alone accounts for **158** of
   them. Before this cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
@@ -134,7 +134,7 @@ $ source /workspace/toolchain/env.sh
 $ ./gradlew :test-runner:test --offline --console=plain
 ...
 BUILD SUCCESSFUL in 3m 18s
-511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
+549 tests, 0 failures, 0 errors, 0 skipped (63 test classes)
 ```
 
 **Package split of the measured run**
@@ -150,7 +150,7 @@ com.phairplay.service:           35
 com.phairplay.settings:          19
 com.phairplay.util:              75
                                     ---
-                                    511   (59 test classes)
+                                    549   (63 test classes)
 ```
 
 The eleven methods of the address policy moved with the class from
@@ -184,7 +184,7 @@ OK: documentation link check passed — 192 internal link(s) resolve, 15 externa
 exit=0
 
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -465,7 +465,7 @@ four sub-phases unchecked; it has been **corrected in this cycle** to "🟠 Part
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`), 158 of them in the DLNA package. Before this cycle the suite had 277 tests. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`), 158 of them in the DLNA package. Before this cycle the suite had 277 tests. |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
 | 3 | **No known S4 finding** | **yes for this milestone** — the DLNA surface has no S4 finding. SEC-04 (the arbitrary-URL fetch through `SetAVTransportURI`) is graded *Medium* in the audit and therefore **S3** in the quality model (`docs/quality/QUALITY.md` §0, Medium → S3); the second pass closed the dangerous part of it (the address policy), the scheme list and the two residual points stay open — so it still needs a written owner decision rather than a fix before the release (see gate 4). The three High findings of the audit (SEC-01, SEC-02, SEC-03) belong to the AirPlay and the UI track and are now **closed and measured**. |
 | 4 | Every open S3 has a written owner decision | **partly** — SEC-04 (S3, the DLNA media URI) is **partly closed**: the address policy refuses the loopback, the link-local, the metadata, the multicast, the broadcast and the obfuscated addresses; the **scheme list**, the **public addresses** and the **un-resolved host names** are still open and need either the CR-01 change or a written owner decision in the release notes; SEC-09 (S2, the GENA TOCTOU) is an accepted residual risk; the `RenderingControl` gap is an open point with a proposed decision (O-4) |

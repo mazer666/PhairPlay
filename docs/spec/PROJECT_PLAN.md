@@ -66,7 +66,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | 8 | M8 – Stability | 🟠 Partial | The frame-queue budget and the mDNS registration bookkeeping are proven by unit tests; the 30-minute session, the RAM, the CPU and the re-advertisement after a network outage are **not measured** |
 | 9 | M9 – Fire TV | 🟡 Implemented, device validation open | The flavour builds, carries no Play Services and degrades honestly; it has never been run on a Fire TV |
 | 10 | M10 – i18n | 🟠 Partial | EN / DE / FR are complete (80 keys each) and proven by `scripts/check-i18n-completeness.sh`; the RTL baseline and the locale-aware formatting are still open; the texts have never been seen on a device |
-| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | The JVM suite is green (**511 tests, 0 failures, 0 errors, 0 skipped**, 59 test classes) and both debug APKs build. **The CI quality gate is green** (all four structure checks exit 0) and **the lint is green for both flavours** (the `firetv` variant was analysed for the first time). The three High findings of the security audit are closed and measured. Still open: no signed APK was cut, no device test was executed, and SEC-04 needs a written owner decision |
+| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | The JVM suite is green (**549 tests, 0 failures, 0 errors, 0 skipped**, 63 test classes) and both debug APKs build. **The CI quality gate is green** (all four structure checks exit 0) and **the lint is green for both flavours** (the `firetv` variant was analysed for the first time). The three High findings of the security audit are closed and measured. Still open: no signed APK was cut, no device test was executed, and SEC-04 needs a written owner decision |
 | 12 | M12 – DLNA | 🟠 Partial — control plane delivered, media path open | SSDP, description server, hardened SOAP dispatcher, GENA eventing, the Samsung DIAL extension and the playback wiring are implemented with 169 test methods; the media URI now has an **address policy** (loopback, link-local / metadata, multicast, broadcast, obfuscated notations and user info are refused) — still open: the **scheme list** of the media URI, the accepted **public addresses** and the **un-resolved host names** (finding SEC-04, S3 — it needs a written owner decision), no cleartext configuration exists, and no control point has ever talked to the renderer |
 
 The per-milestone acceptance records live in
@@ -367,7 +367,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [x] Documentation updated (README, TROUBLESHOOTING, INSTALLATION, PROJECT_PLAN)
 - [x] Community bug fixes merged (screen awake, mDNS standby recovery, iOS 17+ RTSP limit, IPv4 wildcard binding)
 - [x] CI quality gate with four repository structure checks (`.github/workflows/ci.yml`, job `quality-gate`)
-- [x] JVM test suite green — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle it was 277 tests
+- [x] JVM test suite green — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle it was 277 tests
 - [x] Both debug flavours build — measured: `BUILD SUCCESSFUL` (Google TV 1m 40s, Fire TV 1m 13s)
 - [x] Make the quality gate green — **closed and measured**: all four structure checks exit 0 (`check-file-size.sh`: `189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh`: `233 class declaration(s) checked, all of them have a KDoc header`; `check-docs-links.sh`: `192 internal link(s) resolve`; `check-i18n-completeness.sh`: `80 key(s) … complete in 2 language(s)`). Risk R-07 is closed
 - [x] Make the lint green for both flavours — **closed and measured**: `:app:lintGoogletvDebug` and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (8m 50s), both reports say `No issues found.` The finding was `android:usesPermissionFlags` without `tools:targetApi="31"`. Risk R-16 is closed
@@ -389,7 +389,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 
 > **Note (2026-10-24, second pass).** The sub-phases below were unchecked in this plan
 > although the code exists: `app/src/main/kotlin/com/phairplay/dlna/` holds 28
-> production files and a large part of the 511 green test methods of the measured
+> production files and a large part of the 549 green test methods of the measured
 > run. The boxes now reflect the code. What is
 > **not** done is stated explicitly in each box.
 
@@ -478,10 +478,10 @@ otherwise; a date is only the planned day, the trigger decides.
 
 | Release | Planned | Trigger met by | Platforms | Content |
 |---|---|---|---|---|
-| `v1.0.0-alpha.1` | 2026-10-25 | M6–M12 cycle: security findings SEC-01/02/03 closed, quality gate green, documentation brought onto the state of the code | Google TV + Fire TV | The M6–M12 cycle as documented in `CHANGELOG.md` |
-| `v1.0.0-alpha.2` | 2026-11-01 | M13 *Reconnect* (the DLNA renderer becomes visible again after a network loss) and M15 *i18n & RTL* | Google TV + Fire TV | Re-advertisement after a network loss, right-to-left support, locale-aware formatting |
-| `v1.0.0-alpha.3` | 2026-11-08 | M14 *Diagnostics* (the app explains its own state to the user) | Google TV + Fire TV | In-app diagnostics: address, ports, protocol states, self-test |
-| `v1.0.0-beta.1` | 2026-11-15 | The owner has executed the 15 device test cases | Google TV + Fire TV | The same code as the last alpha, with the device findings fixed |
+| `v1.0.0-alpha.1` | 2026-10-25 — **shipped** | M6–M12 cycle: security findings SEC-01/02/03 closed, quality gate green, documentation brought onto the state of the code | Google TV + Fire TV | The M6–M12 cycle as documented in `CHANGELOG.md` |
+| `v1.0.0-alpha.2` | 2026-10-25 — **shipped** | M13 *Reconnect* (the DLNA renderer becomes visible again after a network loss), M14 *Diagnostics* (the app explains and checks its own state) and M15 *i18n & RTL* | Google TV + Fire TV | Re-advertisement after a network loss, diagnostics screen with a self-test, the app languages for the system, locale-aware formatting |
+| `v1.0.0-alpha.3` | 2026-11-08 — *planned* | The next milestone that changes the runtime behaviour | Google TV + Fire TV | Depends on what is merged next; the trigger decides, the date is only the plan |
+| `v1.0.0-beta.1` | 2026-11-15 — *planned* | The owner has executed the 15 device test cases | Google TV + Fire TV | The same code as the last alpha, with the device findings fixed |
 | `v1.0.0-beta.2` | 2026-11-29 | The findings of beta.1 are fixed and re-validated | Google TV + Fire TV | Fixes from the device test round |
 | `v1.0.0` | 2026-12-13 | Two weeks of beta on real devices, no new critical finding, production key | Google TV + Fire TV | The first stable release |
 

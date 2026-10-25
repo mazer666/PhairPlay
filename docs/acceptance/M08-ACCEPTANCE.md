@@ -73,8 +73,8 @@ Does the feature do what the requirement says?
   (`MdnsRegistrationTracker`, `MirrorFrameQueue`); the device-dependent paths
   (`NetworkRecoveryMonitor`) have none and cannot have any on the JVM.
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
-  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors, 0 skipped,
-  59 test classes. This includes the 10 `MdnsRegistrationTrackerTest` and the 13
+  tree: `BUILD SUCCESSFUL in 3m 41s`, **549 tests**, 0 failures, 0 errors, 0 skipped,
+  63 test classes. This includes the 10 `MdnsRegistrationTrackerTest` and the 13
   `MirrorFrameQueueTest` cases. The `com.phairplay.service` package still holds its
   35 test methods. Before this cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
@@ -104,7 +104,7 @@ BUILD SUCCESSFUL
 
 ```
 BUILD SUCCESSFUL in 3m 18s
-511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
+549 tests, 0 failures, 0 errors, 0 skipped (63 test classes)
 ```
 
 The test run and the APK build above describe the integrated tree (the merge of
@@ -127,7 +127,7 @@ OK: documentation link check passed — 192 internal link(s) resolve, 15 externa
 exit=0
 
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -311,7 +311,7 @@ distance.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured) |
 | 3 | **No known S4 finding** | **yes for this milestone** — the M8 surface has no S4 finding. SEC-03 (the unbounded FU-A buffer) touched the AirPlay RTP path and is now **closed and measured** (`RtpInterleaved.MAX_FUA_BYTES`, 8 MB, plus negative tests); see the risk register and the status block in `docs/audit/2026-10-24-security-audit.md` |
 | 4 | Every open S3 has a written owner decision | **yes** — SEC-07 has a written decision (audit §7) |

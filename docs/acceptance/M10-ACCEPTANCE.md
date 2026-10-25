@@ -15,8 +15,8 @@ points of the previous round — the CI quality gate, the lint and the three fil
 above the line limit. The statements about the red gate, the lint finding and
 the file-size warning were brought up to date in the same commit.
 **Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
-integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
-59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+integrated tree and measured: **549 tests, 0 failures, 0 errors, 0 skipped**,
+63 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
 277 tests. Both debug APKs build on that tree and the lint is green for both
 flavours.
 
@@ -28,13 +28,13 @@ Does the feature do what the requirement says?
 
 | # | Scenario | Expected | Result | Evidence |
 |---|---|---|---|---|
-| 1 | No locale file defines a key that the base locale does not define | 0 stale keys | **PASS (measured)** | `bash scripts/check-i18n-completeness.sh` → exit 0, `OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` The script checks three things: every base key exists in the translation, no translation key is unknown to the base, and the format placeholders match. |
-| 2 | Every shipped locale translates the protocol state texts | every locale file defines all `protocol_state_*` keys | **PASS (measured)** | The same script run covers all 80 keys of every locale; the `protocol_state_*` and `protocol_detail_*` keys are part of that set. They exist in `values/`, `values-de/` and `values-fr/`. |
-| 3 | The protocol names are identical in every locale | the four `protocol_*` values are equal in all locale files | **PASS (measured)** | `protocol_airplay`, `protocol_miracast`, `protocol_cast`, `protocol_dlna` are part of the 80 keys the script compares. Measured with the same script: 80 keys in the base file, complete in 2 languages, no stale key, no placeholder difference. |
+| 1 | No locale file defines a key that the base locale does not define | 0 stale keys | **PASS (measured)** | `bash scripts/check-i18n-completeness.sh` → exit 0, `OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` The script checks three things: every base key exists in the translation, no translation key is unknown to the base, and the format placeholders match. |
+| 2 | Every shipped locale translates the protocol state texts | every locale file defines all `protocol_state_*` keys | **PASS (measured)** | The same script run covers all 114 keys of every locale; the `protocol_state_*` and `protocol_detail_*` keys are part of that set. They exist in `values/`, `values-de/` and `values-fr/`. |
+| 3 | The protocol names are identical in every locale | the four `protocol_*` values are equal in all locale files | **PASS (measured)** | `protocol_airplay`, `protocol_miracast`, `protocol_cast`, `protocol_dlna` are part of the 114 keys the script compares. Measured with the same script: 114 keys in the base file, complete in 2 languages, no stale key, no placeholder difference. |
 | 4 | No user-visible text is hardcoded in Kotlin or in a layout | 0 lint findings, 0 grep matches | **PASS (code + lint)** | `grep -rn "setText(\"" app/src/main` → 0 matches. The lint is green for **both** flavours in the second pass (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, both reports `No issues found.`) — no `HardcodedText` finding and no other finding at all. The resource references in the UI code are `R.string.*` (`HomeFragment.kt` lines 124–127 use `R.string.protocol_airplay` and so on). |
 | 5 | With the device language set to German, the app shows German texts | Home screen, Settings, notification and the protocol cards are in German | **NOT MEASURED** | The resource files are complete (scenarios 1–3), but the rendering, the line breaks and the button widths can only be judged on a device. Device test plan case DT-12. |
 | 6 | With the device language set to French, the app shows the French texts | no French key falls back to English | **NOT MEASURED** | Same as scenario 5. Device test plan case DT-12. |
-| 7 | French strings exist at all | the `values-fr/` folder is complete | **PASS (measured)** | `app/src/main/res/values-fr/strings.xml` exists with 80 keys, the same set as the base file. The folder did not exist before this cycle — the QA track added it. |
+| 7 | French strings exist at all | the `values-fr/` folder is complete | **PASS (measured)** | `app/src/main/res/values-fr/strings.xml` exists with 114 keys, the same set as the base file. The folder did not exist before this cycle — the QA track added it. |
 | 8 | The English base file is the single source | all locales carry exactly the base key set | **PASS (measured)** | The script compares the key sets in both directions (missing *and* stale) and reports `complete in 2 language(s)`. |
 
 **Edge cases exercised:**
@@ -71,8 +71,8 @@ Does the feature do what the requirement says?
   suite sees nothing. Android's own `MissingTranslation` lint is switched off in
   `app/build.gradle.kts`.
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
-  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
-  0 skipped, 59 test classes. **Caveat:** no test in that suite covers the
+  tree: `BUILD SUCCESSFUL in 3m 41s`, **549 tests**, 0 failures, 0 errors,
+  0 skipped, 63 test classes. **Caveat:** no test in that suite covers the
   resource completeness. Before this cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
@@ -91,7 +91,7 @@ Does the feature do what the requirement says?
 
 ```
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -123,7 +123,7 @@ OK: documentation link check passed — 192 internal link(s) resolve, 15 externa
 exit=0
 
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -145,7 +145,7 @@ No issues found.
 
 | Metric | Budget | Measured | Result |
 |---|---:|---:|---|
-| Number of translated keys | 80 per locale | **80** in `values/`, **80** in `values-de/`, **80** in `values-fr/` | — |
+| Number of translated keys | 114 per locale | **114** in `values/`, **114** in `values-de/`, **114** in `values-fr/` | — |
 | Runtime of the completeness check | — | **not measured** — no timing run | — |
 | APK size increase caused by the French locale | — | **not measured** — only the debug APKs were built and not weighed | — |
 
@@ -262,15 +262,30 @@ grep -c '<string name=' app/src/main/res/values/strings.xml \
 **Decided by:** Project Manager, on behalf of the owner
 **Date:** 2026-10-24
 
-The measurable part of M10 is **done and proven**: three locales, 80 keys each,
+The measurable part of M10 is **done and proven**: three locales, 114 keys each,
 complete in both directions, no stale key, matching placeholders, checked by a
 script that is part of CI and whose own negative behaviour is documented.
 
-Two things are *not* done and are honestly named in the plan rather than
-claimed: the **RTL baseline** and the **locale-aware date/time/number
-formatting** are still open tasks in phase 10 of the project plan, and they were
-not touched in this cycle. The **rendering** of the translations on a screen is
-unproven.
+**Since 2026-10-25 the two open tasks of phase 10 are implemented** (milestone
+M15, shipped in `v1.0.0-alpha.2`):
+
+* **The RTL baseline.** The layout audit of all layouts found **no** hardcoded
+  left/right geometry — every margin and padding already used the logical
+  Start/End variants (13 uses), so the layouts mirror themselves in a
+  right-to-left locale. `android:supportsRtl="true"` was already in the
+  manifest. The app now also **offers its languages** to the system through
+  `res/xml/locales_config.xml` (`android:localeConfig`), which lets Android 13+
+  pick the app language per app.
+* **The locale-aware formatting.** `com.phairplay.util.LocaleFormatting` formats
+  numbers, byte sizes, durations and timestamps for the language of the reader —
+  with the locale as an explicit parameter, so it is deterministic and testable.
+  `LocaleFormattingTest` (15 tests) proves the German comma, the US point and the
+  Arabic-Indic digits.
+
+What is **still** open: the **rendering** of the translations on a screen is
+unproven, and the locale-aware formatting has **no caller yet** — the app does
+not display a formatted number anywhere, so the helper is an implemented and
+tested API waiting for its first screen.
 
 The second pass closed the two pipeline gates that were red in the previous
 round: the CI quality gate is green (all four structure checks exit 0) and the
@@ -289,9 +304,12 @@ still never been seen on a screen.
 3. **Add a JVM test that compares `values/`, `values-de/` and `values-fr/`,**
    and re-enable Android's `MissingTranslation` lint afterwards. Reason: today
    the only guarantee is a shell script outside the Gradle run.
-4. **Decide on the RTL baseline and the locale-aware formatting** — they are
-   listed as M10 tasks but were not delivered. Reason: they only matter for
-   future Arabic / Hebrew locales; the decision belongs to the owner.
+4. ~~**Decide on the RTL baseline and the locale-aware formatting**~~ — decided and
+   delivered in milestone M15 (2026-10-25): the layouts turned out to be
+   direction-neutral already, the app languages are offered to the system, and
+   the formatting helper exists and is tested. What is still missing is a
+   **screen that uses it** — no screen of the app formats a number for the
+   reader yet, so the helper is a prepared API without a caller.
 
 ---
 
@@ -299,7 +317,7 @@ still never been seen on a screen.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. Note: this does **not** cover the resource completeness. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. Note: this does **not** cover the resource completeness. |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
 | 3 | **No known S4 finding** | **yes** — the M10 surface has no S4 finding |
 | 4 | Every open S3 has a written owner decision | **yes** — the two script gaps are written down as P3 items in the QA acceptance record |

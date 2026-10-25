@@ -17,8 +17,8 @@ points of the previous round — the CI quality gate, the lint and the three fil
 above the line limit. The `firetv` lint, which had never been analysed before,
 now runs and is green, so AC-M9.2 is measured instead of open.
 **Update (third pass, 2026-10-24):** the JVM suite was **run again** on the
-integrated tree and measured: **511 tests, 0 failures, 0 errors, 0 skipped**,
-59 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
+integrated tree and measured: **549 tests, 0 failures, 0 errors, 0 skipped**,
+63 test classes, `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had
 277 tests. Both debug APKs build on that tree and the lint is green for both
 flavours.
 
@@ -72,8 +72,8 @@ Does the feature do what the requirement says?
   `isAvailable` are covered by `CastReceiverTest` (3 tests, **PASSED**); `start()`
   and `stop()` are not, because they need a real `Context`.
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
-  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
-  0 skipped, 59 test classes. Note: the JVM runner compiles the `main` source set
+  tree: `BUILD SUCCESSFUL in 3m 41s`, **549 tests**, 0 failures, 0 errors,
+  0 skipped, 63 test classes. Note: the JVM runner compiles the `main` source set
   **and the `firetv` flavour** (`../app/src/firetv/kotlin` is in the `srcDirs` of
   `test-runner/build.gradle.kts`), so the Fire TV Cast implementation is
   compiled and its shared logic is tested. The `googletv` flavour source set is
@@ -108,7 +108,7 @@ BUILD SUCCESSFUL
 
 ```
 BUILD SUCCESSFUL in 3m 18s
-511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
+549 tests, 0 failures, 0 errors, 0 skipped (63 test classes)
 ```
 
 The test run and the APK build above describe the integrated tree. Before this
@@ -130,7 +130,7 @@ OK: documentation link check passed — 192 internal link(s) resolve, 15 externa
 exit=0
 
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -336,7 +336,7 @@ API 25 device) stays open; it needs hardware.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`); the Fire TV source set is part of the compiled module. Before this cycle the suite had 277 tests. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`); the Fire TV source set is part of the compiled module. Before this cycle the suite had 277 tests. |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
 | 3 | **No known S4 finding** | **yes** — the Fire TV surface has no S4 finding; it has fewer attack surface than the Google TV flavour |
 | 4 | Every open S3 has a written owner decision | **yes** — the Miracast residual risk is written down in the audit §7 |

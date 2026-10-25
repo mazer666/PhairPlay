@@ -43,7 +43,7 @@ section 1.4), each script run from the repository root:
 | `check-kdoc-headers.sh` | **0** | 222 class declarations checked, all of them have a KDoc header |
 | `check-kdoc-headers.sh --skip-nested` | **0** | 198 class declarations checked (the 24 nested declarations are left to the header of the class that contains them), all of them have a KDoc header |
 | `check-docs-links.sh` | **0** | 167 internal links resolve, 15 external links skipped |
-| `check-i18n-completeness.sh` | **0** | 80 keys in the base file, complete in 2 languages (`de`, `fr`) |
+| `check-i18n-completeness.sh` | **0** | 114 keys in the base file, complete in 2 languages (`de`, `fr`) |
 
 Before the follow-up the same tree gave `check-kdoc-headers.sh` → exit **1**
 with 16 violations out of 222 declarations, and `check-file-size.sh` → exit **1**
@@ -310,7 +310,7 @@ items 3 to 6, which belong to other tracks — stay with the owner.
 | `docs/acceptance/QA-I18N-ACCEPTANCE.md` | the language record |
 | `docs/acceptance/QA-DEVICE-TEST-ACCEPTANCE.md` | the device test plan record |
 | `docs/audit/qa-quality-gate-negative-test.md` | the raw output of the negative test |
-| `app/src/main/res/values-de/strings.xml` | completed to 80/80 keys |
+| `app/src/main/res/values-de/strings.xml` | completed to 114/114 keys |
 | `app/src/main/res/values-fr/strings.xml` | completed to 80/80 keys |
 | `app/src/main/res/values/strings.xml` | header comment only — the old comment allowed omitting keys, which contradicts the new gate |
 

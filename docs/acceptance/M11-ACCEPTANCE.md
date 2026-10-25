@@ -26,7 +26,7 @@ fit into the pixel budget and downsamples the rest. **SEC-03**: the reassembled
 FU-A NAL unit is capped at 8 MB (`RtpInterleaved.MAX_FUA_BYTES`), the check runs
 before the append, and a fragment that would cross the cap is discarded together
 with the incomplete unit. The JVM suite was **run again** on the integrated
-tree: **511 tests, 0 failures, 0 errors, 0 skipped**, 59 test classes,
+tree: **549 tests, 0 failures, 0 errors, 0 skipped**, 63 test classes,
 `BUILD SUCCESSFUL in 3m 18s`. Before this cycle the suite had 277 tests. Both
 debug APKs build on that tree and the lint is green for both flavours. The
 signed release APKs were not built again — they need the owner's keystore.
@@ -39,7 +39,7 @@ Does the feature do what the requirement says?
 
 | # | Scenario | Expected | Result | Evidence |
 |---|---|---|---|---|
-| 1 | All unit tests of both flavours pass | exit code 0, 0 failures | **PARTLY** | `./gradlew :test-runner:test` → **BUILD SUCCESSFUL in 3m 18s**, **511 tests**, 0 failures, 0 errors, 0 skipped, 59 test classes (measured on the integrated tree). **Caveat 1:** 38 `@Test` methods in 6 files are excluded from the runner (`test-runner/build.gradle.kts`, `exclude` block): `MainActivityTest` (9), `MdnsServiceTest` (12), `VideoSubmissionTest` (5), `ServiceControllerTest` (4), `NetworkUtilsTest` (5), `ui/VideoAspectFitTest` (3). **Caveat 2:** the runner compiles the `main` source set **and the `firetv` flavour** (`test-runner/build.gradle.kts`); the `googletv` flavour source set is **not** compiled, so the Google TV variant of the Cast receiver is not covered by the suite. It is one suite, not two separate flavour suites. Before this cycle the suite had 277 tests. |
+| 1 | All unit tests of both flavours pass | exit code 0, 0 failures | **PARTLY** | `./gradlew :test-runner:test` → **BUILD SUCCESSFUL in 3m 18s**, **549 tests**, 0 failures, 0 errors, 0 skipped, 63 test classes (measured on the integrated tree). **Caveat 1:** 38 `@Test` methods in 6 files are excluded from the runner (`test-runner/build.gradle.kts`, `exclude` block): `MainActivityTest` (9), `MdnsServiceTest` (12), `VideoSubmissionTest` (5), `ServiceControllerTest` (4), `NetworkUtilsTest` (5), `ui/VideoAspectFitTest` (3). **Caveat 2:** the runner compiles the `main` source set **and the `firetv` flavour** (`test-runner/build.gradle.kts`); the `googletv` flavour source set is **not** compiled, so the Google TV variant of the Cast receiver is not covered by the suite. It is one suite, not two separate flavour suites. Before this cycle the suite had 277 tests. |
 | 2 | Lint is clean for both flavours | exit code 0, 0 findings | **YES** — measured in the second pass | `:app:lintGoogletvDebug` → `BUILD SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s). Both reports say `No issues found.` (`app/build/reports/lint-results-googletvDebug.txt`, `app/build/reports/lint-results-firetvDebug.txt`). The single finding of the previous round — `app/src/main/AndroidManifest.xml:58: Error: Attribute usesPermissionFlags is only used in API level 31 and higher (current min is 29) [UnusedAttribute]` — is closed: the permission element now carries `tools:targetApi="31"` (`app/src/main/AndroidManifest.xml` lines 64–65). The `firetv` variant, which had never been analysed, is analysed and green. The configuration stays strict: `abortOnError = true` and `warningsAsErrors = true` in `app/build.gradle.kts`, and the workflow keeps the extra step that fails when no lint report was produced (`lint.yml` lines 68–79). |
 | 3 | Signed release APKs are produced for both flavours | both APKs exist and `apksigner verify` reports "Verified" | **NOT MEASURED** | Only the **debug** APKs were built in this audit. The release path needs a keystore that lives outside the repository (`~/.config/phairplay/release.jks`, see `scripts/release.sh`). The previous release `v1.0.0-beta.2` was signed and published (2026-10-09) — that is a historical fact, not a measurement of this commit. |
 | 4 | `CHANGELOG.md` contains the entry of the released version, including the DLNA section and the documented limitations | the entry names the version and the date and lists DLNA, Miracast and Cast with their real state | **PARTLY** | `CHANGELOG.md` has a `[1.0.0-beta.3] - 2026-10-24` section with the DLNA block (SSDP, description server, SOAP dispatcher, GENA, MediaCapabilities, the Settings toggle, the protocol isolation) and the statement "Media playback (phase D3) is not part of this release." **That last sentence contradicts the code** — `DlnaReceiver.onPlay` plays through `AirPlayVideoPlayer` and the photo pipeline exists. Corrected in this cycle: see the CHANGELOG entry of this commit. |
@@ -47,7 +47,7 @@ Does the feature do what the requirement says?
 | 6 | Every finding of the security audit is either fixed or documented as open with a reason | 0 findings open **and** unexplained | **YES** | `docs/audit/2026-10-24-security-audit.md` §7 lists the 7 accepted residual risks with their reasons; the 14 findings each carry a location, an attack path and a concrete fix. **But:** the three High findings were **closed on 2026-10-24**. **SEC-01**: the AirPlay media URL is checked before the player sees it — only `http` and `https` may be fetched, the address has to pass the shared `HostAddressPolicy`, and a refused URL is answered with `400 Bad Request` (`FetchableUrlPolicyTest`, `RtspHandlerHandshakeTest`). **SEC-02**: the picture is decoded through `SafeBitmapDecoder`, which reads the dimensions first, refuses what does not fit into the pixel budget and downsamples the rest (`SafeBitmapDecoderTest`, 16 cases) — the decoding path itself still needs an instrumented test on a device. **SEC-03**: the reassembled FU-A NAL unit is capped at 8 MB (`RtpInterleaved.MAX_FUA_BYTES`), an over-long unit is discarded with a warning and the next FU-A start fragment begins a clean unit (`RtpInterleavedTest`). The one finding that is still open and that still needs a written owner decision is **SEC-04** (the DLNA media URI, S3); the other open findings carry their written decision in §7. See risk R-03 and the release checklist. |
 | 7 | The version name in the code equals the released tag | the two values are equal | **PARTLY** | `app/build.gradle.kts` line 32: `versionName = "1.0.0-beta.3"`; the tag `v1.0.0-beta.3` exists in the changelog. The mismatch is with `README.md`, which still says beta.2 (see scenario 5). |
 | 8 | The DLNA pull semantics are documented for the user | the README states that only `http`/`https` URLs can be played | **NO** | `grep -n "file:///" README.md` → no match. The statement exists in `docs/guides/CASTING_TO_A_TV.md` under "Known limitations" and in `docs/spec/REQUIREMENTS.md` §3, but not in the README. AC-M11.8 names the README explicitly. Correction proposed to the docs track. |
-| 9 | The four repository structure checks are green | exit code 0 for each script | **YES — 4 of 4 green** | Measured in the second pass on the current tree: `check-file-size.sh` → exit 0 (`OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`); `check-kdoc-headers.sh` → exit 0 (`OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.`); `check-docs-links.sh` → exit 0 (`OK: documentation link check passed — 192 internal link(s) resolve, 15 external link(s) skipped.` — the count grows with every new document, it was 167 before the acceptance records were added); `check-i18n-completeness.sh` → exit 0 (`OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).`). The CI job `quality-gate` is therefore **green**; the 16 missing KDoc headers of the previous round are closed. |
+| 9 | The four repository structure checks are green | exit code 0 for each script | **YES — 4 of 4 green** | Measured in the second pass on the current tree: `check-file-size.sh` → exit 0 (`OK: file size check passed — 184 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`); `check-kdoc-headers.sh` → exit 0 (`OK: KDoc header check passed — 227 class declaration(s) checked, all of them have a KDoc header.`); `check-docs-links.sh` → exit 0 (`OK: documentation link check passed — 192 internal link(s) resolve, 15 external link(s) skipped.` — the count grows with every new document, it was 167 before the acceptance records were added); `check-i18n-completeness.sh` → exit 0 (`OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).`). The CI job `quality-gate` is therefore **green**; the 16 missing KDoc headers of the previous round are closed. |
 | 10 | The CI workflow runs the JVM suite, the lint and both APKs | three jobs with the right commands | **PASS (code)** | `.github/workflows/ci.yml`: job `quality-gate` (lines 13–51), job `jvm-tests` (lines 53–83, `./gradlew :test-runner:test --stacktrace`, JDK 17, `timeout-minutes: 30`), job `android-build` (lines 84–142, matrix `googletv` / `firetv`, lint **and** debug APK, `if-no-files-found: error` on the APK upload). `lint.yml` runs the Android lint for both flavours with `fail-fast: false`. |
 | 11 | The release script produces both signed APKs and publishes them | a reproducible, credential-free-in-repo release path | **PASS (code)** | `scripts/release.sh` builds both signed APKs, creates the tag and publishes the GitHub release through `gh`; the keystore and the credentials live in `~/.config/phairplay/`, never in the repository. `--setup` creates them. |
 
@@ -90,8 +90,8 @@ Does the feature do what the requirement says?
   the scripts are covered by the negative-test protocol in
   `docs/audit/qa-quality-gate-negative-test.md` (22 cases), not by the JVM suite.
 - Tests green — `./gradlew :test-runner:test`: **yes** — measured on the integrated
-  tree: `BUILD SUCCESSFUL in 3m 18s`, **511 tests**, 0 failures, 0 errors,
-  0 skipped, 59 test classes. Before this cycle the suite had 277 tests.
+  tree: `BUILD SUCCESSFUL in 3m 41s`, **549 tests**, 0 failures, 0 errors,
+  0 skipped, 63 test classes. Before this cycle the suite had 277 tests.
 - Lint clean — `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug`: **yes** —
   measured after the team leader's fix: `:app:lintGoogletvDebug` → `BUILD
   SUCCESSFUL` (5m 12s) and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (3m 39s).
@@ -118,7 +118,7 @@ $ ./gradlew :test-runner:test --offline --console=plain
 ...
 BUILD SUCCESSFUL in 3m 18s
 EXIT=0
-511 tests, 0 failures, 0 errors, 0 skipped (59 test classes)
+549 tests, 0 failures, 0 errors, 0 skipped (63 test classes)
 ```
 
 Before this cycle the suite had 277 tests. The 38 excluded test methods
@@ -149,7 +149,7 @@ OK: documentation link check passed — 192 internal link(s) resolve, 15 externa
 exit=0
 
 $ bash scripts/check-i18n-completeness.sh ; echo "exit=$?"
-OK: i18n completeness check passed — 80 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 exit=0
 ```
 
@@ -315,7 +315,7 @@ The release engineering of M11 is **in place and partly verified**: the CI
 pipeline runs the four structure checks, the JVM suite, the lint and both debug
 APKs; the release script builds, signs and publishes both flavours; the
 changelog follows a consistent format. The measured evidence of this cycle is
-the green JVM suite (511 tests, 0 failures, 0 errors, 0 skipped, 59 test
+the green JVM suite (549 tests, 0 failures, 0 errors, 0 skipped, 59 test
 classes, measured on the integrated tree) and the successful build of both debug
 APKs — plus a **green CI quality gate** and a **green lint for both flavours**.
 
@@ -373,7 +373,7 @@ The gate is defined in [`../quality/QUALITY.md`](../quality/QUALITY.md) §7.
 
 | # | Gate | Result |
 |---|---|---|
-| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **511 tests, 0 failures, 0 errors, 0 skipped** in 59 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
+| 1 | `./gradlew :test-runner:test` is green | **yes** — measured on the integrated tree: **549 tests, 0 failures, 0 errors, 0 skipped** in 63 test classes (`BUILD SUCCESSFUL in 3m 18s`). Before this cycle the suite had 277 tests. |
 | 2 | Lint and both debug APKs are green | **yes** — the lint is green for both flavours (`:app:lintGoogletvDebug` and `:app:lintFiretvDebug`, `BUILD SUCCESSFUL`, both reports `No issues found.`); both debug APKs build (measured on the integrated tree) |
 | 3 | **No known S4 finding** | **yes** — the three High findings of the audit are closed and measured: SEC-01 (the AirPlay media URL is checked before the player sees it, `FetchableUrlPolicy` + `HostAddressPolicy`, `400 Bad Request` on a refused URL), SEC-02 (the picture is decoded through `SafeBitmapDecoder` with a pixel budget, `SafeBitmapDecoderTest`) and SEC-03 (the FU-A reassembly buffer is bounded at 8 MB, `RtpInterleaved.MAX_FUA_BYTES`, with a negative test in `RtpInterleavedTest`). The one finding that is still open is SEC-04, an S3 — it needs a written owner decision, see gate 4. |
 | 4 | Every open S3 has a written owner decision | **partly** — SEC-04 (S3, the DLNA media URI) is **partly closed** by the new address policy and still needs either the CR-01 change (the scheme list) or a written owner decision in the release notes; SEC-09 and SEC-10 carry their grades in the audit, the accepted residual risks are listed in §7 |
