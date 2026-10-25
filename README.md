@@ -18,7 +18,7 @@ PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and 
 
 ## Current Status
 
-**The latest published release is [`v1.0.0-alpha.3`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.3) (2026-10-25)** — it adds three things that make the project easier to ship and easier to debug: **the owner can cut a release himself** with one command (`scripts/release.sh`, guide in [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)), **the owner can check from a laptop** whether the television sees the phone (`scripts/device-check.sh`, guide in [`docs/guides/NETWORK_CHECK.md`](docs/guides/NETWORK_CHECK.md)), and the **diagnostics screen shows the running session** with a locale-aware duration. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+). It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
+**The latest published release is [`v1.0.0-alpha.4`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.4) (2026-10-25)** — it adds the **resource watch**: the app measures its own memory and CPU against the budgets of the project (150 MB, 30 %) and shows them in the diagnostics screen, so two of the four performance criteria stop being “not measured” — the owner reads them off the screen while the 30-minute test runs. It was **cut with the project's own release script** (`scripts/release.sh`, guide in [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)), which refuses to publish anything it has not checked itself. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+). It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
 
 The AirPlay 2 stack is implemented end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote.
 
@@ -148,8 +148,8 @@ Go to the [Releases page](https://github.com/mazer666/PhairPlay/releases) and do
 
 | APK | Device | Latest release |
 |-----|--------|----------------|
-| `PhairPlay-1.0.0-alpha.3-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.3`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.3) |
-| `PhairPlay-1.0.0-alpha.3-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.3`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.3) |
+| `PhairPlay-1.0.0-alpha.4-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.4`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.4) |
+| `PhairPlay-1.0.0-alpha.4-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.4`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.4) |
 
 Then install it via ADB (see the Sideloiding Guide below) or a sideloading app like *Downloader* on Fire TV.
 

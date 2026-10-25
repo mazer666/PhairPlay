@@ -38,13 +38,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [v1.0.0-alpha.4] — 2026-10-25
 
-> **The next release is cut with the project's own tool:** `./scripts/release.sh
-> v1.0.0-alpha.4`. The script runs the quality gate, bumps the version, builds
-> both flavours, verifies the signature of the artefacts, creates the tag and
-> publishes the release — it refuses to publish anything it has not checked
-> itself. See [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md).
+> **What this release is.** The app now measures its own resource usage against
+> the budgets of the project, so two of the four performance criteria stop being
+> "not measured" — the owner reads them off the screen while the 30-minute test
+> runs.
+>
+> **This release was cut with the project's own tool.** `./scripts/release.sh
+> v1.0.0-alpha.4` ran the quality gate, the test suite, the version bump, both
+> builds, the signature check, the tag and the upload. It refused to publish
+> twice before it succeeded: once because `apksigner` could not be found (an
+> unsigned APK must not be published) and once because the push had no
+> credentials. Both failures were real and both stopped the release.
+>
+> **Platforms:** Google TV (Android 10+) and Fire TV (Android 7.1+), signed with
+> the same key as alpha.1 to alpha.3 — the installation updates in place.
+
+### Added
+- **The diagnostics screen measures the app's own resource usage** against the
+  budgets of the project: the resident memory of the process (NFR-03, 150 MB) and
+  its CPU load (NFR-04, 30 %). The CPU load is computed from the process counters
+  in `/proc/self/stat`, not from a platform-wide average.
+- The measurement has **three** states: **OK**, **over budget** and **not
+  measured**. A value that cannot be measured is never shown as a green tick.
+- The budgets live in exactly one place (`PerformanceBudgets`), and a test
+  proves that they still carry the values of the requirement.
+
+### Fixed
+- The release script finds `aapt2` and `apksigner` without a pipeline, so the
+  artifact check also works in shells where a glob does not survive a pipe.
 
 ---
 

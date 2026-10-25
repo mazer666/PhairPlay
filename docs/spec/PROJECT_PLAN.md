@@ -480,7 +480,8 @@ otherwise; a date is only the planned day, the trigger decides.
 |---|---|---|---|---|
 | `v1.0.0-alpha.1` | 2026-10-25 — **shipped** | M6–M12 cycle: security findings SEC-01/02/03 closed, quality gate green, documentation brought onto the state of the code | Google TV + Fire TV | The M6–M12 cycle as documented in `CHANGELOG.md` |
 | `v1.0.0-alpha.2` | 2026-10-25 — **shipped** | M13 *Reconnect* (the DLNA renderer becomes visible again after a network loss), M14 *Diagnostics* (the app explains and checks its own state) and M15 *i18n & RTL* | Google TV + Fire TV | Re-advertisement after a network loss, diagnostics screen with a self-test, the app languages for the system, locale-aware formatting |
-| `v1.0.0-alpha.3` | 2026-11-08 — *planned* | The next milestone that changes the runtime behaviour | Google TV + Fire TV | Depends on what is merged next; the trigger decides, the date is only the plan |
+| `v1.0.0-alpha.4` | 2026-10-25 — **shipped** | M18 *Resource watch* (the app measures its own memory and CPU against the budget) — cut with the project's own release script | Google TV + Fire TV | The diagnostics screen shows the resident memory and the CPU load against the budgets of NFR-03 and NFR-04 |
+| `v1.0.0-alpha.5` | 2026-11-08 — *planned* | The next milestone that changes the runtime behaviour | Google TV + Fire TV | Depends on what is merged next; the trigger decides, the date is only the plan |
 | `v1.0.0-beta.1` | 2026-11-15 — *planned* | The owner has executed the 15 device test cases | Google TV + Fire TV | The same code as the last alpha, with the device findings fixed |
 | `v1.0.0-beta.2` | 2026-11-29 | The findings of beta.1 are fixed and re-validated | Google TV + Fire TV | Fixes from the device test round |
 | `v1.0.0` | 2026-12-13 | Two weeks of beta on real devices, no new critical finding, production key | Google TV + Fire TV | The first stable release |
