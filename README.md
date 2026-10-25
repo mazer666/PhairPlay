@@ -151,7 +151,12 @@ Go to the [Releases page](https://github.com/mazer666/PhairPlay/releases) and do
 | `PhairPlay-1.0.0-alpha.2-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.2`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.2) |
 | `PhairPlay-1.0.0-alpha.2-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.2`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.2) |
 
-Then install it via ADB (see the Sideloading Guide below) or a sideloading app like *Downloader* on Fire TV.
+Then install it via ADB (see the Sideloiding Guide below) or a sideloading app like *Downloader* on Fire TV.
+
+**Want to cut the next release yourself?** The whole flow — quality gate, version
+bump, build, signature check, tag, upload — is one command. See
+[Cutting a release](docs/guides/RELEASING.md); it needs no Android Studio, only a
+JDK, the Android SDK and `curl`.
 
 > **The alpha is signed with a new release key.** If PhairPlay is already installed
 > (for example from the Play Store), uninstall it first — Android refuses to replace
