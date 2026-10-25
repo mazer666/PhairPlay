@@ -1,9 +1,15 @@
 # PhairPlay – Project Plan
 
-Version: 2.3
+Version: 2.4
 Status: Active
 Date: 2026-03-23
-Last Updated: 2026-10-24
+Last Updated: 2026-10-25
+
+> **Revision 2.4 (2026-10-25).** Added the binding
+> [release schedule](#release-schedule): when alpha, beta and stable releases are
+> built, which conditions trigger them, and which platform each of them ships.
+> The schedule is the trigger for shipping binaries — a planned date never
+> replaces a trigger.
 
 > **Revision 2.3 (2026-10-24, second pass).** The CI quality gate and the lint
 > are green since the team leader closed them, and the media URI has an address
@@ -436,6 +442,69 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 
 **Status legend:** ✅ Complete · 🟡 Implemented, device validation open ·
 🟠 Partial · 🔴 Blocked.
+
+---
+
+## Release Schedule
+
+> This section is **binding**: it defines when a release happens and when binaries
+> may be shipped. A date below is a plan; a *trigger* is the decision. When the
+> trigger is met, the release is built and published — when it is not, nothing is
+> published, no matter what the calendar says.
+
+### Version scheme
+
+| Stage | Version scheme | What it means | Channel |
+|---|---|---|---|
+| Alpha | `v1.0.0-alpha.N` | Code complete for a milestone, **not validated on any television** | GitHub Releases, marked *prerelease* |
+| Beta | `v1.0.0-beta.N` | Validated on real hardware, defects known and listed | GitHub Releases, marked *prerelease* |
+| Stable | `v1.0.0` | Validated, measured, ready for the general user | GitHub Releases, marked *latest* |
+
+### Triggers
+
+Every trigger below is a condition on **measured** state, never on a date. A
+release is only built when every condition of its row is true.
+
+| Stage | Trigger — all conditions must hold | Platforms in the release | Artifacts |
+|---|---|---|---|
+| **Alpha** | 1. A milestone that changes the runtime behaviour is merged.<br>2. `:test-runner:test` is green (0 failures, 0 errors, 0 skipped).<br>3. The quality gate is green: `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`, `scripts/check-i18n-completeness.sh`, `scripts/check-docs-links.sh`.<br>4. Lint is green for **both** flavours.<br>5. Both APK flavours build. | **Google TV** (Android 10+, `com.phairplay.googletv`)<br>**Fire TV** (Android 7.1+, `com.phairplay.firetv`) | Signed release APKs (minified, resources shrunk) + source tag |
+| **Beta** | 1. Every case of [`../guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) has been executed on real hardware — 15 of 15.<br>2. The decisive cases are green: **DT-09** (VLC renderer list), **DT-10** (Windows "Cast to Device"), **DT-12** (Samsung Smart View), **DT-13/DT-14** (playback), **DT-15** (30-minute session).<br>3. The performance numbers are measured, not estimated: RAM, CPU load, frame rate, latency (see [`../quality/QUALITY.md`](../quality/QUALITY.md)).<br>4. No open finding of severity S1 or S2 (see [`../project/RISKS.md`](../project/RISKS.md)).<br>5. The acceptance records M01 … M12 name the device they were validated on. | **Google TV** — validated on a real Google TV / Android TV device<br>**Fire TV** — validated on a real Fire TV device | Signed release APKs + release notes listing the known limitations |
+| **Stable** | 1. A beta has been in the owner's hands for **at least two weeks** without a new critical finding.<br>2. Every acceptance record carries a *device validated* decision — no *"not measured"* left in a performance field.<br>3. The checklist in [`../project/RELEASE_READINESS.md`](../project/RELEASE_READINESS.md) is complete.<br>4. The release is signed with the **owner's production key** (an alpha key must not be used for a stable release).<br>5. The changelog and the release notes state the platform, the minimum Android version and the known limitations. | **Google TV** and **Fire TV** — both, always. A stable release that ships for one platform only is a defect, not a decision. | Signed release APKs + changelog + release notes |
+
+### Release train
+
+The planned sequence. Each line is an **alpha** unless the trigger column says
+otherwise; a date is only the planned day, the trigger decides.
+
+| Release | Planned | Trigger met by | Platforms | Content |
+|---|---|---|---|---|
+| `v1.0.0-alpha.1` | 2026-10-25 | M6–M12 cycle: security findings SEC-01/02/03 closed, quality gate green, documentation brought onto the state of the code | Google TV + Fire TV | The M6–M12 cycle as documented in `CHANGELOG.md` |
+| `v1.0.0-alpha.2` | 2026-11-01 | M13 *Reconnect* (the DLNA renderer becomes visible again after a network loss) and M15 *i18n & RTL* | Google TV + Fire TV | Re-advertisement after a network loss, right-to-left support, locale-aware formatting |
+| `v1.0.0-alpha.3` | 2026-11-08 | M14 *Diagnostics* (the app explains its own state to the user) | Google TV + Fire TV | In-app diagnostics: address, ports, protocol states, self-test |
+| `v1.0.0-beta.1` | 2026-11-15 | The owner has executed the 15 device test cases | Google TV + Fire TV | The same code as the last alpha, with the device findings fixed |
+| `v1.0.0-beta.2` | 2026-11-29 | The findings of beta.1 are fixed and re-validated | Google TV + Fire TV | Fixes from the device test round |
+| `v1.0.0` | 2026-12-13 | Two weeks of beta on real devices, no new critical finding, production key | Google TV + Fire TV | The first stable release |
+
+**If a trigger is not met, the release is skipped** — the version number is
+burned, not reused, and the next release gets the next number. A release that
+does not meet its trigger never gets built.
+
+### Rules that apply to every release
+
+1. **One version, both platforms.** A release ships the Google TV *and* the
+   Fire TV flavour, or it does not ship. A platform that cannot be built blocks
+   the release — it does not get a reduced version.
+2. **The binaries are the artefact.** The gate in the trigger column is run
+   against the *same commit* that the tag points at. A release built from an
+   untested commit is not a release.
+3. **The release notes say what was not tested.** Every release lists the
+   device test cases that are still open. An alpha that hides this is a lie in
+   the changelog.
+4. **The version lives in one place.** `versionCode` and `versionName` in
+   `app/build.gradle.kts` are bumped in the same commit that the release tag
+   is created from.
+5. **Every release gets an entry in [`../../CHANGELOG.md`](../../CHANGELOG.md)**,
+   written for a user, not for a colleague.
 
 ---
 
