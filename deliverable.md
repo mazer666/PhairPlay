@@ -11,13 +11,13 @@ aktuelle Adresse. Damit wird die offene Abweichung **FR-61** geschlossen
 
 | Datei | Zweck | Zeilen |
 |---|---|---|
-| `app/src/main/kotlin/com/phairplay/dlna/DlnaReadvertisePlan.kt` | **neu.** Reine, JVM-testbare Entscheidung: „nur neu announces“ vs. „Description-Server neu bauen“. Enthält die Adressregeln. | 80 (neu) |
+| `app/src/main/kotlin/com/phairplay/dlna/DlnaReadvertisePlan.kt` | **neu.** Reine, JVM-testbare Entscheidung: „nur neu announces“ vs. „Description-Server neu bauen“. Enthält die Adressregeln. | 83 (neu) |
 | `app/src/main/kotlin/com/phairplay/dlna/SsdpAdvertiser.kt` | `readvertise()` (Alive-Announcements erneut senden, Socket bei Interface-Verlust neu öffnen), `updateLocation()` (neue Description-URL). Der Listener holt den Socket jetzt pro Runde neu und wartet bei Socket-Wechsel, statt auf einem geschlossenen Socket zu kreisen. | 149 → 295 |
 | `app/src/main/kotlin/com/phairplay/dlna/DlnaReceiver.kt` | `readvertise()`: ermittelt die aktuelle IP, lässt die Entscheidung treffen und baut bei geänderter IP den Description-Server neu (neue URL, neuer Port). `start()`/`stop()`-Verhalten unverändert. | 241 → 313 |
 | `app/src/main/kotlin/com/phairplay/service/ReceiverSupervisor.kt` | `readvertiseAll()`: AirPlay **und** DLNA. `readvertiseAirPlay()` bleibt unverändert erhalten. | 281 → 299 |
 | `app/src/main/kotlin/com/phairplay/service/NetworkRecoveryMonitor.kt` | Nur Text/KDoc: der Rückruf ist jetzt `readvertiseAll()`. **Die Logik „erstes Netzwerk ignorieren / nur nach echtem Verlust“ ist unverändert** (KDoc ab Zeile 58 dokumentiert den Bug). | 128 → 133 |
 | `app/src/main/kotlin/com/phairplay/service/PhairPlayService.kt` | Eine Zeile: `onNetworkRestored = { receivers.readvertiseAll() }`. | 289 → 289 |
-| `app/src/test/kotlin/com/phairplay/dlna/DlnaReadvertisePlanTest.kt` | **neu.** 7 JVM-Tests (siehe Abschnitt 3). | 171 (neu) |
+| `app/src/test/kotlin/com/phairplay/dlna/DlnaReadvertisePlanTest.kt` | **neu.** 7 JVM-Tests (siehe Abschnitt 3). | 174 (neu) |
 
 Nicht angefasst (bewusst, laut Auftrag): Manifest, Layouts, Strings, `docs/`.
 Die Doku-Stelle „FR-61-Abweichung“ wird vom parallelen Track aktualisiert.
