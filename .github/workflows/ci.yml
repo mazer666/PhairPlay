@@ -44,6 +44,12 @@ jobs:
             if [ "$check" = "check-kdoc-headers" ]; then
               args=(--skip-nested)
             fi
+            # The file size rule of docs/CONTRIBUTING.md applies to every source
+            # file, not only to Kotlin. The shell scripts of scripts/ are source
+            # code too, so they are checked with the same limits.
+            if [ "$check" = "check-file-size" ]; then
+              args=(--ext .kt --ext .sh)
+            fi
             echo "::group::scripts/$check.sh ${args[*]:-}"
             if "./scripts/$check.sh" "${args[@]}"; then
               echo "PASS: scripts/$check.sh ${args[*]:-}"
