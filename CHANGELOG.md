@@ -38,6 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+> **The next release is cut with the project's own tool:** `./scripts/release.sh
+> v1.0.0-alpha.4`. The script runs the quality gate, bumps the version, builds
+> both flavours, verifies the signature of the artefacts, creates the tag and
+> publishes the release — it refuses to publish anything it has not checked
+> itself. See [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md).
+
+---
+
 ## [v1.0.0-alpha.3] — 2026-10-25
 
 > **What this release is.** Three things that make the project easier to ship and
