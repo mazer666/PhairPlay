@@ -15,7 +15,7 @@ aktuelle Adresse. Damit wird die offene Abweichung **FR-61** geschlossen
 | `app/src/main/kotlin/com/phairplay/dlna/SsdpAdvertiser.kt` | `readvertise()` (Alive-Announcements erneut senden, Socket bei Interface-Verlust neu öffnen), `updateLocation()` (neue Description-URL). Der Listener holt den Socket jetzt pro Runde neu und wartet bei Socket-Wechsel, statt auf einem geschlossenen Socket zu kreisen. | 149 → 295 |
 | `app/src/main/kotlin/com/phairplay/dlna/DlnaReceiver.kt` | `readvertise()`: ermittelt die aktuelle IP, lässt die Entscheidung treffen und baut bei geänderter IP den Description-Server neu (neue URL, neuer Port). `start()`/`stop()`-Verhalten unverändert. | 241 → 313 |
 | `app/src/main/kotlin/com/phairplay/service/ReceiverSupervisor.kt` | `readvertiseAll()`: AirPlay **und** DLNA. `readvertiseAirPlay()` bleibt unverändert erhalten. | 281 → 299 |
-| `app/src/main/kotlin/com/phairplay/service/NetworkRecoveryMonitor.kt` | Nur Text/KDoc: der Rückruf ist jetzt `readvertiseAll()`. **Die Logik „erstes Netzwerk ignorieren / nur nach echtem Verlust“ ist unverändert** (KDoc ab Zeile 58 dokumentiert den Bug). | 128 → 133 |
+| `app/src/main/kotlin/com/phairplay/service/NetworkRecoveryMonitor.kt` | Nur Text/KDoc: der Rückruf ist jetzt `readvertiseAll()`. **Die Logik „erstes Netzwerk ignorieren / nur nach echtem Verlust“ ist unverändert** (KDoc ab Zeile 61 dokumentiert den Bug). | 128 → 133 |
 | `app/src/main/kotlin/com/phairplay/service/PhairPlayService.kt` | Eine Zeile: `onNetworkRestored = { receivers.readvertiseAll() }`. | 289 → 289 |
 | `app/src/test/kotlin/com/phairplay/dlna/DlnaReadvertisePlanTest.kt` | **neu.** 7 JVM-Tests (siehe Abschnitt 3). | 174 (neu) |
 
@@ -26,7 +26,7 @@ Die Doku-Stelle „FR-61-Abweichung“ wird vom parallelen Track aktualisiert.
 
 ## 2. Die Entscheidungslogik
 
-Die Entscheidung liegt in `DlnaReadvertisePlan` (`app/src/main/kotlin/com/phairplay/dlna/DlnaReadvertisePlan.kt:47`).
+Die Entscheidung liegt in `DlnaReadvertisePlan` (`app/src/main/kotlin/com/phairplay/dlna/DlnaReadvertisePlan.kt:50`).
 Sie ist eine **reine Funktion** ohne Android- und ohne Socket-Abhängigkeit, damit sie
 im `test-runner`-Modul testbar ist. Der Socket-Teil ist es nicht.
 
@@ -52,7 +52,7 @@ decide(previousAddress, currentAddress) ->
 **Neu gebaut wird genau dann, wenn die aktuelle Adresse eine *brauchbare* IPv4-Literal
 ist und sich von der bisher angekündigten Adresse unterscheidet.**
 
-Als *brauchbar* (`approveAddress()`, Zeile 66) gilt eine Adresse nur, wenn sie:
+Als *brauchbar* (`approveAddress()`, Zeile 69) gilt eine Adresse nur, wenn sie:
 
 1. eine reine dotted-quad-Literal ist — vier Dezimal-Oktette 0–255, **ohne** führende
    Null (die Oktal-Schreibweise `0177.0.0.1` wird abgelehnt), und **ohne** Dezimal- oder
