@@ -11,6 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.0.0-alpha.7] — 2026-11-02
+
+> **What this release is.** The release for the **Google Play Store**: the privacy
+> policy is now reachable from inside the app — which Google Play asks for —
+> and a new gate makes sure it stays in step with the app. The work for the
+> store publication found a wrong certificate fingerprint in the documentation
+> that would have broken the Google Cast registration.
+
+### Added
+- **Privacy policy in the app** — the settings carry a row *Privacy policy*
+  (English, German, French) that opens the policy. On a television without a
+  browser the address is shown in a dialog instead, so the row never does
+  nothing. Google Play asks for the policy inside the app as well as in the
+  store listing.
+- **`scripts/check-privacy-policy.sh`** — a new gate: the privacy policy must
+  name **every** permission the app declares, must state that it is reachable
+  from inside the app and must not be older than the manifest. It runs in CI
+  and in the release pipeline.
+- **`scripts/test-check-privacy-policy.sh`** — the self-test of that gate with
+  six cases, all of them negative: a gate that cannot turn red proves nothing.
+  One case covers a permission that is declared over several lines — a
+  single-line parser skips it and passes everything.
+
+### Fixed
+- **The SHA-1 fingerprint of the signing certificate in the documentation was
+  wrong** in four places. The value now in the guides was measured from the
+  release keystore and from the published `.aab`:
+  `F4:BF:7B:F0:E1:40:1D:0C:33:EE:85:C2:51:FF:24:12:1B:D5:7C:E4`. A Google Cast
+  registration with the wrong fingerprint does not start.
+  `scripts/cast-registration-info.sh` compares the guide with the keystore now
+  and says so when they differ.
+- **The release guide named the wrong menu path** for the Android TV opt-in.
+  It is *Setup → Advanced settings → Form factors → Add release type →
+  Android TV*.
+
+### Documented
+- **The measured state of the Play requirements**: Android TV apps need target
+  API 34 (the general API 36 rule does not apply to a television app), the
+  bundle carries 64-bit libraries, and the native libraries are aligned to
+  16 KB page sizes. The order of the steps in the Play Console is documented in
+  [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#publication-in-the-google-play-store).
+
+---
+
 ## [v1.0.0-alpha.6] — 2026-11-02
 
 > **What this release is.** A bug fix for a hardware decoder that scales the
