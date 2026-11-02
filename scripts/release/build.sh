@@ -16,16 +16,17 @@ QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness
 
 # The memory settings of every Gradle call of the release.
 #
-# WHY the in-process Kotlin compiler: by default the Kotlin compiler runs in
-#      its own daemon JVM. During a release build that daemon is idle but keeps
-#      its heap, and R8 needs the rest of the memory — on a 3 GB machine the
-#      kernel kills the build in :app:minifyGoogletvReleaseWithR8. With
-#      "in-process" there is only one JVM, and its heap is capped here.
+# WHY the out-of-process Kotlin compiler: by default the Kotlin compiler runs in
+#      its own daemon JVM, and that daemon keeps its heap while R8 needs the
+#      rest of the memory — on a 3 GB machine the kernel kills the build in
+#      :app:minifyGoogletvReleaseWithR8. Compiling "in-process" does not help
+#      either: the compiler's memory then stays in the same JVM as R8. With
+#      "out-of-process" the compiler runs in a short-lived fork that exits
+#      before the shrinking starts, so the two never compete.
 #
-# WHY 1400 MB: the Kotlin compiler and R8 share that one JVM. 1024 MB was not
-#      enough for the release build of the app (the Kotlin compile of the app
-#      and the shrinking of the resources run one after the other).
-GRADLE_MEMORY_OPTIONS="-Dorg.gradle.jvmargs=-Xmx1400m -Pkotlin.compiler.execution.strategy=in-process"
+# WHY 1400 MB: R8 needs the memory for the shrinking; 1024 MB was not enough
+#      for the release build of the app.
+GRADLE_MEMORY_OPTIONS="-Dorg.gradle.jvmargs=-Xmx1400m -Pkotlin.compiler.execution.strategy=out-of-process"
 
 build_prepare_environment() {
     # Prepares the Android SDK and the JDK for the build and writes
@@ -98,14 +99,10 @@ build_gradle() {
     # build_gradle <task> — runs the Gradle wrapper with the memory settings
     # of the project.
     #
-    # WHY "--no-daemon", the capped heap and the in-process Kotlin compiler:
-    #      a release build with R8 needs more memory than a small laptop has.
-    #      With the default settings the Kotlin compiler runs in its own daemon
-    #      JVM, so two JVMs compete for the memory while R8 is running — the
-    #      kernel then kills the build (observed on a 3 GB machine: the build
-    #      died in :app:minifyGoogletvReleaseWithR8). Compiling in-process
-    #      keeps everything in one JVM, and the heap cap keeps that JVM small
-    #      enough to survive.
+    # WHY "--no-daemon", the capped heap and the out-of-process Kotlin
+    #      compiler: a release build with R8 needs more memory than a small
+    #      laptop has. The memory settings are explained in
+    #      GRADLE_MEMORY_OPTIONS above.
     ( cd "$REPO_ROOT" && ./gradlew --no-daemon $GRADLE_MEMORY_OPTIONS "$@" )
 }
 
