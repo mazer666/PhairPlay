@@ -83,7 +83,12 @@ github_build_notes() {
     local previous commits since plan_url
     plan_url="https://github.com/$GH_OWNER/$GH_REPO/blob/main/docs/guides/DEVICE_TEST_PLAN.md"
 
-    previous=$(git -C "$REPO_ROOT" tag --sort=-version:refname 2>/dev/null \
+    # WHY the date order and not the version order: this repository still has
+    #      releases of an earlier era (v1.0.0-beta.1 … beta.3) whose version
+    #      numbers are higher than the alpha train but which are older. The
+    #      notes have to name the release that came before — by date.
+    previous=$(git -C "$REPO_ROOT" for-each-ref --sort=-creatordate \
+        --format="%(refname:short)" refs/tags 2>/dev/null \
         | grep -v "^${tag}$" | head -1)
     if [ -n "$previous" ]; then
         commits=$(git -C "$REPO_ROOT" log --pretty=format:"- %s" "$previous..$tag" 2>/dev/null | head -30)
@@ -117,7 +122,7 @@ EOF
 
     if [ "$prerelease" = "true" ]; then
         cat <<EOF
-**This is a prerelease.** No television has run this build: **0 of the 15 device test
+**This is a prerelease.** No television has run this build: **0 of the 16 device test
 cases** of the [device test plan]($plan_url) have been executed. Report what you
 find as an issue.
 
@@ -178,6 +183,18 @@ github_publish_rest() {
             ;;
         404)
             release_id=""
+            # A draft with the same tag is not found by the tag endpoint. It is
+            # looked up in the list of the releases, so that a second entry with
+            # the same tag cannot appear — the owner would download from the
+            # wrong one.
+            status=$(github_request GET \
+                "$GITHUB_API/repos/$GH_OWNER/$GH_REPO/releases?per_page=100" "" "$body") || status="000"
+            if [ "$status" = "200" ]; then
+                release_id=$(json_release_id_by_tag "$(cat "$body")" "$tag")
+            fi
+            if [ -n "$release_id" ]; then
+                green "A draft of the release $tag exists (id $release_id) — it is completed instead of creating a second release."
+            fi
             ;;
         *)
             warn "GitHub answered $status while looking for the release $tag."

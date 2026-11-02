@@ -228,6 +228,38 @@ print(value if value is not None else "")
         | head -1
 }
 
+json_release_id_by_tag() {
+    # json_release_id_by_tag <json list of releases> <tag> — prints the id of
+    # the release that carries the tag, drafts included.
+    #
+    # WHY: "GET /releases/tags/<tag>" does not find a draft. A release that
+    #      was created as a draft (an interrupted run) and a later run that
+    #      creates the release again leave two entries with the same tag — the
+    #      owner then downloads from the wrong one. The list of the releases
+    #      shows the draft as well.
+    if command -v python3 >/dev/null 2>&1; then
+        printf '%s' "$1" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if isinstance(data, dict):
+    data = [data]
+for release in data:
+    if release.get("tag_name") == sys.argv[1]:
+        print(release.get("id", ""))
+        break
+' "$2"
+        return 0
+    fi
+    printf '%s' "$1" \
+        | tr '{' '\n' \
+        | grep -F "\"tag_name\":\"$2\"" \
+        | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p' \
+        | head -1
+}
+
 json_asset_id() {
     # json_asset_id <json> <asset name> — prints the id of the named asset.
     if command -v python3 >/dev/null 2>&1; then
