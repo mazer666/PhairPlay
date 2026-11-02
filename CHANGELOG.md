@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Stretched AirPlay picture on hardware decoders that scale the frame** — some
+  decoders (reproduced on the Allwinner H726, Magcubic/Gojodoq HY300, Android 14)
+  scale the decoded picture to the panel and report that scaled size in the crop
+  rectangle instead of a real crop. PhairPlay trusted that rectangle and stretched
+  the picture horizontally (498x1080 was displayed as 484x712, aspect 0.68 instead
+  of 0.46). The crop is now only used when its aspect ratio agrees with the coded
+  picture parsed from the stream's SPS; otherwise the coded aspect wins, which
+  undoes the decoder's distortion. *Implementation: `com.phairplay.airplay.OutputSizeResolver`,
+  `VideoDecoder.publishOutputSize`. Proof: `OutputSizeResolverTest`. Reported as
+  GitHub issue #21.
+
 ---
 
 ## [v1.0.0-alpha.5] — 2026-10-25

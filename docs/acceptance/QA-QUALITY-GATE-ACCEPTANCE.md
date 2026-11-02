@@ -276,7 +276,7 @@ round could not time a run and therefore had to leave this row open.
 6. **`docs/spec/ACCEPTANCE_CRITERIA.md` has no acceptance criterion for the
    DLNA MediaRenderer, Miracast, Google Cast, the pairing PIN, the German and
    French user interface, "start on boot" and the notification.** The device
-   test plan therefore uses the identifiers DT-01 … DT-15 and lists the gap
+   test plan therefore uses the identifiers DT-01 … DT-16 and lists the gap
    explicitly.
 
 ---

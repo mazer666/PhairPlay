@@ -252,7 +252,7 @@ consistent; it says nothing about the television.
 
 The authoritative list of everything that needs hardware is
 [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md): **15 cases**
-(DT-01 … DT-15), each with a copy-pasteable script, a time limit and an
+(DT-01 … DT-16), each with a copy-pasteable script, a time limit and an
 evidence requirement.
 
 | Case | What it proves |

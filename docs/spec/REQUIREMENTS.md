@@ -7,7 +7,7 @@ Date: 2026-10-24
 > **Change log v3.0 (2026-10-24).** The UPnP / DLNA MediaRenderer is no longer
 > "out of scope": it is implemented (package `com.phairplay.dlna`, ADR-004 phases
 > D1–D4) and is therefore described by its own requirement section (§1.9).
-> FR-04 and FR-06 were amended (four receivers, not three). FR-44 … FR-70 were
+> FR-04 and FR-06 were amended (four receivers, not three). FR-44 … FR-71 were
 > added, NFR-26 … NFR-31 were added. §3 now lists DLNA as in scope and Miracast
 > media decoding as an explicit, reasoned exclusion. The milestone numbering of
 > `ACCEPTANCE_CRITERIA.md` was reconciled with `PROJECT_PLAN.md`; see the mapping
@@ -216,6 +216,10 @@ PhairPlay actually does — not what a Miracast sink would do.
 
 - FR-69: On a device without Google Play Services (the `firetv` flavour), the Cast receiver MUST report "disabled" and MUST NOT initialise the Cast SDK. The HomeScreen MUST explain that Cast requires Google Play Services. *Implementation: `app/src/firetv/kotlin/com/phairplay/cast/CastReceiver.kt`. Proof: `CastReceiverTest`.*
 - FR-70: When no Cast application ID is registered, the Cast receiver MUST report an explicit "not configured" error and the documentation MUST point to the registration guide (`docs/guides/CAST_APP_ID.md`). It MUST NOT claim to advertise a Cast receiver. *Implementation: `CastReceiver.isConfigured`, `CastReceiver.start`. Proof: `CastReceiverTest`.*
+
+### 1.16 Video aspect ratio robustness
+
+- FR-71: When the hardware decoder reports a crop rectangle whose aspect ratio differs from the aspect ratio of the coded picture by more than 5%, the app MUST treat that rectangle as a **scaled picture** and MUST use the coded aspect ratio (parsed from the stream's SPS) for the on-screen aspect-fit. A decoder that scales the picture to the panel and reports the scaled size as a crop rectangle would otherwise stretch the picture horizontally. *Implementation: `com.phairplay.airplay.OutputSizeResolver`, `VideoDecoder.publishOutputSize`. Proof: `OutputSizeResolverTest`.*
 
 ---
 

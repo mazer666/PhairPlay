@@ -164,7 +164,7 @@ stops, nothing was published. Fix the cause and run it again.
 An alpha can be cut with the script alone. A **stable** release needs more,
 because it is the version that other people install:
 
-1. **All 15 device test cases executed** on real hardware
+1. **All 16 device test cases executed** on real hardware
    ([`DEVICE_TEST_PLAN.md`](DEVICE_TEST_PLAN.md)).
 2. **The performance numbers measured**, not estimated: RAM, CPU load, frame
    rate, latency (`docs/quality/QUALITY.md`).

@@ -131,7 +131,7 @@ session**, because no device was available to the QA agent.
 3. **`docs/spec/ACCEPTANCE_CRITERIA.md` has no acceptance criterion for the
    DLNA MediaRenderer, Miracast, Google Cast, the pairing PIN, the German and
    French user interface, "start on boot" and the notification.** The plan
-   uses the identifiers DT-01 … DT-15 and lists the gap in its section 4.
+   uses the identifiers DT-01 … DT-16 and lists the gap in its section 4.
    The spec track has to add the missing criteria; until then the results of
    the plan cannot be mapped onto an approved criterion.
 4. **The test run of the JVM suite was not executed in this session.** The

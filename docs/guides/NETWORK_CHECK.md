@@ -225,5 +225,5 @@ a few seconds.
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — the failure catalogue of the
   product (no picture, no sound, the device stays invisible).
 - [`DEVICE_TEST_PLAN.md`](DEVICE_TEST_PLAN.md) — the hardware test cases
-  DT-01 … DT-15; DT-09 is the VLC renderer case this check prepares.
+  DT-01 … DT-16; DT-09 is the VLC renderer case this check prepares.
 - [`INSTALLATION.md`](INSTALLATION.md) — how the app gets onto the television.

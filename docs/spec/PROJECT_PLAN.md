@@ -372,7 +372,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [x] Make the quality gate green — **closed and measured**: all four structure checks exit 0 (`check-file-size.sh`: `189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh`: `233 class declaration(s) checked, all of them have a KDoc header`; `check-docs-links.sh`: `192 internal link(s) resolve`; `check-i18n-completeness.sh`: `80 key(s) … complete in 2 language(s)`). Risk R-07 is closed
 - [x] Make the lint green for both flavours — **closed and measured**: `:app:lintGoogletvDebug` and `:app:lintFiretvDebug` → `BUILD SUCCESSFUL` (8m 50s), both reports say `No issues found.` The finding was `android:usesPermissionFlags` without `tools:targetApi="31"`. Risk R-16 is closed
 - [ ] Produce and verify the signed v1.0.0 APKs (`apksigner verify`) — **open: the keystore is the owner's**
-- [ ] Real-device A/V validation on Google TV and Fire TV hardware — **open: no device; 0 of 15 device test cases executed**
+- [ ] Real-device A/V validation on Google TV and Fire TV hardware — **open: no device; 0 of 16 device test cases executed**
 - [x] Close the three S4 findings of the security audit — **closed and measured**: SEC-01 (the AirPlay media URL is checked before the player fetches it), SEC-02 (the picture decoder reads the dimensions first and has a pixel budget), SEC-03 (the reassembled FU-A unit is bounded to 8 MB). SEC-04 stays open as an S3 with a written owner decision (the scheme list of the media URI)
 - [ ] Stable v1.0.0 release
 
@@ -482,7 +482,7 @@ otherwise; a date is only the planned day, the trigger decides.
 | `v1.0.0-alpha.2` | 2026-10-25 — **shipped** | M13 *Reconnect* (the DLNA renderer becomes visible again after a network loss), M14 *Diagnostics* (the app explains and checks its own state) and M15 *i18n & RTL* | Google TV + Fire TV | Re-advertisement after a network loss, diagnostics screen with a self-test, the app languages for the system, locale-aware formatting |
 | `v1.0.0-alpha.4` | 2026-10-25 — **shipped** | M18 *Resource watch* (the app measures its own memory and CPU against the budget) — cut with the project's own release script | Google TV + Fire TV | The diagnostics screen shows the resident memory and the CPU load against the budgets of NFR-03 and NFR-04 |
 | `v1.0.0-alpha.5` | 2026-11-08 — *planned* | The next milestone that changes the runtime behaviour | Google TV + Fire TV | Depends on what is merged next; the trigger decides, the date is only the plan |
-| `v1.0.0-beta.1` | 2026-11-15 — *planned* | The owner has executed the 15 device test cases | Google TV + Fire TV | The same code as the last alpha, with the device findings fixed |
+| `v1.0.0-beta.1` | 2026-11-15 — *planned* | The owner has executed the 16 device test cases | Google TV + Fire TV | The same code as the last alpha, with the device findings fixed |
 | `v1.0.0-beta.2` | 2026-11-29 | The findings of beta.1 are fixed and re-validated | Google TV + Fire TV | Fixes from the device test round |
 | `v1.0.0` | 2026-12-13 | Two weeks of beta on real devices, no new critical finding, production key | Google TV + Fire TV | The first stable release |
 

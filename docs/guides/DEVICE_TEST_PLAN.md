@@ -734,6 +734,38 @@ adb exec-out screencap -p > /tmp/phairplay-debug-overlay.png
 
 ---
 
+### DT-16 — Picture aspect ratio on a decoder that scales the frame
+
+**Needs hardware:** yes — a device whose decoder scales the picture to the panel.
+The Allwinner H726 in the Magcubic/Gojodoq HY300 dongle reproduces it; any other
+TV works as a control.
+**Covers:** FR-71, AC-4.1 (the video fills the screen without distortion).
+
+**Steps**
+
+```bash
+# 1. mirror a picture with a known aspect ratio from a phone
+#    (a full-screen portrait photo is the easiest to judge by eye)
+# 2. watch the picture on the TV
+# 3. read the size the app decided on
+adb logcat -d | grep -i "VideoDecoder" | grep "output size"
+```
+
+**Expected result**
+
+1. The picture keeps its aspect ratio: a portrait photo stays portrait, a 16:9
+   picture stays 16:9. No horizontal stretching, no black bars on the sides of
+   a picture that fills the height.
+2. The log line `Video output size WxH (…)` names the size that is used. On a
+   device whose decoder scales the frame, the parenthesis contains
+   "the decoder scaled the picture" — that is the expected note there, not an
+   error.
+
+**Time limit:** 2 minutes of mirroring.
+**Evidence:** a photo of the screen, the log line.
+
+---
+
 ## 4. Acceptance criteria that require real hardware
 
 | Criterion | Why the JVM cannot prove it | Case | In the spec? |
@@ -765,6 +797,7 @@ adb exec-out screencap -p > /tmp/phairplay-debug-overlay.png
 | The French texts appear on the device | needs the resource system of the device | DT-12 | **no — gap** |
 | The receiver starts after a reboot | needs a real boot | DT-13 | **no — gap** |
 | The notification and its actions work | needs the system notification UI | DT-14 | **no — gap** |
+| The picture keeps its aspect ratio on a decoder that scales the frame | needs the real decoder of the device | DT-16 | yes (FR-71) |
 
 **Gap list for the spec track.** `docs/spec/ACCEPTANCE_CRITERIA.md` has no
 criterion for the DLNA MediaRenderer, for Miracast, for Google Cast, for the
@@ -772,7 +805,7 @@ pairing PIN, for the German and French user interface, for "start on boot" and
 for the notification — although all of them are implemented or in this cycle's
 scope. The DLNA work of round 1 even contradicts
 `docs/spec/REQUIREMENTS.md` line 180 ("DLNA / UPnP — Out of scope — Not
-planned"). The cases above use the identifiers **DT-01 … DT-15** of this plan
+planned"). The cases above use the identifiers **DT-01 … DT-16** of this plan
 until the spec track adds real AC identifiers.
 
 ---
@@ -820,6 +853,7 @@ Copy this table into the acceptance record and fill it in.
 | DT-13 Start on boot | ☐ pass ☐ fail ☐ n/a | ☐ pass ☐ fail ☐ n/a | | |
 | DT-14 Notification | ☐ pass ☐ fail ☐ n/a | ☐ pass ☐ fail ☐ n/a | | |
 | DT-15 Debug overlay / stability | ☐ pass ☐ fail ☐ n/a | ☐ pass ☐ fail ☐ n/a | | |
+| DT-16 Aspect ratio on a scaling decoder | ☐ pass ☐ fail ☐ n/a | ☐ pass ☐ fail ☐ n/a | | |
 
 `n/a` needs a reason in the notes column (for example "Fire TV has no Wi-Fi
 Direct on this hardware" or "no Cast App ID registered").

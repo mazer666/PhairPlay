@@ -40,6 +40,12 @@ class VideoDecoder(private val outputSurface: Surface) {
     @Volatile
     private var isInitialized = false
 
+    // The size parsed from the stream's SPS — the authoritative size of the content.
+    // The decoder's own numbers may describe a picture the hardware scaled to the panel
+    // (GitHub issue #21), so they are only trusted when they agree with this one.
+    private var referenceWidth = 0
+    private var referenceHeight = 0
+
     /**
      * False once MediaCodec has thrown (entered an unrecoverable error state). The caller should
      * drop this decoder and create a fresh one — error state cannot be cleared by reconfigure.
@@ -93,6 +99,8 @@ class VideoDecoder(private val outputSurface: Surface) {
         // Provisional size for StreamingScreen aspect-fit; replaced by the decoder's reported size.
         StreamStats.videoWidth = actualWidth
         StreamStats.videoHeight = actualHeight
+        referenceWidth = actualWidth
+        referenceHeight = actualHeight
 
         // Create the MediaFormat that describes the H.264 stream to the hardware decoder
         val format = MediaFormat.createVideoFormat(
@@ -278,20 +286,55 @@ class VideoDecoder(private val outputSurface: Surface) {
         }
     }
 
-    /** Reads the decoder's true display size (honouring the crop rectangle) for StreamingScreen. */
+    /**
+     * Publishes the size the on-screen aspect-fit should use.
+     *
+     * WHY the resolver: the decoder's crop rectangle is not always a crop. A decoder that
+     * scales the picture to the panel reports the scaled size as a crop, and using it
+     * stretches the picture (GitHub issue #21). [OutputSizeResolver] compares the crop
+     * with the size parsed from the SPS and keeps the true aspect when they disagree.
+     */
     private fun publishOutputSize(format: MediaFormat) {
-        var w = format.getInteger(MediaFormat.KEY_WIDTH)
-        var h = format.getInteger(MediaFormat.KEY_HEIGHT)
-        if (format.containsKey("crop-left") && format.containsKey("crop-right")) {
-            w = format.getInteger("crop-right") - format.getInteger("crop-left") + 1
-            h = format.getInteger("crop-bottom") - format.getInteger("crop-top") + 1
-        }
-        if (isPlausibleSize(w, h)) {
-            StreamStats.videoWidth = w
-            StreamStats.videoHeight = h
-            Logger.i("Video output size ${w}x$h")
+        val result = OutputSizeResolver.resolve(
+            coded = PictureSize(
+                format.getIntegerOrZero(MediaFormat.KEY_WIDTH),
+                format.getIntegerOrZero(MediaFormat.KEY_HEIGHT),
+            ),
+            crop = readCrop(format),
+            reference = if (referenceWidth > 0 && referenceHeight > 0) {
+                PictureSize(referenceWidth, referenceHeight)
+            } else {
+                null
+            },
+        )
+
+        if (isPlausibleSize(result.width, result.height)) {
+            StreamStats.videoWidth = result.width
+            StreamStats.videoHeight = result.height
+            Logger.i("Video output size ${result.width}x${result.height} (${result.reason})")
         }
     }
+
+    /**
+     * Reads the decoder's crop rectangle.
+     *
+     * @return The cropped size, or null when the decoder reports no usable crop.
+     */
+    private fun readCrop(format: MediaFormat): PictureSize? {
+        if (!format.containsKey("crop-left") || !format.containsKey("crop-right")) return null
+        val left = format.getIntegerOrZero("crop-left")
+        val right = format.getIntegerOrZero("crop-right")
+        val top = format.getIntegerOrZero("crop-top")
+        val bottom = format.getIntegerOrZero("crop-bottom")
+        val width = right - left + 1
+        val height = bottom - top + 1
+        if (width <= 0 || height <= 0) return null
+        return PictureSize(width, height)
+    }
+
+    /** Reads an integer key; a missing or non-integer value counts as 0. */
+    private fun MediaFormat.getIntegerOrZero(key: String): Int =
+        runCatching { getInteger(key) }.getOrDefault(0)
 
     /**
      * Releases all MediaCodec resources.

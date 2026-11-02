@@ -181,7 +181,7 @@ links here instead of carrying a second, drifting copy.
 | **Risk** | The entire acceptance of the product rests on scenarios that a JVM cannot prove: the mDNS picker entry, the picture on the screen, the SSDP answer in a real LAN, the VLC renderer list, the German and French texts, the boot receiver. None of the 15 cases of the device test plan has been executed. |
 | **Likelihood** | **certain** — 0 of 15 cases executed. |
 | **Impact** | **high** — without device tests there is no evidence that the receiver works on a television at all. |
-| **Countermeasure** | The plan exists and is copy-pasteable: `docs/guides/DEVICE_TEST_PLAN.md` with the cases DT-01 … DT-15, hardware list H1–H6, software list S1–S5, time limits per case and a result sheet. The acceptance record `docs/acceptance/QA-DEVICE-TEST-ACCEPTANCE.md` states honestly that the execution is open. |
+| **Countermeasure** | The plan exists and is copy-pasteable: `docs/guides/DEVICE_TEST_PLAN.md` with the cases DT-01 … DT-16, hardware list H1–H6, software list S1–S5, time limits per case and a result sheet. The acceptance record `docs/acceptance/QA-DEVICE-TEST-ACCEPTANCE.md` states honestly that the execution is open. |
 | **Owner** | QA + owner (hardware access) |
 | **Status** | **open** — reason: no hardware was available in this cycle. This is the largest single gap in the release readiness and the reason v1.0.0 cannot be called *stable* yet. |
 
@@ -238,7 +238,7 @@ links here instead of carrying a second, drifting copy.
 | **Impact** | **medium** — a regression that only shows up in the moved code would not be caught by the JVM suite alone. |
 | **Countermeasure** | The moved symbols keep their signature and their visibility, and the suite is green after the split (measured: **549 tests, 0 failures, 0 errors, 0 skipped** in 59 classes). The file-size script passes **without a warning**: `bash scripts/check-file-size.sh` → exit 0, `OK: file size check passed — 189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.` Item R3b of the release checklist is therefore **done**. |
 | **Owner** | Architect / each file owner |
-| **Status** | **open** — reason: the device test plan (DT-01 … DT-15) is the missing proof; it has never been executed. The file-size part of the risk is closed; the behavioural part of the split is not. |
+| **Status** | **open** — reason: the device test plan (DT-01 … DT-16) is the missing proof; it has never been executed. The file-size part of the risk is closed; the behavioural part of the split is not. |
 
 ---
 
@@ -257,7 +257,7 @@ links here instead of carrying a second, drifting copy.
 | R-09 | i18n completeness checked outside the Gradle run | medium | medium | `scripts/check-i18n-completeness.sh` runs in CI and is green; a JVM test would close the gap | QA | mitigated |
 | R-10 | Release key outside the repository | low / medium | high | The owner backs up `~/.config/phairplay/release.jks` outside the team storage | Owner | open |
 | R-11 | Version and changelog drift at release cut | medium | medium | `scripts/release.sh` takes the version as its argument; check it against the changelog before tagging | Release owner | open |
-| R-12 | Device test coverage is zero | certain | high | The device test plan (DT-01 … DT-15) exists and is copy-pasteable; it needs hardware | QA / Owner | open |
+| R-12 | Device test coverage is zero | certain | high | The device test plan (DT-01 … DT-16) exists and is copy-pasteable; it needs hardware | QA / Owner | open |
 | R-13 | 38 test methods never run in CI | certain | medium | The six excluded files need a device run or JVM-safe stubs | QA / Platform | open |
 | R-14 | Miracast / Samsung visibility proven only at protocol level | certain | medium | The protocol side is covered by 29 tests; the device side is DT-09 and the Samsung check | QA | open |
 | R-15 | Samsung Tizen is not a target | certain | medium | Out of scope for v1.0.0; the existing Samsung support serves DLNA televisions | Owner | open (accepted for v1.0.0) |
