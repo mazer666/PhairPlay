@@ -80,16 +80,24 @@ github_build_notes() {
     #      ("Every release lists the device test cases that are still open").
     #      A release that hides an open case is a defect.
     local tag="$1" prerelease="$2" test_status="$3" asset_googletv="$4" asset_firetv="$5" asset_googletv_aab="${6:-}"
-    local previous commits since plan_url
+    local previous commits since plan_url changelog_section
     plan_url="https://github.com/$GH_OWNER/$GH_REPO/blob/main/docs/guides/DEVICE_TEST_PLAN.md"
 
     # WHY the date order and not the version order: this repository still has
     #      releases of an earlier era (v1.0.0-beta.1 … beta.3) whose version
     #      numbers are higher than the alpha train but which are older. The
     #      notes have to name the release that came before — by date.
+    #
+    # WHY the neighbour and not the newest other tag: the direct neighbour in
+    #      the date order is the release that came before this one. The newest
+    #      other tag is the release that came *after* it, which is wrong when
+    #      an older release is rebuilt.
     previous=$(git -C "$REPO_ROOT" for-each-ref --sort=-creatordate \
         --format="%(refname:short)" refs/tags 2>/dev/null \
-        | grep -v "^${tag}$" | head -1)
+        | awk -v tag="$tag" '
+            $0 == tag { found = 1; next }
+            found && !printed { print; printed = 1 }
+        ')
     if [ -n "$previous" ]; then
         commits=$(git -C "$REPO_ROOT" log --pretty=format:"- %s" "$previous..$tag" 2>/dev/null | head -30)
         since="since $previous"
@@ -99,10 +107,33 @@ github_build_notes() {
     fi
     [ -n "$commits" ] || commits="- no commit since the last release"
 
+    # The prose of the release comes from the CHANGELOG — one source of truth
+    # for what a release is. A list of commit messages alone tells the owner
+    # nothing about what changed for the user.
+    changelog_section=""
+    if [ -f "$REPO_ROOT/CHANGELOG.md" ]; then
+        changelog_section=$(awk -v tag="$tag" '
+            index($0, "## [" tag "]") == 1 { inside = 1; next }
+            inside && /^## / { exit }
+            inside { print }
+        ' "$REPO_ROOT/CHANGELOG.md")
+    fi
+
     cat <<EOF
 ## What's changed ($since)
 
 $commits
+EOF
+    if [ -n "$changelog_section" ]; then
+        cat <<EOF
+
+---
+
+$changelog_section
+EOF
+    fi
+
+    cat <<EOF
 
 ---
 
