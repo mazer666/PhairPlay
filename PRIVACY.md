@@ -1,7 +1,7 @@
 # Privacy policy of PhairPlay
 
-**Last updated:** 2026-10-24
-**Applies to:** PhairPlay for Google TV and Fire TV, version 1.0.0-beta.3
+**Last updated:** 2026-11-02
+**Applies to:** every version of PhairPlay for Google TV and Fire TV, from 1.0.0-alpha.1 on
 
 PhairPlay shows the screen of your phone or laptop on your television. It is a
 receiver, not a service: there is no account, no cloud, and no company behind it
@@ -9,6 +9,15 @@ that could collect anything. This policy is short because the application does
 not do what most applications do.
 
 ---
+
+## 0. Where you can read this
+
+* **In the app:** Settings → About → **Privacy policy**. The entry opens this
+  document; on a television without a browser the address is shown instead, so
+  you can read it on your phone.
+* **On the web:** <https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md>
+* **In the store listing:** the same address is given in the Google Play entry
+  of the app.
 
 ## 1. The short version
 

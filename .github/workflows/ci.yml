@@ -20,12 +20,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Make the check scripts executable
-        run: chmod +x scripts/check-file-size.sh scripts/check-kdoc-headers.sh scripts/check-docs-links.sh scripts/check-i18n-completeness.sh
+        run: chmod +x scripts/check-file-size.sh scripts/check-kdoc-headers.sh scripts/check-docs-links.sh scripts/check-i18n-completeness.sh scripts/check-privacy-policy.sh
 
-      # The four scripts are the machine-readable form of the project rules in
+      # The five scripts are the machine-readable form of the project rules in
       # docs/CONTRIBUTING.md. Every one of them exits 1 when it finds a
       # violation, so a red script makes the job — and the build — red.
-      # All four run even if an earlier one fails, so one push shows the
+      # All five run even if an earlier one fails, so one push shows the
       # complete list of problems instead of one problem per push.
       # The KDoc check runs with --skip-nested, because a nested declaration is
       # documented by the KDoc header of the class that contains it.
@@ -38,7 +38,8 @@ jobs:
             check-file-size \
             check-kdoc-headers \
             check-docs-links \
-            check-i18n-completeness
+            check-i18n-completeness \
+            check-privacy-policy
           do
             args=()
             if [ "$check" = "check-kdoc-headers" ]; then

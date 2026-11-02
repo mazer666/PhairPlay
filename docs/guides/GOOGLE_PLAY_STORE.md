@@ -75,16 +75,32 @@ app/build/outputs/bundle/googletvRelease/app-googletv-release.aab
    - **Free or paid:** `Free`
 3. Accept the Developer Program Policies and US export laws, then click **Create app**.
 
+### What the bundle already satisfies
+
+These are the technical conditions Google checks. They are **measured**, not
+assumed:
+
+| Condition | Requirement | State |
+|---|---|---|
+| Target API level | Android TV apps must target **API 34** or higher (the general API 36 rule does not apply to TV) | the app targets **API 35** — compliant |
+| Android App Bundle | mandatory for every new TV app | `PhairPlay-<version>-GoogleTV.aab` is built and signed by `scripts/release.sh` |
+| 64-bit | required since 1 August 2026 | `arm64-v8a` and `x86_64` are in the bundle |
+| 16 KB page sizes | required since 1 August 2026 | the 64-bit native libraries are aligned to `0x4000`; `zipalign -c -P 16 -v 4` on the APK reports every `.so` as **OK** |
+| TV banner | required | `docs/playstore/assets/tv-banner-1280x720.png` |
+| TV screenshot | at least one | two in `docs/playstore/assets/` |
+| Privacy policy | in the store listing **and** inside the app | the app has the entry *Privacy policy* in the settings |
+
 ### Step 2 — Opt into Android TV (Form factors)
 
 > **Why this step is critical:** An app that declares `LEANBACK_LAUNCHER` in its
 > manifest is **not** distributed to Android TV / Google TV devices until you
 > explicitly opt into the Android TV form factor in Play Console.
 
-1. In the left menu, open **Test and release → Setup → Advanced settings**.
+1. In the left menu, open **Setup → Advanced settings**.
 2. Open the **Form factors** tab.
-3. Click **+ Add form factor** and select **Android TV**.
-4. Follow the two prompts that appear for Android TV:
+3. Click **+ Add release type** and select **Android TV**.
+4. Confirm the opt-in and agree to the Android TV review policy.
+5. Follow the two prompts that appear for Android TV:
    - Upload the Android TV banner ([`../playstore/assets/tv-banner-1280x720.png`](../playstore/assets/tv-banner-1280x720.png)) and the two TV screenshots ([`../playstore/assets/tv-screenshot-1-home-1920x1080.png`](../playstore/assets/tv-screenshot-1-home-1920x1080.png), [`../playstore/assets/tv-screenshot-2-diagnostics-1920x1080.png`](../playstore/assets/tv-screenshot-2-diagnostics-1920x1080.png)).
    - Select **Opt-in to Android TV**.
 
@@ -95,7 +111,7 @@ card with the exact values below:
 
 | Declaration | What to select |
 |---|---|
-| **Privacy policy** | Enter `https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md` |
+| **Privacy policy** | Enter `https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md` — the same policy is reachable from inside the app (Settings → About → Privacy policy), which Google Play asks for as well. The gate `scripts/check-privacy-policy.sh` proves that the policy names every declared permission. |
 | **Ads** | **No, my app does not contain ads** |
 | **App access** | **All functionality in my app is available without any access restrictions** |
 | **Content ratings** | Fill out the IARC questionnaire: select **Utility, Productivity, Communication, or Other** → answer **No** to all violence/user-generated content/sharing/location questions |
@@ -152,7 +168,7 @@ When you upload your first `.aab` under **Test and release → Production** (or
 
 1. Google Play enables **Play App Signing**.
 2. Your local release key (`~/.config/phairplay/phairplay-release.jks`, SHA-1
-   `D3:79:31:20:0D:67:7A:58:C1:58:17:27:65:B2:49:84:2A:3B:F8:77`) acts as your
+   `F4:BF:7B:F0:E1:40:1D:0C:33:EE:85:C2:51:FF:24:12:1B:D5:7C:E4`) acts as your
    **Upload Key**.
 3. If you let Google generate a separate **App Signing Key**, open
    **Test and release → Setup → App signing** and copy the **SHA-1 certificate
@@ -160,4 +176,4 @@ When you upload your first `.aab` under **Test and release → Production** (or
    custom Cast Application ID in the [Google Cast Developer Console](CAST_APP_ID.md),
    use that Play App Signing SHA-1 for the Play Store distribution (or choose
    *Export and upload a key from Java keystore* during setup so Play Store and
-   GitHub Releases share the exact same certificate `D37931200D677A58C158172765B249842A3BF877`).
+   GitHub Releases share the exact same certificate `F4BF7BF0E1401D0C33EE85C251FF24121BD57CE4`).

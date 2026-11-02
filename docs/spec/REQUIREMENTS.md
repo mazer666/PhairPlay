@@ -7,7 +7,7 @@ Date: 2026-10-24
 > **Change log v3.0 (2026-10-24).** The UPnP / DLNA MediaRenderer is no longer
 > "out of scope": it is implemented (package `com.phairplay.dlna`, ADR-004 phases
 > D1–D4) and is therefore described by its own requirement section (§1.9).
-> FR-04 and FR-06 were amended (four receivers, not three). FR-44 … FR-71 were
+> FR-04 and FR-06 were amended (four receivers, not three). FR-44 … FR-73 were
 > added, NFR-26 … NFR-31 were added. §3 now lists DLNA as in scope and Miracast
 > media decoding as an explicit, reasoned exclusion. The milestone numbering of
 > `ACCEPTANCE_CRITERIA.md` was reconciled with `PROJECT_PLAN.md`; see the mapping
@@ -220,6 +220,11 @@ PhairPlay actually does — not what a Miracast sink would do.
 ### 1.16 Video aspect ratio robustness
 
 - FR-71: When the hardware decoder reports a crop rectangle whose aspect ratio differs from the aspect ratio of the coded picture by more than 5%, the app MUST treat that rectangle as a **scaled picture** and MUST use the coded aspect ratio (parsed from the stream's SPS) for the on-screen aspect-fit. A decoder that scales the picture to the panel and reports the scaled size as a crop rectangle would otherwise stretch the picture horizontally. *Implementation: `com.phairplay.airplay.OutputSizeResolver`, `VideoDecoder.publishOutputSize`. Proof: `OutputSizeResolverTest`.*
+
+### 1.17 Privacy policy and store publication
+
+- FR-72: The app MUST offer the privacy policy from its own settings, so that the policy is reachable **inside the app** and not only in a store listing. *Implementation: the row "Privacy policy" in `SettingsFragment`, the URL in the string resource `privacy_policy_url`. Proof: the privacy policy gate `scripts/check-privacy-policy.sh` and the APK build.*
+- FR-73: The privacy policy MUST name **every** permission the app declares, and it MUST NOT be older than the manifest. Google Play reviews the policy against the app — a permission without a mention in the policy is a finding in the review. *Proof: `scripts/check-privacy-policy.sh` with its self-test `scripts/test-check-privacy-policy.sh` (six cases, including the negative ones).*
 
 ---
 

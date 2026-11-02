@@ -44,6 +44,7 @@ DEFAULT_MEDIA_RECEIVER_ID="CC1AD845"
 bold() { printf '\033[1m%s\033[0m\n' "$*"; }
 red()  { printf '\033[0;31m%s\033[0m\n' "$*"; }
 green(){ printf '\033[0;32m%s\033[0m\n' "$*"; }
+yellow(){ printf '\033[0;33m%s\033[0m\n' "$*"; }
 
 die() { red "ERROR: $*" >&2; exit 1; }
 
@@ -148,6 +149,31 @@ echo "#   $OWNER"
 echo "#"
 echo "# The console asks for the fingerprint **without** the colons:"
 echo "#   $(printf '%s' "$SHA1" | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+echo ""
+
+# ── The guide must name the same fingerprint ─────────────────────────────────
+#
+# WHY: the guide carries the fingerprint as text, and a wrong one costs the
+#      registration: the Cast receiver then refuses to start, and the owner
+#      does not know why. The fingerprint in the documentation is compared with
+#      the one of the key that is really there.
+GUIDE="$REPO_ROOT/docs/guides/CAST_APP_ID.md"
+if [ -f "$GUIDE" ]; then
+    # WHY the length range and not a fixed number: a SHA-1 fingerprint with
+    #      colons is 59 characters, a SHA-256 one is 95. The range accepts both
+    #      — the comparison with the keystore is what decides.
+    DOCUMENTED=$(sed -n 's/.*SHA-1 fingerprint of the signing certificate.*`\([0-9A-Fa-f:]\{30,\}\)`.*/\1/p' "$GUIDE" | head -1)
+    if [ -z "$DOCUMENTED" ]; then
+        yellow "The guide $GUIDE does not name a SHA-1 fingerprint — check the table in it."
+    elif [ "$DOCUMENTED" != "$SHA1" ]; then
+        red "The guide names a different fingerprint than the key:"
+        echo "     guide:  $DOCUMENTED"
+        echo "     key:    $SHA1"
+        echo "  The registration would fail. Correct the guide before you register."
+    else
+        green "The guide and the keystore name the same fingerprint."
+    fi
+fi
 echo ""
 
 bold "=== What to enter in the console ==="

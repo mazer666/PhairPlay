@@ -467,9 +467,52 @@ release is only built when every condition of its row is true.
 
 | Stage | Trigger — all conditions must hold | Platforms in the release | Artifacts |
 |---|---|---|---|
-| **Alpha** | 1. A milestone that changes the runtime behaviour is merged.<br>2. `:test-runner:test` is green (0 failures, 0 errors, 0 skipped).<br>3. The quality gate is green: `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`, `scripts/check-i18n-completeness.sh`, `scripts/check-docs-links.sh`.<br>4. Lint is green for **both** flavours.<br>5. Both APK flavours build. | **Google TV** (Android 10+, `com.phairplay.googletv`)<br>**Fire TV** (Android 7.1+, `com.phairplay.firetv`) | Signed release APKs (minified, resources shrunk) + source tag |
+| **Alpha** | 1. A milestone that changes the runtime behaviour is merged.<br>2. `:test-runner:test` is green (0 failures, 0 errors, 0 skipped).<br>3. The quality gate is green: `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`, `scripts/check-i18n-completeness.sh`, `scripts/check-docs-links.sh`, `scripts/check-privacy-policy.sh`.<br>4. Lint is green for **both** flavours.<br>5. Both APK flavours build. | **Google TV** (Android 10+, `com.phairplay.googletv`)<br>**Fire TV** (Android 7.1+, `com.phairplay.firetv`) | Signed release APKs (minified, resources shrunk) + source tag |
 | **Beta** | 1. Every case of [`../guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) has been executed on real hardware — 16 of 16.<br>2. The decisive cases are green: **DT-09** (VLC renderer list), **DT-10** (Windows "Cast to Device"), **DT-12** (Samsung Smart View), **DT-13/DT-14** (playback), **DT-15** (30-minute session), **DT-16** (picture aspect ratio).<br>3. The performance numbers are measured, not estimated: RAM, CPU load, frame rate, latency (see [`../quality/QUALITY.md`](../quality/QUALITY.md)).<br>4. No open finding of severity S1 or S2 (see [`../project/RISKS.md`](../project/RISKS.md)).<br>5. The acceptance records M01 … M12 name the device they were validated on. | **Google TV** — validated on a real Google TV / Android TV device<br>**Fire TV** — validated on a real Fire TV device | Signed release APKs + release notes listing the known limitations |
 | **Stable** | 1. A beta has been in the owner's hands for **at least two weeks** without a new critical finding.<br>2. Every acceptance record carries a *device validated* decision — no *"not measured"* left in a performance field.<br>3. The checklist in [`../project/RELEASE_READINESS.md`](../project/RELEASE_READINESS.md) is complete.<br>4. The release is signed with the **owner's production key** (an alpha key must not be used for a stable release).<br>5. The changelog and the release notes state the platform, the minimum Android version and the known limitations. | **Google TV** and **Fire TV** — both, always. A stable release that ships for one platform only is a defect, not a decision. | Signed release APKs + changelog + release notes |
+
+### Publication in the Google Play Store
+
+The Play Store is **not** a stage of its own: it publishes a release that
+already exists. The AAB of a release is the artefact, and the publication is
+the owner's work in the Play Console — the account, the payments and the
+agreements belong to the owner.
+
+**What the project delivers**
+
+* The signed Android App Bundle (`.aab`) of every release — built and verified
+  by `scripts/release.sh` together with the two APKs.
+* The store graphics (`docs/playstore/assets/`), the listing texts and the
+  step-by-step guide (`docs/guides/GOOGLE_PLAY_STORE.md`).
+* A privacy policy that is reachable from inside the app and that names every
+  declared permission (FR-72, FR-73, gate `scripts/check-privacy-policy.sh`).
+
+**What the owner does** — the order matters, because each step depends on the
+one before it:
+
+| # | Step | Why the order matters |
+|---|---|---|
+| 1 | Create the app in the Play Console | the package name `com.phairplay.googletv` and the app name are fixed |
+| 2 | Complete the declarations (privacy policy, ads, data safety, content rating, target audience, foreground service) | the review checks them before anything else |
+| 3 | Upload the `.aab` of the release to **internal testing** | the upload key is what Google signs the app with afterwards |
+| 4 | Read the **Play App Signing** SHA-1 in *Setup → App integrity* | this is the fingerprint the app has on the device — not the fingerprint of the upload key |
+| 5 | Register the **Google Cast Application ID** with that Play fingerprint | a Cast ID registered with the upload key does not work on the Play-installed app |
+| 6 | Opt into the Android TV form factor (*Setup → Advanced settings → Form factors → Android TV*) | without the opt-in the app is never offered on a television |
+| 7 | Roll out to production | the app becomes visible in the store |
+
+**The trigger for the production rollout:** the device tests of the release are
+executed (16 of 16) **and** the internal testing track has been used on a real
+Google TV. A store release without a device test is a defect, not a decision.
+
+**Two facts that cost time if they are unknown**
+
+* **Play App Signing changes the signature.** The app installed from the store
+  is signed by Google, not by the local release key. An app that was sideloaded
+  therefore has to be **uninstalled once** before the store version can be
+  installed.
+* **The Android TV review is a separate review.** Google checks the app against
+  the TV quality guidelines (a banner, at least one screenshot, 64-bit, 16 KB
+  page sizes) — all of which the current bundle already satisfies.
 
 ### Release train
 

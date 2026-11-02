@@ -184,6 +184,10 @@
     <string name="diagnostics_copy_failed">Die Zwischenablage ist nicht verfügbar</string>
     <string name="setting_diagnostics">Diagnose</string>
     <string name="setting_diagnostics_subtitle">Zustand des Empfängers anzeigen und lokalen Selbsttest ausführen</string>
+    <string name="setting_privacy">Datenschutzerklärung</string>
+    <string name="setting_privacy_subtitle">Was die App speichert und was sie sendet</string>
+    <string name="privacy_policy_url">https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md</string>
+    <string name="privacy_policy_no_browser">Auf diesem Fernseher kann keine App eine Webseite öffnen. Die Datenschutzerklärung steht hier:\n\n%1$s</string>
 
     <!-- Die gemessenen Werte des App-Prozesses im Vergleich zu ihren Budgets -->
     <string name="diagnostics_status_over_budget">über Budget</string>

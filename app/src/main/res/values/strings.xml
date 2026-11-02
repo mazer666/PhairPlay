@@ -183,6 +183,10 @@
     <string name="diagnostics_copy_failed">The clipboard is not available</string>
     <string name="setting_diagnostics">Diagnostics</string>
     <string name="setting_diagnostics_subtitle">Show the state of the receiver and run a local self-test</string>
+    <string name="setting_privacy">Privacy policy</string>
+    <string name="setting_privacy_subtitle">What the app stores and what it sends</string>
+    <string name="privacy_policy_url">https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md</string>
+    <string name="privacy_policy_no_browser">No app on this TV can open a web page. The privacy policy is at:\n\n%1$s</string>
 
     <!-- The measured values of the app process against their budgets -->
     <string name="diagnostics_status_over_budget">over budget</string>

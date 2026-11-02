@@ -12,7 +12,7 @@
 
 # The four repository checks of the quality gate. They need neither Gradle nor
 # an Android SDK, only bash — and each of them exits 1 on a violation.
-QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness check-docs-links"
+QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness check-docs-links check-privacy-policy"
 
 # The memory settings of every Gradle call of the release.
 #

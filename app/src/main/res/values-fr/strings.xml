@@ -192,6 +192,10 @@
     <string name="diagnostics_copy_failed">Le presse-papiers n\'est pas disponible</string>
     <string name="setting_diagnostics">Diagnostic</string>
     <string name="setting_diagnostics_subtitle">Afficher l\'état du récepteur et lancer un auto-test local</string>
+    <string name="setting_privacy">Politique de confidentialité</string>
+    <string name="setting_privacy_subtitle">Ce que l\'application stocke et ce qu\'elle envoie</string>
+    <string name="privacy_policy_url">https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md</string>
+    <string name="privacy_policy_no_browser">Aucune application de cette TV ne peut ouvrir de page web. La politique de confidentialité est ici :\n\n%1$s</string>
 
     <!-- Les valeurs mesurées du processus de l\'application face à leurs budgets -->
     <string name="diagnostics_status_over_budget">au-dessus du budget</string>

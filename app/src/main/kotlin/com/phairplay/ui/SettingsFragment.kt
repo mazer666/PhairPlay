@@ -1,6 +1,9 @@
 package com.phairplay.ui
 
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import com.phairplay.service.ServiceController
 import android.text.InputFilter
@@ -61,6 +64,7 @@ class SettingsFragment : Fragment() {
     private lateinit var rowForceHighRes: View
     private lateinit var textVersionValue: TextView
     private lateinit var rowDiagnostics: View
+    private lateinit var rowPrivacy: View
     private lateinit var rowReset: LinearLayout
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
@@ -101,6 +105,7 @@ class SettingsFragment : Fragment() {
         rowForceHighRes     = view.findViewById(R.id.row_force_high_res)
         textVersionValue    = view.findViewById(R.id.text_version_value)
         rowDiagnostics      = view.findViewById(R.id.row_diagnostics)
+        rowPrivacy          = view.findViewById(R.id.row_privacy)
         rowReset            = view.findViewById(R.id.row_reset)
     }
 
@@ -207,6 +212,7 @@ class SettingsFragment : Fragment() {
         setToggleListener(rowForceHighRes) { enabled -> save { it.copy(forceHighResolution = enabled) } }
 
         rowDiagnostics.setOnClickListener { openDiagnostics() }
+        rowPrivacy.setOnClickListener { openPrivacyPolicy() }
         rowReset.setOnClickListener { resetSettings() }
     }
 
@@ -227,6 +233,33 @@ class SettingsFragment : Fragment() {
             .addToBackStack(null)
             .commit()
         Logger.d("Settings: opening the diagnostics screen")
+    }
+
+    /**
+     * Opens the privacy policy.
+     *
+     * WHY this entry exists: Google Play requires a privacy policy that is reachable
+     * **from inside the app** — a policy that only lives in the store listing does
+     * not pass the review.
+     *
+     * WHY the fallback: many televisions have no browser at all. When nothing can
+     * open the address, the address itself is shown in a dialog, so the viewer can
+     * read it on another device instead of pressing a button that does nothing.
+     */
+    private fun openPrivacyPolicy() {
+        val url = getString(R.string.privacy_policy_url)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        try {
+            startActivity(intent)
+            Logger.d("Settings: opening the privacy policy in an external app")
+        } catch (e: ActivityNotFoundException) {
+            Logger.w("Settings: no app can open the privacy policy — showing the address")
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.setting_privacy)
+                .setMessage(getString(R.string.privacy_policy_no_browser, url))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
     }
 
     private fun setToggleListener(row: View, onChanged: (Boolean) -> Unit) {
