@@ -16,17 +16,16 @@ QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness
 
 # The memory settings of every Gradle call of the release.
 #
-# WHY the out-of-process Kotlin compiler: by default the Kotlin compiler runs in
-#      its own daemon JVM, and that daemon keeps its heap while R8 needs the
-#      rest of the memory — on a 3 GB machine the kernel kills the build in
-#      :app:minifyGoogletvReleaseWithR8. Compiling "in-process" does not help
-#      either: the compiler's memory then stays in the same JVM as R8. With
-#      "out-of-process" the compiler runs in a short-lived fork that exits
-#      before the shrinking starts, so the two never compete.
+# WHY the in-process Kotlin compiler: the default runs the compiler in its own
+#      daemon JVM, and that daemon keeps its heap alive while R8 needs the rest
+#      of the memory. On a 3 GB machine the kernel kills the build in
+#      :app:minifyGoogletvReleaseWithR8 — without a message in the log. With
+#      "in-process" there is only one JVM, and the compiler's memory is garbage
+#      that the GC can hand back before the shrinking starts.
 #
 # WHY 1400 MB: R8 needs the memory for the shrinking; 1024 MB was not enough
 #      for the release build of the app.
-GRADLE_MEMORY_OPTIONS="-Dorg.gradle.jvmargs=-Xmx1400m -Pkotlin.compiler.execution.strategy=out-of-process"
+GRADLE_MEMORY_OPTIONS="-Dorg.gradle.jvmargs=-Xmx1400m -Pkotlin.compiler.execution.strategy=in-process"
 
 build_prepare_environment() {
     # Prepares the Android SDK and the JDK for the build and writes
@@ -111,8 +110,18 @@ build_release_apks() {
     # other — plus the Google Play Store Android App Bundle (.aab) for the
     # googletv flavour. Both flavours always ship (PROJECT_PLAN § "Release
     # Schedule": "One version, both platforms.").
+    #
+    # WHY the compile runs in its own call: the Kotlin compiler and R8 are the
+    #      two memory hogs of a release build. Together they need more than a
+    #      3 GB machine has — the kernel then kills the build in the middle of
+    #      :app:minify…ReleaseWithR8, without a message in the log. In two
+    #      calls the compiler is gone before R8 starts, and R8 is up to date in
+    #      the second call, so the two never compete for the memory.
     local flavor
     for flavor in googletv firetv; do
+        step "Compiling the $flavor release (the memory hog comes first)"
+        build_gradle ":app:compile${flavor}ReleaseKotlin" --stacktrace \
+            || die "The $flavor release compile failed — the release is aborted."
         step "Building the $flavor release APK"
         build_gradle ":app:assemble${flavor}Release" --stacktrace \
             || die "The $flavor release build failed — the release is aborted."
