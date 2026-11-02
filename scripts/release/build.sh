@@ -14,6 +14,19 @@
 # an Android SDK, only bash — and each of them exits 1 on a violation.
 QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness check-docs-links"
 
+# The memory settings of every Gradle call of the release.
+#
+# WHY the in-process Kotlin compiler: by default the Kotlin compiler runs in
+#      its own daemon JVM. During a release build that daemon is idle but keeps
+#      its heap, and R8 needs the rest of the memory — on a 3 GB machine the
+#      kernel kills the build in :app:minifyGoogletvReleaseWithR8. With
+#      "in-process" there is only one JVM, and its heap is capped here.
+#
+# WHY 1400 MB: the Kotlin compiler and R8 share that one JVM. 1024 MB was not
+#      enough for the release build of the app (the Kotlin compile of the app
+#      and the shrinking of the resources run one after the other).
+GRADLE_MEMORY_OPTIONS="-Dorg.gradle.jvmargs=-Xmx1400m -Pkotlin.compiler.execution.strategy=in-process"
+
 build_prepare_environment() {
     # Prepares the Android SDK and the JDK for the build and writes
     # local.properties (which is in .gitignore and stays on the machine).
@@ -75,7 +88,7 @@ build_run_quality_gate() {
 build_run_tests() {
     # Runs the JVM protocol suite of the release trigger.
     step "JVM protocol suite (:test-runner:test)"
-    if ! ( cd "$REPO_ROOT" && ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx1024m" :test-runner:test ); then
+    if ! ( cd "$REPO_ROOT" && ./gradlew --no-daemon $GRADLE_MEMORY_OPTIONS :test-runner:test ); then
         die "The JVM protocol suite is red — the release is aborted. Fix the failures and run the release again."
     fi
     green "The JVM protocol suite is green."
@@ -85,10 +98,15 @@ build_gradle() {
     # build_gradle <task> — runs the Gradle wrapper with the memory settings
     # of the project.
     #
-    # WHY: "--no-daemon" and the capped heap. A release build with R8 needs
-    #      more memory than a small laptop has; a daemon keeps that memory
-    #      alive between the two flavours and the kernel kills the process.
-    ( cd "$REPO_ROOT" && ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx1024m" "$@" )
+    # WHY "--no-daemon", the capped heap and the in-process Kotlin compiler:
+    #      a release build with R8 needs more memory than a small laptop has.
+    #      With the default settings the Kotlin compiler runs in its own daemon
+    #      JVM, so two JVMs compete for the memory while R8 is running — the
+    #      kernel then kills the build (observed on a 3 GB machine: the build
+    #      died in :app:minifyGoogletvReleaseWithR8). Compiling in-process
+    #      keeps everything in one JVM, and the heap cap keeps that JVM small
+    #      enough to survive.
+    ( cd "$REPO_ROOT" && ./gradlew --no-daemon $GRADLE_MEMORY_OPTIONS "$@" )
 }
 
 build_release_apks() {
