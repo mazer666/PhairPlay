@@ -132,13 +132,13 @@ between "the script said it worked" and "the release is good":
 | Symptom | Cause | What to do |
 |---|---|---|
 | `Quality gate failed` | One of the four checks is red | **Do not publish.** Fix the cause first — the message names the file and the line. |
-| `The version ... does not follow the release scheme` | The tag is not `v<major>.<minor>.<patch>[-<stage>.<n>]` | Use the correct scheme, for example `v1.0.0-alpha.4`. |
+| `The version ... does not follow the release scheme` | The tag is not `v<major>.<minor>.<patch>[-<stage>.<n>]` | Use the correct scheme, for example `v1.0.0-alpha.7`. |
 | `The version inside the APK does not match the tag` | The build used a stale `app/build.gradle.kts` | The script bumps the file itself; if this appears, the working tree was changed after the bump. Start again. |
 | `The APK is not signed` | `KEYSTORE_PATH` does not point at the keystore, or the password is wrong | Check `~/.config/phairplay/release.env`. The file must exist and be readable. |
 | `401 Unauthorized` | The GitHub token expired or has the wrong scope | Create a new token with the scope `repo` and update `GITHUB_TOKEN` in `release.env`. |
 | `404` during the asset upload | The upload went to the wrong host | The script uses `uploads.github.com` for assets — an upload against `api.github.com` answers 404. |
 | `The tag exists already` | A previous run got as far as the tag | If the tag points at the current commit, the script rebuilds the release. If it points elsewhere, delete it: `git tag -d <tag> && git push origin :refs/tags/<tag>` |
-| The build dies with `Gradle build daemon disappeared` | The machine ran out of memory during the release build (R8 is hungry) | Close other programs and run the script again. The script already caps the heap and builds one flavour at a time. |
+| The build dies with `Gradle build daemon disappeared`, or the build stops silently in `:app:minify…ReleaseWithR8` | The machine ran out of memory during the release build (R8 is hungry) | Close other programs and run the script again. The script caps the heap at 1400 MB, compiles the Kotlin code in a short-lived fork and builds one flavour at a time — on a 3 GB machine that is the difference between a finished build and a killed one. |
 | `git push` fails | No write access, or the branch is protected | Check the remote: `git remote -v`. The script pushes to the branch the release plan names. |
 
 **A failed release is not a problem — an unchecked release is.** If the script
