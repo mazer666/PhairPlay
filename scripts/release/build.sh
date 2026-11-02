@@ -23,9 +23,12 @@ QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness
 #      "in-process" there is only one JVM, and the compiler's memory is garbage
 #      that the GC can hand back before the shrinking starts.
 #
-# WHY 1400 MB: R8 needs the memory for the shrinking; 1024 MB was not enough
-#      for the release build of the app.
-GRADLE_MEMORY_OPTIONS="-Dorg.gradle.jvmargs=-Xmx1400m -Pkotlin.compiler.execution.strategy=in-process"
+# WHY 1100 MB: the shrinking (R8) needs about 1.3 GB of heap for this app, and
+#      the JVM holds another 600 MB beside it (metaspace, code cache, the
+#      mapped input files). On a 3 GB machine a larger heap makes the kernel
+#      kill the build in the middle of the shrinking — without a message in the
+#      log. 1100 MB was measured: both flavours and the bundle build with it.
+GRADLE_MEMORY_OPTIONS="-Dorg.gradle.jvmargs=-Xmx1100m -Pkotlin.compiler.execution.strategy=in-process"
 
 build_prepare_environment() {
     # Prepares the Android SDK and the JDK for the build and writes
