@@ -18,19 +18,19 @@ PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and 
 
 ## Current Status
 
-**The latest published release is [`v1.0.0-alpha.4`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.4) (2026-10-25)** — it adds the **resource watch**: the app measures its own memory and CPU against the budgets of the project (150 MB, 30 %) and shows them in the diagnostics screen, so two of the four performance criteria stop being “not measured” — the owner reads them off the screen while the 30-minute test runs. It was **cut with the project's own release script** (`scripts/release.sh`, guide in [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)), which refuses to publish anything it has not checked itself. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+). It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
+**The latest published release is [`v1.0.0-alpha.6`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.6) (2026-11-02)** — it fixes a **stretched AirPlay picture**: some hardware decoders scale the decoded picture to the panel and report that scaled size as a crop, and PhairPlay used to trust it ([issue #21](https://github.com/mazer666/PhairPlay/issues/21)). The crop is now only used when its aspect ratio agrees with the size parsed from the stream's SPS; otherwise the coded aspect wins, which undoes the distortion. The release was **cut with the project's own release script** (`scripts/release.sh`, guide in [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)), which refuses to publish anything it has not checked itself. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+), plus the Google Play Store bundle. It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
 
 The AirPlay 2 stack is implemented end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote.
 
 The **UPnP/DLNA MediaRenderer is implemented** — not planned. The package `com.phairplay.dlna` holds 28 production files: SSDP discovery, the device description server, the SOAP control plane (`ConnectionManager`, `AVTransport`, `RenderingControl`), GENA eventing and the Samsung Smart View extension. Miracast and Google Cast are still control-plane only.
 
-> **Nothing in this README has been tested on a television.** No device test has ever been executed — 0 of the 15 cases of [`docs/guides/DEVICE_TEST_PLAN.md`](docs/guides/DEVICE_TEST_PLAN.md) have been run, because no television was available. Everything below is proven by the automated test suite and by reading the code. What that does **not** say is listed under [Known Limitations](#known-limitations).
+> **Nothing in this README has been tested on a television.** No device test has ever been executed — 0 of the 16 cases of [`docs/guides/DEVICE_TEST_PLAN.md`](docs/guides/DEVICE_TEST_PLAN.md) have been run, because no television was available. Everything below is proven by the automated test suite and by reading the code. What that does **not** say is listed under [Known Limitations](#known-limitations).
 
 **The quality gates are green** — measured on the current tree:
 
 | Gate | Command | Result |
 |---|---|---|
-| JVM test suite | `./gradlew :test-runner:test` | 551 tests, 0 failures, 0 errors, 0 skipped (63 test classes) |
+| JVM test suite | `./gradlew :test-runner:test` | 592 tests, 0 failures, 0 errors, 0 skipped (66 test classes) |
 | Android lint | `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug` | `No issues found.` for both flavours |
 | Debug APKs | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug` | both build — Google TV 29.3 MB, Fire TV 16.3 MB |
 | Repository checks | the four `scripts/check-*.sh` (see [Option B](#option-b-build-from-source)) | all four green — file size, KDoc headers, documentation links, language completeness |
@@ -148,8 +148,8 @@ Go to the [Releases page](https://github.com/mazer666/PhairPlay/releases) and do
 
 | APK | Device | Latest release |
 |-----|--------|----------------|
-| `PhairPlay-1.0.0-alpha.4-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.4`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.4) |
-| `PhairPlay-1.0.0-alpha.4-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.4`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.4) |
+| `PhairPlay-1.0.0-alpha.6-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.6`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.6) |
+| `PhairPlay-1.0.0-alpha.6-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.6`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.6) |
 
 Then install it via ADB (see the Sideloiding Guide below) or a sideloading app like *Downloader* on Fire TV.
 
@@ -291,7 +291,7 @@ workarounds are in [`docs/guides/CASTING_TO_A_TV.md`](docs/guides/CASTING_TO_A_T
 ## Known Limitations
 
 - **Beta software** — the AirPlay 2 stack is complete but real-device validation with various macOS/iOS senders is ongoing. Please report issues.
-- **No device test has ever been executed.** The 15 cases of [`docs/guides/DEVICE_TEST_PLAN.md`](docs/guides/DEVICE_TEST_PLAN.md) have never been run, because no television was available for this cycle. Every statement in this README comes from the automated test suite and from reading the code — none of it is confirmed on real hardware.
+- **No device test has ever been executed.** The 16 cases of [`docs/guides/DEVICE_TEST_PLAN.md`](docs/guides/DEVICE_TEST_PLAN.md) have never been run, because no television was available for this cycle. Every statement in this README comes from the automated test suite and from reading the code — none of it is confirmed on real hardware.
 - **Apple Music in-app audio is not decryptable.** macOS protects it with FairPlay on every AirPlay path. Route the Mac's system audio output instead (works fine).
 - **FairPlay-protected video** (Netflix, Disney+, Apple TV+) cannot be mirrored — this is Apple's DRM, not a PhairPlay limitation.
 - **Buffered audio (AirPlay 2 type 103)** is accepted but not yet played back.

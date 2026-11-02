@@ -41,7 +41,7 @@ signature with `jarsigner`, and uploads `PhairPlay-<version>-GoogleTV.aab` to
 the GitHub release:
 
 ```bash
-./scripts/release.sh v1.0.0-alpha.5
+./scripts/release.sh v1.0.0-alpha.7
 ```
 
 ### Option B — Build only the `.aab` locally
