@@ -199,8 +199,11 @@ artifacts_write_manifest() {
 
 # Writes the verification report: what was checked, with which result.
 artifacts_write_verification_report() {
-    local version="$1" dir="$2" file="$3" tests failures classes
+    local version="$1" dir="$2" file="$3" tests failures classes gate_list
     read -r tests failures classes <<< "$(test_run_counts)"
+    # The list of the gates is taken from the release script itself, so the report
+    # cannot name fewer gates than the release actually ran.
+    gate_list=$(printf '%s.sh, ' $QUALITY_GATE_SCRIPTS | sed 's/, $//')
 
     cat > "$file" <<EOF
 PhairPlay $version — verification report
@@ -212,7 +215,7 @@ Generated $(date -u +%Y-%m-%dT%H:%M:%SZ) by scripts/release.sh --artifacts-only.
 
 | Check | Command | Result |
 |---|---|---|
-| Quality gate | scripts/check-file-size.sh, check-kdoc-headers.sh, check-i18n-completeness.sh, check-docs-links.sh, check-privacy-policy.sh | green |
+| Quality gate | scripts/$gate_list | green |
 | JVM protocol suite | ./gradlew :test-runner:test | $tests tests, $failures failures ($classes test classes) |
 | Version inside the artefacts | aapt2 dump badging | equals $version |
 | Signature of the APKs | apksigner verify | signed by the release key |
