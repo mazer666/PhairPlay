@@ -21,26 +21,27 @@ was derived from the sources: 630 `@Test` methods in `app/src/test/kotlin` minus
 the 38 methods of the six excluded classes (`test-runner/build.gradle.kts`,
 `exclude` block) = **592**, matching the measured run.
 
-**Re-measured 2026-11-05, 16:10 (working tree, after the parallel tracks
+**Re-measured 2026-11-05, 17:20 (working tree, after the parallel tracks
 landed):** the tree is no longer at `34a166c` — the commit `ee49f8e` ("feat
 (release): build the artefacts without publishing them") was added at 15:59 and
-the working tree carries uncommitted changes from the security and the spec
-track. The state has moved:
+the working tree carries the uncommitted changes of the security, the spec and
+the UI track. **All five gates are green again:**
 
-* `check-file-size.sh` → `221 file(s) checked, none above the hard limit of 550
-  lines, **1 warning(s) above the soft limit of 400 lines**`
-  (`app/src/main/kotlin/com/phairplay/ui/DiagnosticsFragment.kt`, 407 lines).
-* `check-kdoc-headers.sh` → `287 class declaration(s) checked`.
-* `check-privacy-policy.sh` → **RED**: "the privacy policy (2026-11-02) is
-  older than the manifest (2026-11-05)". The manifest was edited in the
-  working tree (the backup and data-extraction rules); the permission set did
-  not change, but the gate compares the *dates*.
-* `check-docs-links.sh` → **RED**: 31 broken internal links, all of them in
-  `docs/spec/archive/` (the spec track's files). None of the broken links is in
-  `docs/project/` or `docs/compliance/`.
-* `@Test` methods in `app/src/test/kotlin`: **665** (was 630). The exclude list
-  is unchanged, so **627** methods would run — derived, not measured, because
-  no Gradle run was permitted in this session. The last **measured** figure
+* `check-file-size.sh` → `OK: file size check passed — 225 file(s) checked,
+  none above the hard limit of 550 lines, 0 warning(s) above the soft limit of
+  400 lines.` (`DiagnosticsFragment.kt` was split down to 360 lines).
+* `check-kdoc-headers.sh` → `OK: KDoc header check passed — 292 class
+  declaration(s) checked, all of them have a KDoc header.`
+* `check-i18n-completeness.sh` → `OK: i18n completeness check passed — 129
+  key(s) … complete in 2 language(s).`
+* `check-docs-links.sh` → `OK: documentation link check passed — 401 internal
+  link(s) resolve, 87 external link(s) skipped.` The 31 broken links of the
+  16:10 measurement in `docs/spec/archive/` are repaired.
+* `check-privacy-policy.sh` → `OK: privacy policy check passed.` `PRIVACY.md`
+  now carries the date `2026-11-05`, the same day as the manifest.
+* `@Test` methods in `app/src/test/kotlin`: **672**. The exclude list is
+  unchanged, so **634** methods would run — derived, not measured, because no
+  Gradle run was permitted in this session. The last **measured** figure
   remains **592** at the release `v1.0.0-alpha.7`.
 * The DLNA scheme allowlist is **gone**: `DlnaMediaUri.validate()` now
   delegates to `FetchableUrlPolicy`, which accepts `http` and `https` only.
@@ -87,7 +88,7 @@ proof in §1.
 | R-04 | `file://` turns the TV into a file reader | was medium | medium | **Closed:** the scheme is refused on the DLNA path as well, and the refusal is proven by a negative test | DLNA | **closed** | `DlnaMediaUri.validate("file:///etc/passwd")` is rejected with "the URL scheme is not supported" (`app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt:37`, the check itself at `:62` via `FetchableUrlPolicy.check`). The new `app/src/test/kotlin/com/phairplay/dlna/DlnaMediaUriAttackTest.kt` (6 test methods) proves that a file URI "is refused and never reaches the playback controller" and that a refused URI is not stored and is not echoed back by `GetMediaInfo`. The app sandbox remains the outer boundary (`android:allowBackup="false"`, `app/src/main/AndroidManifest.xml:133`). |
 | R-05 | Cleartext HTTP is blocked by the platform default | medium | high | Decide on a network security configuration for private LAN ranges (CR-02) or document the DLNA media path as `https`-only | Platform | open | Re-measured 2026-11-05: `app/src/main/res/xml/` contains only `locales_config.xml`, and `grep -rn "networkSecurityConfig\|usesCleartextTraffic" app/src/` → **no match**. On API 28+ the platform therefore blocks `http://`. The DLNA media fetch and the GENA `NOTIFY` are affected; no device test has measured which paths actually fail (0 of 16 cases). |
 | R-06 | GENA callback: check and connect differ | low | medium | Host names are refused outright; the residual window is accepted and documented | DLNA | open (accepted for v1.0.0) | `GenaCallbackPolicy` refuses every DNS name (`GenaCallbackPolicyTest` → `rejects a DNS name`), which closes the window for the common case. The remaining TOCTOU is SEC-09. |
-| R-07 | The quality gate is red | was certain | medium | **Closed at the baseline; red again in the current working tree** | Architect | **closed at `34a166c`, open in the working tree** | Measured green on `34a166c` (2026-11-05): file-size `216 file(s) checked, 0 warning(s) above the soft limit of 400 lines`; KDoc `280 class declaration(s) checked`; i18n `129 key(s) … complete in 2 language(s)`; docs-links `326 internal link(s) resolve`; privacy `13 declared permissions are documented`. **Re-measured at 16:10 in the working tree: two gates are red** — `check-privacy-policy.sh` ("the privacy policy (2026-11-02) is older than the manifest (2026-11-05)") and `check-docs-links.sh` (31 broken links, all in `docs/spec/archive/`), and `check-file-size.sh` reports one warning (`DiagnosticsFragment.kt`, 407 lines). The causes are the uncommitted changes of the parallel tracks, not a regression of this register's scope → risk R-28 |
+| R-07 | The quality gate is red | was certain | medium | **Closed** — the five structure checks exit 0 | Architect | **closed** | Measured green on `34a166c` (2026-11-05): file-size `216 file(s) checked, 0 warning(s) above the soft limit of 400 lines`; KDoc `280 class declaration(s) checked`; i18n `129 key(s) … complete in 2 language(s)`; docs-links `326 internal link(s) resolve`; privacy `13 declared permissions are documented`. **Re-measured at 17:20 in the working tree: all five gates are green again** — `225 file(s) checked, 0 warning(s)`, `292 class declaration(s)`, `401 internal link(s) resolve`, `OK: privacy policy check passed.` The two red gates of the 16:10 measurement were repaired by the parallel tracks (`PRIVACY.md` brought up to the manifest date, the links in `docs/spec/archive/` fixed, `DiagnosticsFragment.kt` split to 360 lines) → risk R-28 is mitigated |
 | R-08 | 400 vs. 550 line rule documented ambiguously | certain | low | Set `--strict` in the CI call or rewrite the rule texts to soft/hard | Owner / Docs | open | `docs/CONTRIBUTING.md` and NFR-23 say "no source file over 400 lines", the script warns at 400 and fails at 550, and the CI call does not pass `--strict` (`.github/workflows/ci.yml:51-52` passes only `--ext .kt --ext .sh`). The tree satisfies both limits today, so the gap is latent. |
 | R-09 | The i18n completeness check is outside the Gradle run | medium | medium | The script runs in CI and is green; a JVM test would close the gap | QA | mitigated, with a known gap | `scripts/check-i18n-completeness.sh` → exit 0, `129 key(s) … complete in 2 language(s)`; it runs in the CI job `quality-gate`. Android's own `MissingTranslation` lint is switched off (`app/build.gradle.kts:152`). The placeholder comparison is a sequence comparison and `<plurals>` / `<string-array>` are not compared at all. |
 | R-10 | The release key lives outside the repository | low / medium | high | The owner backs up `~/.config/phairplay/phairplay-release.jks` outside the team storage | Owner | open | `scripts/release.sh --setup` creates the keystore and `~/.config/phairplay/release.env` (mode 600) and the script refuses to run without them (`scripts/release.sh:180-184`). The backup is an owner action that has not been confirmed. |
@@ -108,7 +109,7 @@ proof in §1.
 | R-25 | The bundled Cast SDK is five years old | certain | low | Decide whether to update `play-services-cast-tv` before the store publication | Platform | open | `gradle/libs.versions.toml` pins `play-services-cast-tv = "20.0.0"`. The Play Services SDK versions that Google supports move forward, and the app registers a *new* Cast Application ID for a 2026 publication with a 2021 SDK. The current version is what the graceful-degradation path was proven against (`CastReceiverOptionsProvider`, `CastReceiver`). No measured defect is known. |
 | R-26 | The store listing advertises a feature that cannot work | high | high | Remove the Miracast claim from the listing, or request the missing runtime permission | Owner / Platform | open | The store listing text in `docs/guides/GOOGLE_PLAY_STORE.md:140-156` advertises "Miracast discovery". The runtime permissions for Wi-Fi Direct are **never requested**: the only `requestPermissions` call in the whole app asks for `POST_NOTIFICATIONS` (`app/src/main/kotlin/com/phairplay/MainActivity.kt:295-307`). `hasWifiP2pPermission()` therefore returns `false` on Android 10+ (`app/src/main/kotlin/com/phairplay/miracast/MiracastReceiver.kt:247-250`) and the Miracast state becomes `ERROR` — finding SEC-06, restated in `PRIVACY.md` §6. A listing that describes a feature the app cannot deliver is a misrepresentation risk in the review. |
 | R-27 | The foreground-service declaration needs a demonstration video recorded on a television | high | medium | Record the video on a Google TV with the published APK | Owner / QA | open | "When your apps target Android 14 and above, you'll need to declare any foreground service types that you use … 3. Include a link to a video demonstrating each foreground service feature." (`https://support.google.com/googleplay/android-developer/answer/13392821`, retrieved 2026-11-05). PhairPlay declares `foregroundServiceType="connectedDevice"` (`app/src/main/AndroidManifest.xml:182`) and the matching `FOREGROUND_SERVICE_CONNECTED_DEVICE` permission (`:43`). The video must show the in-app setup and the device interaction — which means a real television (R-12) and a recording. The runtime prerequisite of the type is met: `CHANGE_WIFI_STATE` (`:56`) and `CHANGE_WIFI_MULTICAST_STATE` (`:37`) are declared (`https://developer.android.com/develop/background-work/services/fgs/service-types`, retrieved 2026-11-05). |
-| R-28 | The working tree carries uncommitted changes from parallel tracks, and two gates are red | certain | high | Land or revert the parallel changes before the release cut, then re-run the five gates | Release owner + all track owners | open | Observed on 2026-11-05 at 16:10: the tree is at `ee49f8e` (not the `34a166c` baseline this register was measured against) and carries uncommitted modifications in the production code, the spec documents and `docs/spec/archive/`. Two gates are **red**: `check-privacy-policy.sh` ("the privacy policy (2026-11-02) is older than the manifest (2026-11-05)") and `check-docs-links.sh` (31 broken links, all in `docs/spec/archive/`). `check-file-size.sh` reports one warning (`DiagnosticsFragment.kt`, 407 lines). `scripts/release.sh` refuses to publish from a dirty tree (`scripts/release.sh:194-199`), so the release cut is stopped by the tooling — but the **substantive** risk is that a store upload could carry a manifest change that no release note describes, and that the privacy policy would then be older than the app it documents |
+| R-28 | The working tree carries uncommitted changes from parallel tracks | was certain | high | Land the parallel changes before the release cut, then re-run the five gates | Release owner + all track owners | **mitigated** — the gates are green again | Observed on 2026-11-05 at 16:10: the tree was at `ee49f8e` with uncommitted modifications in the production code, the spec documents and `docs/spec/archive/`, and **two gates were red** — `check-privacy-policy.sh` ("the privacy policy (2026-11-02) is older than the manifest (2026-11-05)") and `check-docs-links.sh` (31 broken links, all in `docs/spec/archive/`). **Re-measured at 17:20: all five gates exit 0.** What remains is the *process* risk: `scripts/release.sh` refuses to publish from a dirty tree (`scripts/release.sh:194-199`), so a release cut is only possible once the parallel work is committed — and a store upload must carry the bundle that was audited, not a mixture |
 
 ---
 
@@ -216,11 +217,12 @@ change with a privacy cost and needs an owner decision.
   executed on real television hardware.
 * **R-21** — the Data Safety section is not declared.
 * **R-26** — the listing advertises a feature that cannot work.
-* **R-28** — two gates are red in the working tree, so the bundle that would be
-  uploaded is not the bundle that was audited.
+* **R-28** — mitigated: the gates are green again (17:20), but the working
+  tree still carries uncommitted parallel work, and `scripts/release.sh`
+  refuses to publish from a dirty tree.
 
 **Blocking the internal test track:** R-21, R-27 (the foreground-service
-demonstration video needs a television), R-23 (the banner format) and R-28.
+demonstration video needs a television) and R-23 (the banner format).
 R-19 and R-20 are owner decisions that must be taken before the first upload,
 because the Cast registration depends on them.
 
@@ -232,7 +234,7 @@ key backup), R-11 (the version bump), R-24 (the native library check is not
 wired into a gate), R-25 (the Cast SDK age), R-13 (38 test methods outside
 CI).
 
-**Closed with a measurement:** R-07 (quality gate — at the baseline `34a166c`;
-red again in the working tree, see R-28), R-16 (lint), R-18 (the release build
-memory — root cause solved), R-03 in part (the address policy **and** the
-scheme list), R-04 (the `file://` file reader).
+**Closed with a measurement:** R-07 (quality gate — green at the baseline
+`34a166c` and green again in the working tree at 17:20), R-16 (lint), R-18
+(the release build memory — root cause solved), R-03 in part (the address
+policy **and** the scheme list), R-04 (the `file://` file reader).

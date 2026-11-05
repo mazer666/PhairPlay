@@ -41,7 +41,7 @@ to the step; that guide holds the exact texts and paths.
 | 0.6 | Read the answers of the Data safety form | Answer only after the three owner questions are answered | `DATA_SAFETY_DRAFT.md` §5 | ☐ |
 | 0.7 | **Get a Google TV** and install the published APK on it | This is needed for the foreground-service demonstration video (step 4.6) and for the device test plan | `docs/guides/DEVICE_TEST_PLAN.md` | ☐ |
 | 0.8 | Record the foreground-service demonstration video | The video must show the in-app setup and the device interaction, not the system settings | — (the video itself) | ☐ |
-| 0.9 | **Make the five repository gates green again** | `bash scripts/check-file-size.sh && bash scripts/check-kdoc-headers.sh && bash scripts/check-i18n-completeness.sh && bash scripts/check-privacy-policy.sh && bash scripts/check-docs-links.sh`. **Two of them are red right now** (2026-11-05 16:10): the privacy policy is older than the manifest, and 31 links in `docs/spec/archive/` are broken. The upload must carry the bundle that was audited | `scripts/check-*.sh`; the gate list is `scripts/release/build.sh:15` | ☐ |
+| 0.9 | **Check that the five repository gates are green** | `bash scripts/check-file-size.sh && bash scripts/check-kdoc-headers.sh && bash scripts/check-i18n-completeness.sh && bash scripts/check-privacy-policy.sh && bash scripts/check-docs-links.sh`. **Measured 2026-11-05 17:20: all five exit 0.** They were red at 16:10 and the parallel tracks repaired them. The upload must carry the bundle that was audited | `scripts/check-*.sh`; the gate list is `scripts/release/build.sh:15` | ☐ |
 
 ---
 

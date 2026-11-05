@@ -2,7 +2,7 @@
 
 **Version:** 2.1
 **Prepared by:** Project Manager
-**Date:** 2026-11-05 (measured 15:58, re-measured 16:10)
+**Date:** 2026-11-05 (measured 15:58, re-measured 16:10 and 17:20)
 **Measured on:** commit `34a166c` (branch `main`), release tag `v1.0.0-alpha.7`
 **Supersedes:** revision 1.0 of 2026-10-24, which was written against the
 commits `2267672` / `51933eb`, the version `1.0.0-beta.3` and a device test
@@ -11,11 +11,14 @@ plan with 15 cases. All of that is stale.
 > **The tree moved during this measurement.** At 15:58 the repository was at
 > `34a166c` and all five gates were green. At 16:10 the tree stood at
 > `ee49f8e` ("feat(release): build the artefacts without publishing them") with
-> uncommitted changes from the security and the spec track: **two gates are red
-> now** (`check-privacy-policy.sh` and `check-docs-links.sh`), the file-size
-> check reports one warning, and the DLNA scheme allowlist has been removed in
-> favour of a single `FetchableUrlPolicy`. The rows below say which state they
-> describe. The rows that changed are marked **[16:10]**.
+> uncommitted changes from the security, the spec and the UI track: two gates
+> were red (`check-privacy-policy.sh` and `check-docs-links.sh`), the file-size
+> check reported one warning, and the DLNA scheme allowlist had been removed in
+> favour of a single `FetchableUrlPolicy`. **At 17:20 all five gates are green
+> again** — the privacy policy was brought up to the manifest date, the links in
+> `docs/spec/archive/` were repaired and `DiagnosticsFragment.kt` was split to
+> 360 lines. The rows below say which state they describe; the rows that
+> changed are marked **[16:10]** or **[17:20]**.
 
 ---
 
@@ -44,7 +47,7 @@ their opt-in.
 | 1 | The release is published with three assets | GitHub API, `releases/tags/v1.0.0-alpha.7`: `PhairPlay-1.0.0-alpha.7-GoogleTV.apk` = **16 600 258 B**, `PhairPlay-1.0.0-alpha.7-FireTV.apk` = **11 668 733 B**, `PhairPlay-1.0.0-alpha.7-GoogleTV.aab` = **9 003 755 B**; `prerelease: true`, published `2026-11-02T20:00:26Z` |
 | 2 | The JVM suite is green with **592** tests | Derived from the sources: 630 `@Test` methods in `app/src/test/kotlin` minus the 38 methods of the six excluded classes (`test-runner/build.gradle.kts`, `exclude` block) = 592. The excluded classes are `MainActivityTest` (9), `MdnsServiceTest` (12), `VideoSubmissionTest` (5), `ServiceControllerTest` (4), `NetworkUtilsTest` (5), `ui/VideoAspectFitTest` (3). |
 | 3 | All five repository gates are green **[15:58]** | `check-file-size.sh` → `216 file(s) checked, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh` → `280 class declaration(s) checked`; `check-i18n-completeness.sh` → `129 key(s) … complete in 2 language(s)`; `check-docs-links.sh` → `326 internal link(s) resolve`; `check-privacy-policy.sh` → `13 declared permissions are documented` |
-| 3b | **Two gates are red in the working tree [16:10]** | `check-privacy-policy.sh` → "the privacy policy (2026-11-02) is older than the manifest (2026-11-05)"; `check-docs-links.sh` → 31 broken internal links, all of them in `docs/spec/archive/` (none in `docs/project/` or `docs/compliance/`). `check-file-size.sh` → `221 file(s) checked, 1 warning(s)` (`DiagnosticsFragment.kt`, 407 lines). The cause is the uncommitted manifest change of the parallel tracks, not the release artefact → risk R-28 |
+| 3b | **All five gates are green in the working tree [17:20]** | `check-file-size.sh` → `225 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh` → `292 class declaration(s) checked`; `check-i18n-completeness.sh` → `129 key(s) … complete in 2 language(s)`; `check-docs-links.sh` → `401 internal link(s) resolve`; `check-privacy-policy.sh` → `OK: privacy policy check passed.` At 16:10 two of them were red; the parallel tracks repaired them |
 | 3c | The DLNA scheme allowlist has been removed **[16:10]** | `DlnaMediaUri.validate()` delegates to `FetchableUrlPolicy` (`app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt:62`), whose `FETCHABLE_SCHEMES = setOf("http", "https")` (`app/src/main/kotlin/com/phairplay/util/FetchableUrlPolicy.kt:57`) refuses everything else. The new `DlnaMediaUriAttackTest` (6 methods) proves that a `file://` URI never reaches the playback controller. R-03 and R-04 changed accordingly |
 | 3d | The native library check exists but is not wired in **[16:10]** | `scripts/check-native-libs.sh` verifies the ELF alignment of the 64-bit libraries, the ZIP alignment and the ABIs; `grep -rn "check-native-libs" .github/ scripts/release/` → **0 matches** |
 | 4 | The build configuration meets the Play target requirements | `targetSdk = 35`, `compileSdk = 35` (`app/build.gradle.kts:24`, `:30`); the `googletv` flavour has `minSdk = 29` (`:60`) |
@@ -99,7 +102,7 @@ opted in. Only then can a build be uploaded to the internal test track.
 | A17 | The Google Cast Application ID is registered | **offen** | Without an ID the receiver reports `ERROR` (`app/src/googletv/kotlin/com/phairplay/cast/CastReceiver.kt:23-27`); the procedure is `docs/guides/CAST_APP_ID.md`. **The fingerprint that is registered must be the one of the key that signs the delivered build** → R-20 | Owner |
 | A18 | The listing does not advertise a feature the app cannot deliver | **offen** | The listing advertises Miracast; the Wi-Fi Direct permissions are never requested at runtime (`MainActivity.kt:295-307` is the only `requestPermissions` call) → the feature cannot start on Android 10+ (SEC-06) → risk R-26 | Owner / Platform |
 | A19 | The internal test track has no tester requirement | **erfüllt** | "Internal testing … Requirements to access track: None." (`https://support.google.com/googleplay/android-developer/answer/14151465`, retrieved 2026-11-05) | — |
-| A20 | **[16:10]** The repository gates are green, so that the uploaded bundle matches the audited code | **blockiert** | `scripts/release.sh` aborts on a red gate (`scripts/release/build.sh:72-89`), and `check-privacy-policy.sh` + `check-docs-links.sh` are currently red in the working tree → risk R-28 | The parallel tracks land or revert; the owner re-runs the five gates before the upload |
+| A20 | **[17:20]** The repository gates are green, so that the uploaded bundle matches the audited code | **erfüllt** | All five gates exit 0 (measured 17:20). `scripts/release.sh` aborts on a red gate (`scripts/release/build.sh:72-89`), so the condition is enforced by the tooling. The working tree still carries uncommitted parallel work — `scripts/release.sh:194-199` refuses to publish from a dirty tree → risk R-28 | The parallel tracks commit their work before the release cut |
 
 ---
 

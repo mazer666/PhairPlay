@@ -11,10 +11,11 @@ merged into one list and sorted by the effect of closing them.
 
 > **The tree moved while this list was being written.** At 15:58 the repository
 > was at `34a166c` with all five gates green. At 16:10 it stood at `ee49f8e`
-> with uncommitted changes from the parallel tracks. Two consequences for this
-> list: **RB-10 is closed** (the DLNA scheme allowlist was removed in favour of
-> the shared `FetchableUrlPolicy`), and **RB-26 is new** (two gates are red in
-> the working tree). Everything else stands as measured.
+> with uncommitted changes from the parallel tracks; **at 17:20 all five gates
+> are green again**. Two consequences for this list: **RB-10 is closed** (the
+> DLNA scheme allowlist was removed in favour of the shared
+> `FetchableUrlPolicy`) and **RB-26 is closed** (the two red gates were
+> repaired by the parallel tracks). Everything else stands as measured.
 
 **How to read the order:** the list is sorted by *effect*, not by effort. The
 first tier contains the items without which no Google Play release happens at
@@ -69,7 +70,7 @@ worse than a finding.
 | RB-18 | **Resolve the 400 vs. 550 line rule** | R-08 | low | low (a text change or one flag) | — | open | `docs/CONTRIBUTING.md` and NFR-23 say "no source file over 400 lines"; the script warns at 400 and fails at 550; the CI call passes neither `--strict` nor a limit (`.github/workflows/ci.yml:51-52`). Either add `--strict` to the CI call or rewrite both texts to the soft/hard wording. The tree satisfies both limits today. |
 | RB-19 | **Close the two known gaps of the i18n check** | R-09 | low | medium (a JVM test) | — | open | The placeholder comparison is a sequence comparison and `<plurals>` / `<string-array>` are not compared at all. A JVM test that compares the three resource folders (`values/`, `values-de/`, `values-fr/`) would make the completeness part of the JVM gate. |
 | RB-20 | **Back up the release keystore outside the team-controlled storage** | R-10 | high | low (a copy plus a written confirmation) | — | open | `~/.config/phairplay/phairplay-release.jks` holds the key that signs every release. A lost key means that the installed apps can no longer be upgraded. The backup must live somewhere the team does not control, and the confirmation belongs in the release checklist. |
-| RB-26 | **Land the parallel tracks' changes and get the five gates green again** | R-07, R-28, readiness A20 | critical | low (the work is already written; only the landing and the re-measurement are missing) | — | open | Measured at 2026-11-05 16:10: the tree stands at `ee49f8e` with uncommitted changes in the production code, `docs/spec/` and `docs/spec/archive/`. `check-privacy-policy.sh` is red ("the privacy policy (2026-11-02) is older than the manifest (2026-11-05)") and `check-docs-links.sh` reports 31 broken links in `docs/spec/archive/`. `check-file-size.sh` warns about `DiagnosticsFragment.kt` (407 lines). `scripts/release.sh` refuses to publish from a dirty tree (`scripts/release.sh:194-199`), so the tooling stops the release — but the privacy policy has to be touched up to the manifest date and the archived links have to be repaired before the upload |
+| RB-26 | **Land the parallel tracks' changes** | R-07, R-28, readiness A20 | high | low (the work is already written; only the landing is missing) | — | **closed** (gates) / open (commit) | At 16:10 two gates were red: `check-privacy-policy.sh` ("the privacy policy (2026-11-02) is older than the manifest (2026-11-05)") and `check-docs-links.sh` (31 broken links in `docs/spec/archive/`), plus a file-size warning on `DiagnosticsFragment.kt`. **Re-measured 17:20: all five gates exit 0** — the privacy policy was brought up to the manifest date, the archived links were repaired and the file was split to 360 lines. What remains is the commit of the parallel work: `scripts/release.sh` refuses to publish from a dirty tree (`scripts/release.sh:194-199`) |
 
 ---
 
