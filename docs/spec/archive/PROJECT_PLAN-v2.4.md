@@ -19,12 +19,12 @@ Last Updated: 2026-10-25
 > `docs/spec/ACCEPTANCE_CRITERIA.md` v2.0 (`AC-M<n>.<m>` for the milestones
 > M6 … M12; the legacy rounds AR-0 … AR-8 keep their old `AC-<n>.<m>`
 > identifiers). The milestone risk register lives in
-> [`../project/RISKS.md`](../project/RISKS.md).
+> [`../project/RISKS.md`](../../project/RISKS.md).
 
 > **Revision 2.2 (2026-10-24).** The status table below was verified against the
 > code on commit `51933eb`, not against the checkboxes of the older plan. The
 > milestone risk register has moved to
-> [`../project/RISKS.md`](../project/RISKS.md).
+> [`../project/RISKS.md`](../../project/RISKS.md).
 
 ---
 
@@ -70,8 +70,8 @@ Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 
 | 12 | M12 – DLNA | 🟠 Partial — control plane delivered, media path open | SSDP, description server, hardened SOAP dispatcher, GENA eventing, the Samsung DIAL extension and the playback wiring are implemented with 169 test methods; the media URI now has an **address policy** (loopback, link-local / metadata, multicast, broadcast, obfuscated notations and user info are refused) — still open: the **scheme list** of the media URI, the accepted **public addresses** and the **un-resolved host names** (finding SEC-04, S3 — it needs a written owner decision), no cleartext configuration exists, and no control point has ever talked to the renderer |
 
 The per-milestone acceptance records live in
-[`../acceptance/`](../acceptance/): `M06-ACCEPTANCE.md` … `M12-ACCEPTANCE.md`.
-The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
+[`../acceptance/`](../../acceptance/): `M06-ACCEPTANCE.md` … `M12-ACCEPTANCE.md`.
+The open risks live in [`../project/RISKS.md`](../../project/RISKS.md).
 
 ---
 
@@ -184,7 +184,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [ ] Advertise HEVC support in AirPlay `features` bitmask only if hardware supports it
 
 **Definition of Done:** AC-4.x (legacy round AR-4) — ≥25fps, ≤100ms latency on Google TV for H.264 streams. HEVC streams play if hardware is capable.
-**Note (2026-10-24):** neither number has been measured on a device — see [`../acceptance/M08-ACCEPTANCE.md`](../acceptance/M08-ACCEPTANCE.md) §3.
+**Note (2026-10-24):** neither number has been measured on a device — see [`../acceptance/M08-ACCEPTANCE.md`](../../acceptance/M08-ACCEPTANCE.md) §3.
 
 ---
 
@@ -254,7 +254,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [ ] Miracast status card updates in HomeScreen (connecting, streaming, codec info in debug overlay)
 
 **Definition of Done:** ~~Windows 10 screen mirroring works end-to-end; LPCM and AAC audio work; H.265 works on capable hardware; HDCP negotiated.~~
-**Revised Definition of Done (2026-10-24):** AC-M6.1 … AC-M6.8 — discovery and control plane only. The media path is **out of scope** (see ADR-004 and `docs/spec/REQUIREMENTS.md` §3). Acceptance record: [`../acceptance/M06-ACCEPTANCE.md`](../acceptance/M06-ACCEPTANCE.md).
+**Revised Definition of Done (2026-10-24):** AC-M6.1 … AC-M6.8 — discovery and control plane only. The media path is **out of scope** (see ADR-004 and `docs/spec/REQUIREMENTS.md` §3). Acceptance record: [`../acceptance/M06-ACCEPTANCE.md`](../../acceptance/M06-ACCEPTANCE.md).
 
 ---
 
@@ -305,7 +305,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [ ] PlayReady via Android `MediaDrm` (handled automatically by Cast SDK)
 
 **Definition of Done:** ~~Cast from Chrome works on Google TV; H.264 + VP8 mandatory; optional codecs negotiated at runtime; DRM-free streams play; Widevine-protected streams play via Cast SDK.~~
-**Revised Definition of Done (2026-10-24):** AC-M7.1 … AC-M7.6 — graceful degradation. The Cast SDK lifecycle runs, the Fire TV flavour degrades to `DISABLED`, an unconfigured build reports `ERROR`. The end-to-end Cast receiver needs a registered application ID. Acceptance record: [`../acceptance/M07-ACCEPTANCE.md`](../acceptance/M07-ACCEPTANCE.md).
+**Revised Definition of Done (2026-10-24):** AC-M7.1 … AC-M7.6 — graceful degradation. The Cast SDK lifecycle runs, the Fire TV flavour degrades to `DISABLED`, an unconfigured build reports `ERROR`. The end-to-end Cast receiver needs a registered application ID. Acceptance record: [`../acceptance/M07-ACCEPTANCE.md`](../../acceptance/M07-ACCEPTANCE.md).
 
 ---
 
@@ -322,7 +322,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [x] Bounded mDNS registration retry with an explicit error state — `MdnsRegistrationTrackerTest`, 10 green tests
 
 **Definition of Done:** ~~AC-8.x — 30min stable, reconnect working.~~
-**Revised Definition of Done (2026-10-24):** AC-M8.1 … AC-M8.8 (plus the legacy round AR-6 / `AC-6.x`). AC-M8.4 and AC-M8.7 are proven by unit tests; AC-M8.1, AC-M8.2, AC-M8.3, AC-M8.5, AC-M8.6 and AC-M8.8 need a device. Acceptance record: [`../acceptance/M08-ACCEPTANCE.md`](../acceptance/M08-ACCEPTANCE.md).
+**Revised Definition of Done (2026-10-24):** AC-M8.1 … AC-M8.8 (plus the legacy round AR-6 / `AC-6.x`). AC-M8.4 and AC-M8.7 are proven by unit tests; AC-M8.1, AC-M8.2, AC-M8.3, AC-M8.5, AC-M8.6 and AC-M8.8 need a device. Acceptance record: [`../acceptance/M08-ACCEPTANCE.md`](../../acceptance/M08-ACCEPTANCE.md).
 
 ---
 
@@ -336,7 +336,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [x] Cast graceful fallback (no GMS) — the Fire TV flavour reports `DISABLED` and contains no reference to `com.google.android.gms`
 - [x] Fire TV flavor specific adjustments — the flavour compiles, carries its own package id `com.phairplay.firetv` and its own version suffix
 
-**Definition of Done (2026-10-24):** AC-M9.1 … AC-M9.6 (plus the legacy round AR-7 / `AC-7.x`). AC-M9.1 and AC-M9.3 are covered by the build; every other criterion needs a device. Acceptance record: [`../acceptance/M09-ACCEPTANCE.md`](../acceptance/M09-ACCEPTANCE.md).
+**Definition of Done (2026-10-24):** AC-M9.1 … AC-M9.6 (plus the legacy round AR-7 / `AC-7.x`). AC-M9.1 and AC-M9.3 are covered by the build; every other criterion needs a device. Acceptance record: [`../acceptance/M09-ACCEPTANCE.md`](../../acceptance/M09-ACCEPTANCE.md).
 
 ---
 
@@ -351,7 +351,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [ ] Locale-aware date/time/number formatting — **open: not started**
 - [ ] Render the translations on a device — **open: no device** (device test plan DT-12)
 
-**Definition of Done (2026-10-24):** AC-M10.1 … AC-M10.6. AC-M10.1 … AC-M10.3 are proven by the script; AC-M10.4 by the code; AC-M10.5 and AC-M10.6 need a device. Acceptance record: [`../acceptance/M10-ACCEPTANCE.md`](../acceptance/M10-ACCEPTANCE.md).
+**Definition of Done (2026-10-24):** AC-M10.1 … AC-M10.6. AC-M10.1 … AC-M10.3 are proven by the script; AC-M10.4 by the code; AC-M10.5 and AC-M10.6 need a device. Acceptance record: [`../acceptance/M10-ACCEPTANCE.md`](../../acceptance/M10-ACCEPTANCE.md).
 
 ---
 
@@ -376,14 +376,14 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [x] Close the three S4 findings of the security audit — **closed and measured**: SEC-01 (the AirPlay media URL is checked before the player fetches it), SEC-02 (the picture decoder reads the dimensions first and has a pixel budget), SEC-03 (the reassembled FU-A unit is bounded to 8 MB). SEC-04 stays open as an S3 with a written owner decision (the scheme list of the media URI)
 - [ ] Stable v1.0.0 release
 
-**Definition of Done (2026-10-24):** AC-M11.1 … AC-M11.8 (plus the legacy round AR-8 / `AC-8.x`). Acceptance record: [`../acceptance/M11-ACCEPTANCE.md`](../acceptance/M11-ACCEPTANCE.md).
+**Definition of Done (2026-10-24):** AC-M11.1 … AC-M11.8 (plus the legacy round AR-8 / `AC-8.x`). Acceptance record: [`../acceptance/M11-ACCEPTANCE.md`](../../acceptance/M11-ACCEPTANCE.md).
 
 ---
 
 ## Phase 12 – UPnP / DLNA MediaRenderer
 
 **Milestone:** M12  
-**Status:** 🟠 Partial — the control plane is delivered, the media path is open (architected in [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md))  
+**Status:** 🟠 Partial — the control plane is delivered, the media path is open (architected in [ADR-004](../../decisions/ADR-004-dlna-mediarenderer-roadmap.md))  
 
 **Goal:** Provide native media streaming for Windows ("Cast to Device"), VLC, BubbleUPnP, and Android UPnP controllers via an incremental, secure, and fully unit-tested DLNA MediaRenderer stack.
 
@@ -418,7 +418,7 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 - [ ] End-to-end testing with Windows 11 "Cast to Device", VLC Renderer, and BubbleUPnP — **open: no device and no control point** (device test plan DT-08 … DT-11)
 - [ ] Samsung Smart View extension — **delivered**: the Samsung SSDP search term and the DIAL documents are implemented (`SamsungSsdpResponderTest` 6, `DialAppCatalogTest` 10, `DialEndpointTest` 6, `DlnaDeviceDescriptionFieldsTest` 7 — all green); the visibility in a real television list is not proven
 
-**Definition of Done (2026-10-24, second pass):** AC-M12.1 … AC-M12.20. AC-M12.15 is **still not met** — the *address* of the media URI is now restricted, but the *scheme* allowlist still contains `file`, `smb`, `ftp` and other schemes. AC-M12.4, AC-M12.18, AC-M12.19 and the Samsung visibility need a device. Acceptance record: [`../acceptance/M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md).
+**Definition of Done (2026-10-24, second pass):** AC-M12.1 … AC-M12.20. AC-M12.15 is **still not met** — the *address* of the media URI is now restricted, but the *scheme* allowlist still contains `file`, `smb`, `ftp` and other schemes. AC-M12.4, AC-M12.18, AC-M12.19 and the Samsung visibility need a device. Acceptance record: [`../acceptance/M12-ACCEPTANCE.md`](../../acceptance/M12-ACCEPTANCE.md).
 
 ---
 
@@ -432,13 +432,13 @@ The open risks live in [`../project/RISKS.md`](../project/RISKS.md).
 | M3 | AirPlay Handshake + Photo | RTSP session + `/photo` endpoint | 🟡 Implemented, device validation open | AC-3.x | — |
 | M4 | AirPlay Video | H.264 mandatory ≥25fps; H.265 optional | 🟡 Implemented, device validation open | AC-4.x | — |
 | M5 | AirPlay Audio | A/V sync ≤40ms; ALAC; optional surround | 🟡 Implemented, device validation open | AC-5.x | — |
-| M6 | Miracast | Discovery + WFD control plane; **no media path** | 🟠 Partial | AC-M6.x | [`M06-ACCEPTANCE.md`](../acceptance/M06-ACCEPTANCE.md) |
-| M7 | Cast | Cast SDK lifecycle + graceful degradation | 🟠 Partial | AC-M7.x | [`M07-ACCEPTANCE.md`](../acceptance/M07-ACCEPTANCE.md) |
-| M8 | Stability | Bounded queue, mDNS retry; the endurance numbers are open | 🟠 Partial | AC-M8.x + AC-6.x | [`M08-ACCEPTANCE.md`](../acceptance/M08-ACCEPTANCE.md) |
-| M9 | Fire TV | The flavour builds and degrades honestly; never run on a device | 🟡 Implemented, device validation open | AC-M9.x + AC-7.x | [`M09-ACCEPTANCE.md`](../acceptance/M09-ACCEPTANCE.md) |
-| M10 | i18n | EN + DE + FR complete (80 keys each); RTL and formatting open | 🟠 Partial | AC-M10.x | [`M10-ACCEPTANCE.md`](../acceptance/M10-ACCEPTANCE.md) |
-| M11 | Release | CI quality gate and lint green; signed APKs and the device validation open | 🟠 Beta — not ready for v1.0.0 | AC-M11.x + AC-8.x | [`M11-ACCEPTANCE.md`](../acceptance/M11-ACCEPTANCE.md) |
-| M12 | DLNA | SSDP, SOAP, Playback, GENA, Samsung DIAL — all implemented; the media URI is address-restricted | 🟠 Partial — control plane delivered, media path open | AC-M12.x | [`M12-ACCEPTANCE.md`](../acceptance/M12-ACCEPTANCE.md) |
+| M6 | Miracast | Discovery + WFD control plane; **no media path** | 🟠 Partial | AC-M6.x | [`M06-ACCEPTANCE.md`](../../acceptance/M06-ACCEPTANCE.md) |
+| M7 | Cast | Cast SDK lifecycle + graceful degradation | 🟠 Partial | AC-M7.x | [`M07-ACCEPTANCE.md`](../../acceptance/M07-ACCEPTANCE.md) |
+| M8 | Stability | Bounded queue, mDNS retry; the endurance numbers are open | 🟠 Partial | AC-M8.x + AC-6.x | [`M08-ACCEPTANCE.md`](../../acceptance/M08-ACCEPTANCE.md) |
+| M9 | Fire TV | The flavour builds and degrades honestly; never run on a device | 🟡 Implemented, device validation open | AC-M9.x + AC-7.x | [`M09-ACCEPTANCE.md`](../../acceptance/M09-ACCEPTANCE.md) |
+| M10 | i18n | EN + DE + FR complete (80 keys each); RTL and formatting open | 🟠 Partial | AC-M10.x | [`M10-ACCEPTANCE.md`](../../acceptance/M10-ACCEPTANCE.md) |
+| M11 | Release | CI quality gate and lint green; signed APKs and the device validation open | 🟠 Beta — not ready for v1.0.0 | AC-M11.x + AC-8.x | [`M11-ACCEPTANCE.md`](../../acceptance/M11-ACCEPTANCE.md) |
+| M12 | DLNA | SSDP, SOAP, Playback, GENA, Samsung DIAL — all implemented; the media URI is address-restricted | 🟠 Partial — control plane delivered, media path open | AC-M12.x | [`M12-ACCEPTANCE.md`](../../acceptance/M12-ACCEPTANCE.md) |
 
 **Status legend:** ✅ Complete · 🟡 Implemented, device validation open ·
 🟠 Partial · 🔴 Blocked.
@@ -468,8 +468,8 @@ release is only built when every condition of its row is true.
 | Stage | Trigger — all conditions must hold | Platforms in the release | Artifacts |
 |---|---|---|---|
 | **Alpha** | 1. A milestone that changes the runtime behaviour is merged.<br>2. `:test-runner:test` is green (0 failures, 0 errors, 0 skipped).<br>3. The quality gate is green: `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`, `scripts/check-i18n-completeness.sh`, `scripts/check-docs-links.sh`, `scripts/check-privacy-policy.sh`.<br>4. Lint is green for **both** flavours.<br>5. Both APK flavours build. | **Google TV** (Android 10+, `com.phairplay.googletv`)<br>**Fire TV** (Android 7.1+, `com.phairplay.firetv`) | Signed release APKs (minified, resources shrunk) + source tag |
-| **Beta** | 1. Every case of [`../guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) has been executed on real hardware — 16 of 16.<br>2. The decisive cases are green: **DT-09** (VLC renderer list), **DT-10** (Windows "Cast to Device"), **DT-12** (Samsung Smart View), **DT-13/DT-14** (playback), **DT-15** (30-minute session), **DT-16** (picture aspect ratio).<br>3. The performance numbers are measured, not estimated: RAM, CPU load, frame rate, latency (see [`../quality/QUALITY.md`](../quality/QUALITY.md)).<br>4. No open finding of severity S1 or S2 (see [`../project/RISKS.md`](../project/RISKS.md)).<br>5. The acceptance records M01 … M12 name the device they were validated on. | **Google TV** — validated on a real Google TV / Android TV device<br>**Fire TV** — validated on a real Fire TV device | Signed release APKs + release notes listing the known limitations |
-| **Stable** | 1. A beta has been in the owner's hands for **at least two weeks** without a new critical finding.<br>2. Every acceptance record carries a *device validated* decision — no *"not measured"* left in a performance field.<br>3. The checklist in [`../project/RELEASE_READINESS.md`](../project/RELEASE_READINESS.md) is complete.<br>4. The release is signed with the **owner's production key** (an alpha key must not be used for a stable release).<br>5. The changelog and the release notes state the platform, the minimum Android version and the known limitations. | **Google TV** and **Fire TV** — both, always. A stable release that ships for one platform only is a defect, not a decision. | Signed release APKs + changelog + release notes |
+| **Beta** | 1. Every case of [`../guides/DEVICE_TEST_PLAN.md`](../../guides/DEVICE_TEST_PLAN.md) has been executed on real hardware — 16 of 16.<br>2. The decisive cases are green: **DT-09** (VLC renderer list), **DT-10** (Windows "Cast to Device"), **DT-12** (Samsung Smart View), **DT-13/DT-14** (playback), **DT-15** (30-minute session), **DT-16** (picture aspect ratio).<br>3. The performance numbers are measured, not estimated: RAM, CPU load, frame rate, latency (see [`../quality/QUALITY.md`](../../quality/QUALITY.md)).<br>4. No open finding of severity S1 or S2 (see [`../project/RISKS.md`](../../project/RISKS.md)).<br>5. The acceptance records M01 … M12 name the device they were validated on. | **Google TV** — validated on a real Google TV / Android TV device<br>**Fire TV** — validated on a real Fire TV device | Signed release APKs + release notes listing the known limitations |
+| **Stable** | 1. A beta has been in the owner's hands for **at least two weeks** without a new critical finding.<br>2. Every acceptance record carries a *device validated* decision — no *"not measured"* left in a performance field.<br>3. The checklist in [`../project/RELEASE_READINESS.md`](../../project/RELEASE_READINESS.md) is complete.<br>4. The release is signed with the **owner's production key** (an alpha key must not be used for a stable release).<br>5. The changelog and the release notes state the platform, the minimum Android version and the known limitations. | **Google TV** and **Fire TV** — both, always. A stable release that ships for one platform only is a defect, not a decision. | Signed release APKs + changelog + release notes |
 
 ### Publication in the Google Play Store
 
@@ -550,10 +550,10 @@ does not meet its trigger never gets built.
 4. **The version lives in one place.** `versionCode` and `versionName` in
    `app/build.gradle.kts` are bumped in the same commit that the release tag
    is created from.
-5. **Every release gets an entry in [`../../CHANGELOG.md`](../../CHANGELOG.md)**,
+5. **Every release gets an entry in [`../../CHANGELOG.md`](../../../CHANGELOG.md)**,
    written for a user, not for a colleague.
 
-**How a release is cut:** [`../guides/RELEASING.md`](../guides/RELEASING.md) —
+**How a release is cut:** [`../guides/RELEASING.md`](../../guides/RELEASING.md) —
 one command, and it refuses to publish an unchecked build.
 
 ---
@@ -561,7 +561,7 @@ one command, and it refuses to publish an unchecked build.
 ## Risk Register
 
 > The maintained risk register lives in
-> [`../project/RISKS.md`](../project/RISKS.md) — 17 entries with the likelihood,
+> [`../project/RISKS.md`](../../project/RISKS.md) — 17 entries with the likelihood,
 > the impact, the countermeasure, the owner and the status. The table below is the
 > original planning view and is kept for the history of the project; where the
 > two differ, **the register in `docs/project/RISKS.md` is authoritative**.

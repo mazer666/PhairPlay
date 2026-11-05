@@ -1,10 +1,33 @@
 # PhairPlay – Acceptance Criteria
 
-Version: 2.0
+Version: 3.0
 Status: Active
-Date: 2026-10-24
+Date: 2026-11-05
 
 This document defines **measurable, verifiable acceptance criteria** for each milestone. A milestone is considered **DONE** only when ALL its criteria pass on ALL target devices (unless the milestone is device-specific).
+
+> **Change log v3.0 (2026-11-05).** The criteria were checked against the
+> requirement baseline v4.0 and against the code on `main` @ `34a166c`. Three
+> things changed:
+>
+> 1. **§0.8 — the contradiction register.** Eleven places where a criterion, the
+>    requirement it belongs to and the code say different things. Every one of
+>    them was measured, not estimated. The full list with the evidence is in
+>    §0.8; the measures are in
+>    [`REMEDIATION_BACKLOG.md`](REMEDIATION_BACKLOG.md).
+> 2. **The legacy rounds were corrected where they name a test that does not
+>    exist.** Eight criteria pointed at a method name (`testSdpParsing()` and
+>    seven others) that was never written — the Kotlin tests carry backtick
+>    names. The criteria now name the test that actually exists.
+> 3. **A new round AR-V4** carries the criteria of the baseline v4.0 — the
+>    requirements that are new, that are sharpened, and that are open.
+>
+> **The ✅ of the legacy rounds is not evidence.** The rounds AR-1 … AR-8 were
+> closed before the device test plan existed; their "Definition of Done" says
+> "all criteria pass", but the device criteria were never executed — the
+> project plan records **0 of 16 device test cases executed**. A ✅ in a legacy
+> round therefore means *the automated part passed*, never *the criterion was
+> proven on a television*.
 
 ---
 
@@ -13,22 +36,15 @@ This document defines **measurable, verifiable acceptance criteria** for each mi
 ### 0.1 Two different numberings — and how they are kept apart
 
 Until v1.0 this document and `PROJECT_PLAN.md` used the word "milestone" for two
-different things, and the two numberings collided:
+different things, and the two numberings collided: `PROJECT_PLAN.md` numbers the
+**phases of the project** (`M0` … `M12`), while this document numbered its own
+sections 0 … 8 — against an **older, nine-milestone plan without Miracast, Cast
+and DLNA**. So "Milestone 6" here meant *Stability & Reconnect* while "M6" in the
+project plan meant *Miracast*.
 
-* **`PROJECT_PLAN.md`** numbers the **phases of the project**: `M0` … `M12`
-  (M6 = Miracast, M7 = Cast, M8 = Stability, M9 = Fire TV, M10 = i18n,
-  M11 = Release, M12 = DLNA).
-* This document numbered its own sections 0 … 8. Those sections were written
-  against an **older, nine-milestone plan without Miracast, Cast and DLNA**, so
-  "Milestone 6" here meant *Stability & Reconnect* while "M6" in the project plan
-  meant *Miracast*.
-
-**Resolution (v2.0).** From now on:
-
-| Term | Meaning | Owner document |
-|---|---|---|
-| **Milestone `M<n>`** | A phase of the project. This is the only meaning of the word "milestone". | `PROJECT_PLAN.md` |
-| **Acceptance round `AR-<n>`** | A section of this document. An acceptance round may cover parts of several milestones. | this document |
+**Resolution (v2.0).** A **milestone `M<n>`** is a phase of the project and
+belongs to `PROJECT_PLAN.md`; an **acceptance round `AR-<n>`** is a section of
+this document and may cover parts of several milestones.
 
 ### 0.2 Identifier scheme
 
@@ -37,37 +53,24 @@ different things, and the two numberings collided:
 | `AC-<n>.<m>` | Criterion `m` of the **legacy acceptance round** `n` (AR-0 … AR-8). The identifier is bound to the round, **not** to a milestone. | Unchanged — existing identifiers keep their meaning so that old references stay valid. |
 | `AC-M<n>.<m>` | Criterion `m` of **milestone `M<n>`** of the project plan. | New (v2.0) — used for every criterion added for M6 … M12. |
 
-### 0.3 Mapping: acceptance round → milestone
+### 0.3 The mapping: milestone ↔ acceptance round ↔ criteria
 
-| Acceptance round | Topic in this document | Criterion IDs | Covers milestone |
+| Milestone (`PROJECT_PLAN.md`) | Acceptance round | Criterion IDs | Binding |
 |---|---|---|---|
-| AR-0 | Specification complete | `AC-0.x` | M0 |
-| AR-1 | App starts | `AC-1.x` | M1 |
-| AR-2 | Network visibility (mDNS) | `AC-2.x` | M2 |
-| AR-3 | Connection & handshake (RTSP) | `AC-3.x` | M3 |
-| AR-4 | Video streaming | `AC-4.x` | M4 |
-| AR-5 | Audio streaming | `AC-5.x` | M5 |
-| AR-6 | Stability & reconnect | `AC-6.x` | **M8** (legacy) |
-| AR-7 | Fire TV validation | `AC-7.x` | **M9** (legacy) |
-| AR-8 | Release | `AC-8.x` | **M11** (legacy) |
-
-### 0.4 Mapping: milestone → acceptance criteria
-
-| Milestone (`PROJECT_PLAN.md`) | Topic | Binding criteria |
-|---|---|---|
-| M0 | Specification complete | `AC-0.x` |
-| M1 | Skeleton + UI | `AC-1.x` |
-| M2 | mDNS discovery | `AC-2.x` |
-| M3 | AirPlay handshake + photo | `AC-3.x` |
-| M4 | AirPlay video | `AC-4.x` |
-| M5 | AirPlay audio | `AC-5.x` |
-| M6 | Miracast | **`AC-M6.x`** |
-| M7 | Google Cast | **`AC-M7.x`** |
-| M8 | Stability & reconnect | `AC-6.x` (legacy) + **`AC-M8.x`** (binding) |
-| M9 | Fire TV port | `AC-7.x` (legacy) + **`AC-M9.x`** (binding) |
-| M10 | i18n polish | **`AC-M10.x`** |
-| M11 | Release | `AC-8.x` (legacy) + **`AC-M11.x`** (binding) |
-| M12 | UPnP / DLNA MediaRenderer | **`AC-M12.x`** |
+| M0 | AR-0 Specification complete | `AC-0.x` | legacy — archived |
+| M1 | AR-1 App starts | `AC-1.x` | legacy — archived |
+| M2 | AR-2 Network visibility (mDNS) | `AC-2.x` | legacy — archived |
+| M3 | AR-3 Connection & handshake (RTSP) | `AC-3.x` | legacy — archived |
+| M4 | AR-4 Video streaming | `AC-4.x` | legacy — archived |
+| M5 | AR-5 Audio streaming | `AC-5.x` | legacy — archived |
+| M6 | — | **`AC-M6.x`** | **binding** |
+| M7 | — | **`AC-M7.x`** | **binding** |
+| M8 | AR-6 Stability & reconnect | `AC-6.x` (legacy) + **`AC-M8.x`** | **binding** |
+| M9 | AR-7 Fire TV validation | `AC-7.x` (legacy) + **`AC-M9.x`** | **binding** |
+| M10 | — | **`AC-M10.x`** | **binding** |
+| M11 | AR-8 Release | `AC-8.x` (legacy) + **`AC-M11.x`** | **binding** |
+| M12 | — | **`AC-M12.x`** | **binding** |
+| — | **AR-V4 Baseline v4.0 compliance** | **`AC-V4.x`** | **binding** |
 
 > **Correction proposal for the project track.** `PROJECT_PLAN.md` v2.1 writes
 > *"Definition of Done: AC-6.x"* under **Phase 6 – Miracast**, *"AC-7.x"* under
@@ -81,11 +84,10 @@ different things, and the two numberings collided:
 ### 0.5 Reading the legacy rounds
 
 The rounds AR-0 … AR-8 belong to milestones that were closed before v2.0; their
-identifiers and their wording are **not** changed here, so that a historical
-result stays reproducible. Two of them are soft by today's standard (AC-4.1
-"correct aspect ratio", AC-5.4 "Audio quality is clean"). For every future
-verification the binding criteria of the new rounds apply: AC-M8.x replaces
-AR-6, AC-M9.x replaces AR-7 and AC-M11.x replaces AR-8.
+identifiers keep their meaning, so that a historical result stays reproducible.
+Two of them are soft by today's standard (AC-4.1 "correct aspect ratio", AC-5.4
+"Audio quality is clean"). For every future verification the binding criteria
+apply: AC-M8.x replaces AR-6, AC-M9.x replaces AR-7 and AC-M11.x replaces AR-8.
 
 ### 0.6 Rules for every criterion
 
@@ -95,175 +97,97 @@ AR-6, AC-M9.x replaces AR-7 and AC-M11.x replaces AR-8.
   lead runs and the artefact that proves the result.
 * If a criterion is not met, it is reported as **not met** with a reason — never
   as "partly met".
+* A criterion that needs real hardware names a **device procedure** `DT-xx`.
+
+### 0.7 The device procedures (`DT-xx`)
+
+A criterion that cannot be executed on a build server is written as a **device
+procedure** with the identifier `DT-xx`. The procedures are defined in two
+places:
+
+| Range | Where | Owner |
+|---|---|---|
+| `DT-01` … `DT-16` | [`../guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) | QA track |
+| `DT-17` … `DT-19` | [`DEVICE_PROCEDURES.md`](DEVICE_PROCEDURES.md) | product track |
+
+**A `DT-xx` that nobody defined is not a proof.** The generator of the
+traceability matrix checks every `DT-xx` that a requirement names against both
+files and fails when it finds one that is not defined — that is the red case of
+`scripts/test-build-traceability.sh`.
+
+The three procedures of the v4.0 baseline:
+
+| Procedure | Proves | State on 2026-11-05 |
+|---|---|---|
+| **DT-17** | the cleartext configuration of the LAN (NFR-28) | **fails** — the configuration does not exist |
+| **DT-18** | the log of a release build (NFR-31) | **fails** — a release build writes nothing |
+| **DT-19** | the store installation and the in-app policy (FR-72, FR-73, NFR-21) | not executed — no internal track yet |
+
+### 0.8 The contradiction register
+
+Every row was measured on `main` @ `34a166c`. "Open" means the contradiction is
+still in the tree.
+
+| # | Where | The criterion / the requirement says | The code says | State |
+|---|---|---|---|---|
+| C-01 | AC-0.5 | the four documents are committed to the branch `claude/setup-phairplay-project-8cpcN` | that branch does not exist; the tree is on `main` (`git branch -a`) | **open** — the criterion is unsatisfiable as written |
+| C-02 | AC-1.7, AC-8.6 | `./gradlew assembleDebug` and `./gradlew build` | the project has two flavours; CI runs `:app:lintGoogletvDebug`, `:app:lintFiretvDebug` and `:test-runner:test` (`.github/workflows/ci.yml`) | **open** — the command does not build what the criterion claims |
+| C-03 | AC-1.8, AC-8.1 | `./gradlew test` proves the suite | the suite of the app runs as `:test-runner:test`; `./gradlew test` does not run it | **open** — the proof command is wrong |
+| C-04 | AR-1 … AR-8 | "Definition of Done: all criteria pass ✅" | the device criteria were never executed — 0 of 16 device test cases (`PROJECT_PLAN.md`, Phase 11) | **open** — the ✅ is not evidence |
+| C-05 | AC-2.1 | the device appears in the macOS picker within **3 s** | FR-06 says **2 s** | **open** — two thresholds for one fact |
+| C-06 | AC-2.6, AC-3.5, AC-3.7, AC-3.8, AC-4.8, AC-4.9, AC-5.6, AC-5.7 | the proof is a method `testSdpParsing()`, `testOversizedMessageRejected()`, `testTxtRecordContents()`, `testMediaCodecInit()`, `testNalUnitExtraction()`, `testDecryption()`, `testAacFrameExtraction()`, `testMalformedMessageHandled()` | **none of the eight method names exists** — the Kotlin tests carry backtick names | **corrected in v3.0** — the rows now name the test that exists |
+| C-07 | AC-M6.6 | the receiver reports `ERROR` and the home screen never shows "Advertising" | `ReceiverSupervisor.kt:175` sets `ProtocolState.ADVERTISING` before the receiver can report the error | **open** — the unit test passes, the device does not |
+| C-08 | AC-M10.3 | the four `protocol_*` values are equal in every locale | `scripts/check-i18n-completeness.sh` compares the key set and the placeholders — **not** the values | **open** — the criterion has no automatic proof |
+| C-09 | AC-M12.3 | the proof is the test `DlnaControlPointProbeTest` | that test does not exist in the tree (`find . -name "DlnaControlPointProbeTest*"` → 0) | **open** — the criterion names a plan, not a fact |
+| C-10 | AC-M12.15 | the renderer refuses a `file://` URI with the fault `402` | **closed on 2026-11-05**: `DlnaMediaUri` delegates to `FetchableUrlPolicy`, and `DlnaMediaUriTest` asserts "rejects a file URI because it would read the local file system" | ✅ **closed** (commits `b4e5afa`, `55acde4`) |
+| C-11 | AC-M11.6 | every finding of the security audit is fixed or documented as open | 8 of the 14 findings are still open: SEC-04, SEC-05, SEC-06, SEC-07, SEC-08, SEC-09, SEC-10, SEC-11 | **open** — the criterion is met literally, but the security state is not "green" |
 
 ---
 
-## Acceptance Round AR-0 – Specification Complete (M0)
+## Acceptance Round AR-0 … AR-8 (legacy) — archived
 
-**Goal:** All specification documents are present, complete, and consistent.
+The rounds **AR-0 … AR-8** are the acceptance rounds of the milestones that
+were closed before the device test plan existed. Their identifiers keep their
+meaning — `AC-<n>.<m>` is bound to the round, not to a milestone — and the
+mapping in §0.3 above still points at them.
 
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-0.1 | `docs/spec/REQUIREMENTS.md` exists and is complete | `ls docs/spec/` + manual review | File present, all sections filled |
-| AC-0.2 | `docs/spec/TECHNICAL_SPEC.md` exists and is complete | `ls docs/spec/` + manual review | File present, architecture diagram included |
-| AC-0.3 | `docs/spec/ACCEPTANCE_CRITERIA.md` exists and is complete | `ls docs/spec/` + manual review | File present, all milestones covered |
-| AC-0.4 | `docs/spec/PROJECT_PLAN.md` exists and is complete | `ls docs/spec/` + manual review | File present, all phases and DoD defined |
-| AC-0.5 | All 4 documents are committed to the `claude/setup-phairplay-project-8cpcN` branch | `git log --oneline` | Commit containing all 4 files visible in log |
+Their **text** is archived unchanged:
+[`archive/ACCEPTANCE_CRITERIA-legacy-rounds.md`](archive/ACCEPTANCE_CRITERIA-legacy-rounds.md).
 
-**Definition of Done:** All 5 criteria pass. ✅
+**Three things about them must be known before a criterion of a legacy round is
+used as a proof:**
 
----
+1. **The ✅ of a legacy round is not evidence.** "Definition of Done: all
+   criteria pass ✅" means *the automated part passed*. The device criteria
+   were never executed — the project plan records **0 of 16** device test cases.
+2. **Eight rows named a test that does not exist** (`testSdpParsing()` and
+   seven others). Those rows were **corrected in v3.0**; the correction is
+   written down in the table "The corrected legacy criteria" below.
+3. **Three commands are wrong**: AC-0.5 names a branch that does not exist,
+   and AC-1.7 / AC-1.8 / AC-8.1 / AC-8.6 name Gradle commands that do not run
+   what the criterion claims. The commands that run today are
+   `./gradlew :test-runner:test` and `./gradlew :app:lintGoogletvDebug
+   :app:lintFiretvDebug`.
 
-## Acceptance Round AR-1 – App Starts (M1)
+### 0.9 The corrected legacy criteria
 
-**Goal:** The app launches without crashing on both target platforms and shows the Waiting Screen.
+The eight rows of C-06 named a test method that was never written. The
+Kotlin tests carry backtick names — the criterion has to name the test that
+actually exists.
 
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-1.1 | App installs via `adb install` on Google TV | `adb install app-googletv-debug.apk` | Exit code 0, "Success" |
-| AC-1.2 | App installs via `adb install` on Fire TV | `adb install app-firetv-debug.apk` | Exit code 0, "Success" |
-| AC-1.3 | App starts on Google TV without crashing | Launch app, observe for 30s | No crash dialog, no FATAL in logcat |
-| AC-1.4 | App starts on Fire TV without crashing | Launch app, observe for 30s | No crash dialog, no FATAL in logcat |
-| AC-1.5 | Waiting Screen displays the device name | Visual inspection | Device name matches name in system settings |
-| AC-1.6 | Waiting Screen displays usage instructions | Visual inspection | "Open AirPlay on your Mac..." text visible |
-| AC-1.7 | App builds cleanly for both flavors | `./gradlew assembleDebug` | Exit code 0, 0 errors, 0 warnings (treat warnings as errors) |
-| AC-1.8 | All unit tests pass | `./gradlew test` | Exit code 0, 0 failures |
+| Criterion | The proof named before | The proof that exists |
+|---|---|---|
+| AC-2.6 | `MdnsServiceTest.testTxtRecordContents()` | `MdnsServiceNameTest` (9 cases) + `MdnsServiceTest` — "start registers two mDNS services" |
+| AC-3.5 | `RtspHandlerHandshakeTest.testSdpParsing()` | `SdpParserTest` (21 cases) — "video+audio SDP sets hasVideo=true and hasAudio=true" |
+| AC-3.7 | `RtspHandlerHandshakeTest.testOversizedMessageRejected()` | `RtspHandlerHandshakeTest` — "ANNOUNCE with empty body returns 400" + `RtspRequestReader` budget |
+| AC-3.8 | `RtspHandlerHandshakeTest.testMalformedMessageHandled()` | `RtspHandlerHandshakeTest` — "unknown RTSP method returns 501" + "ANNOUNCE with blank body returns 400" |
+| AC-4.8 | `VideoDecoderTest.testMediaCodecInit()` | `VideoDecoderTest` — "VideoDecoder is created successfully" |
+| AC-4.9 | `VideoDecoderTest.testNalUnitExtraction()` | `RtpFuaReassemblyTest` (8 cases) + `RtpInterleavedTest` (10 cases) |
+| AC-5.6 | `AudioPlayerTest.testDecryption()` | `AudioPlayerEncryptionTest` (12 cases) — "isAudioEncrypted is true when both key and IV are exactly 16 bytes" |
+| AC-5.7 | `AudioPlayerTest.testAacFrameExtraction()` | `SdpParserTest` — "AAC-ELD audio codec is detected" + `AudioStreamServerTest` (3 cases) |
 
-**Definition of Done:** All 8 criteria pass on both devices. ✅
-
----
-
-## Acceptance Round AR-2 – Network Visibility (mDNS) (M2)
-
-**Goal:** macOS discovers PhairPlay in the AirPlay picker within 3 seconds of app launch.
-
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-2.1 | PhairPlay appears in macOS AirPlay menu within 3 seconds | Start timer at app launch, watch macOS menu bar → AirPlay icon | Device name appears ≤ 3s after app launch |
-| AC-2.2 | Device name in macOS picker matches TV device name | Compare macOS picker with device settings name | Names are identical |
-| AC-2.3 | PhairPlay disappears from macOS picker within 10 seconds of app close | Close app, watch picker | Device removed from picker ≤ 10s after close |
-| AC-2.4 | mDNS re-registers correctly after app returns from background | Background app 60s, then bring to foreground | Device reappears in macOS picker ≤ 5s |
-| AC-2.5 | Unit test: `MdnsService` registers correct service types | `./gradlew test` | `MdnsServiceTest` — all tests pass |
-| AC-2.6 | Unit test: TXT record contains required keys (deviceid, features, model) | `./gradlew test` | `MdnsServiceTest.testTxtRecordContents()` passes |
-| AC-2.7 | No `W/NsdManager` or `E/NsdManager` errors in logcat | `adb logcat -s NsdManager` | 0 errors during normal operation |
-
-**Definition of Done:** All 7 criteria pass. ✅
-
----
-
-## Acceptance Round AR-3 – Connection & Handshake (RTSP) (M3)
-
-**Goal:** AirPlay connection is established from macOS. The RTSP handshake completes without errors.
-
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-3.1 | macOS completes RTSP OPTIONS → SETUP → ANNOUNCE → RECORD sequence | PhairPlay logcat shows all 4 RTSP methods received | All 4 methods logged, all responded with `200 OK` |
-| AC-3.2 | No RTSP error responses (4xx / 5xx) during normal handshake | Inspect logcat | 0 error responses for a standard connection attempt |
-| AC-3.3 | A second connection attempt while streaming is rejected | Connect a second Mac while first is active | Second connection gets `503 Service Unavailable` |
-| AC-3.4 | TEARDOWN cleans up all resources | Disconnect from macOS, check logcat | Resources freed, WaitingScreen shown, mDNS still active |
-| AC-3.5 | SDP is correctly parsed (video codec, audio codec, keys extracted) | Unit test | `RtspHandlerHandshakeTest.testSdpParsing()` passes |
-| AC-3.6 | Unit test: RTSP method routing | Unit test | `RtspHandlerHandshakeTest` + `RtspHandlerSessionTest` — all handler method tests pass |
-| AC-3.7 | RTSP oversized message (>64KB) is rejected without crash | Fuzzing test / unit test | `RtspHandlerHandshakeTest.testOversizedMessageRejected()` passes |
-| AC-3.8 | Malformed RTSP message does not crash the app | Unit test with invalid input | `RtspHandlerHandshakeTest.testMalformedMessageHandled()` passes |
-
-**Definition of Done:** All 8 criteria pass. ✅
-
----
-
-## Acceptance Round AR-4 – Video Streaming (M4)
-
-**Goal:** macOS Screen Mirroring video is decoded and displayed at ≥25fps with ≤100ms latency.
-
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-4.1 | Video is displayed full-screen after connection | Visual inspection | Video fills screen with correct aspect ratio |
-| AC-4.2 | No black flashes or frozen frames during normal streaming | 5-minute streaming test | 0 visible glitches |
-| AC-4.3 | Frame rate ≥ 25fps | Display frame counter overlay on macOS + count on TV | TV shows ≥ 25 rendered frames per second |
-| AC-4.4 | Video latency ≤ 100ms | Display stopwatch on macOS, watch TV | Measured delta ≤ 100ms |
-| AC-4.5 | Video uses hardware decoder | `adb shell dumpsys media.codec` | MediaCodec uses `OMX.` or `c2.` hardware component |
-| AC-4.6 | App switches from WaitingScreen to StreamingScreen when video starts | Visual inspection | Transition happens within 1s of stream start |
-| AC-4.7 | App returns to WaitingScreen when stream stops | Disconnect from macOS | WaitingScreen shown within 2s |
-| AC-4.8 | Unit test: VideoDecoder initializes MediaCodec correctly | Unit test | `VideoDecoderTest.testMediaCodecInit()` passes |
-| AC-4.9 | Unit test: NAL unit extraction from RTP payload | Unit test | `VideoDecoderTest.testNalUnitExtraction()` passes |
-
-**Definition of Done:** All 9 criteria pass on Google TV. ✅
-
----
-
-## Acceptance Round AR-5 – Audio Streaming (M5)
-
-**Goal:** Audio plays in sync with video. No dropouts, no crackling.
-
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-5.1 | Audio is audible after connection | Play audio on macOS, listen on TV | Audio heard from TV speakers/HDMI |
-| AC-5.2 | Audio/video sync ≤ 40ms drift | Play A/V sync test video (clapper board) | Visual drift ≤ 40ms |
-| AC-5.3 | No audio dropouts during 5-minute stream | 5-minute streaming test | 0 audible dropouts |
-| AC-5.4 | No audio crackling or distortion | Streaming test with music | Audio quality is clean |
-| AC-5.5 | Audio continues after video pause/resume | Pause screen sharing briefly, resume | Audio resumes correctly |
-| AC-5.6 | Unit test: AES-128-CTR decryption | Unit test with known test vector | `AudioPlayerTest.testDecryption()` passes |
-| AC-5.7 | Unit test: AAC-ELD frame extraction from RTP | Unit test | `AudioPlayerTest.testAacFrameExtraction()` passes |
-
-**Definition of Done:** All 7 criteria pass on Google TV. ✅
-
----
-
-## Acceptance Round AR-6 – Stability & Reconnect (legacy, covers M8)
-
-**Goal:** 30-minute continuous streaming without issues. Automatic reconnect after disruption.
-
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-6.1 | 30-minute continuous stream without crash | Automated timer + logcat monitor | 0 crashes, 0 FATAL in logcat |
-| AC-6.2 | 30-minute continuous stream without unexpected disconnect | Monitor RTSP session | Session stays active for full 30 minutes |
-| AC-6.3 | RAM usage stays ≤ 150 MB throughout the 30-minute test | `adb shell dumpsys meminfo com.phairplay.*` every 5 minutes | Peak ≤ 150 MB at every measurement |
-| AC-6.4 | CPU usage stays ≤ 30% average throughout the 30-minute test | `adb shell top -p $(pidof com.phairplay.*)` | 5-minute rolling average ≤ 30% |
-| AC-6.5 | Automatic reconnect after network disruption (Wi-Fi toggle) | Disable and re-enable Wi-Fi on sender Mac | PhairPlay reappears in macOS picker within 5s of reconnect |
-| AC-6.6 | Automatic reconnect after sender disconnects | Disconnect AirPlay from macOS, wait 5s, reconnect | Reconnect completes without restarting the app |
-| AC-6.7 | App survives Android "Don't Keep Activities" developer option | Enable option, background app, return | App still functional after returning from background |
-
-**Definition of Done:** All 7 criteria pass on Google TV. ✅
-
----
-
-## Acceptance Round AR-7 – Fire TV Validation (legacy, covers M9)
-
-**Goal:** All previous milestones also pass on Fire TV.
-
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-7.1 | All AC-1.x criteria pass on Fire TV | See Milestone 1 | All pass |
-| AC-7.2 | All AC-2.x criteria pass on Fire TV | See Milestone 2 | All pass |
-| AC-7.3 | All AC-3.x criteria pass on Fire TV | See Milestone 3 | All pass |
-| AC-7.4 | All AC-4.x criteria pass on Fire TV | See Milestone 4 | All pass |
-| AC-7.5 | All AC-5.x criteria pass on Fire TV | See Milestone 5 | All pass |
-| AC-7.6 | All AC-6.x criteria pass on Fire TV | See Milestone 6 | All pass |
-| AC-7.7 | `firetv` flavor APK size ≤ 10 MB | `ls -la app-firetv-release.apk` | Size ≤ 10 MB |
-
-**Definition of Done:** All 7 criteria pass on Fire TV. ✅
-
----
-
-## Acceptance Round AR-8 – Release (legacy, covers M11)
-
-**Goal:** Project is ready for public v1.0 release.
-
-| # | Criterion | How to Verify | Pass Condition |
-|---|---|---|---|
-| AC-8.1 | All unit tests pass | `./gradlew test` | Exit code 0 |
-| AC-8.2 | All instrumented tests pass on emulator (API 29) | `./gradlew connectedAndroidTest` | Exit code 0 |
-| AC-8.3 | Release APK builds for `googletv` flavor | `./gradlew assembleGoogletvRelease` | Exit code 0, APK generated |
-| AC-8.4 | Release APK builds for `firetv` flavor | `./gradlew assembleFiretvRelease` | Exit code 0, APK generated |
-| AC-8.5 | CI pipeline (GitHub Actions) is green | GitHub Actions status | All workflow checks green |
-| AC-8.6 | No Kotlin compiler errors or warnings | `./gradlew build` | 0 errors, 0 warnings |
-| AC-8.7 | `README.md` contains installation instructions for both platforms | Manual review | Sideloading steps for Google TV and Fire TV present |
-| AC-8.8 | `CHANGELOG.md` contains v1.0.0 entry | Manual review | Version entry with release date present |
-| AC-8.9 | GitHub Release created with both APKs attached | GitHub Releases page | Release exists with 2 APK assets |
-| AC-8.10 | No known CRITICAL or HIGH severity security issues | Manual security review | 0 critical/high issues |
-
-**Definition of Done:** All 10 criteria pass. ✅
-
----
+The **binding** criteria for the milestones that are still open are the rounds
+AR-M6 … AR-M12 below and the round AR-V4 at the end of this document.
 
 ## Milestone M6 – Miracast receiver (control plane, honest limits)
 
@@ -414,6 +338,39 @@ UPnP control points; the control plane, the eventing and the hardening behave ex
 
 **Definition of Done:** All 20 criteria pass. AC-M12.4 and AC-M12.19 are the two criteria that need
 real hardware and a second device; the other 18 are automated.
+
+---
+
+## Acceptance Round AR-V4 – Baseline v4.0 compliance
+
+**Goal:** The requirement baseline of 2026-11-05 is complete, traceable and
+honest. Every criterion below is **open** today unless its row says otherwise —
+the state is measured, not estimated.
+
+| # | Criterion | How to Verify | Pass Condition | State |
+|---|---|---|---|---|
+| AC-V4.1 | Every requirement of the baseline carries the eight attributes | `./scripts/build-traceability.sh` + a read of [`REQUIREMENTS_MATRIX.md`](REQUIREMENTS_MATRIX.md) | 108 requirement rows, each with identifier, description, rationale, source, acceptance criterion, owner, verification, deliverable and status | ✅ met — 108 rows, 0 missing |
+| AC-V4.2 | Every requirement is classified as a binding external obligation, an internal norm or a recommendation | `grep -c "· \*\*\(INT\|EXT\|REC\)" docs/spec/REQUIREMENTS.md` | The count equals the number of requirements; the tag of every line is one of the three classes | ✅ met — 108 tags |
+| AC-V4.3 | The traceability matrix is generated, not written by hand | `head -8 docs/spec/TRACEABILITY.md` | The file names `scripts/build-traceability.sh` as its generator and carries the note "do not edit by hand" | ✅ met |
+| AC-V4.4 | No requirement of the matrix has no proof | `./scripts/build-traceability.sh --check` | Exit 0; the summary reports 0 rows without a proof | ✅ met — 58 automated, 25 device, 13 gate, 8 command, 4 excluded, 0 without |
+| AC-V4.5 | The generator turns red when a requirement loses its proof | `./scripts/test-build-traceability.sh` | All 5 cases pass, including the two red cases (a deleted test class, an undefined `DT-xx`) | ✅ met — 5 of 5 |
+| AC-V4.6 | The renderer refuses every media scheme except `http` and `https` (FR-50) | `./gradlew :app:testGoogletvDebugUnitTest --tests "com.phairplay.dlna.DlnaMediaUriTest"` | `file`, `smb` and `ftp` are refused; a `file:///` URI is answered with the fault `402`; the test "SetAVTransportURI accepts a file URI" is **gone** | ✅ **met** — closed on 2026-11-05 (commits `b4e5afa`, `55acde4`) |
+| AC-V4.7 | The Miracast card never shows "Advertising" when the receiver cannot advertise (FR-59) | `./gradlew :app:testGoogletvDebugUnitTest --tests "com.phairplay.miracast.MiracastReceiverTest"` + the device procedure DT-06 | The state becomes `ERROR` and `ReceiverSupervisor` does not set `ADVERTISING` before the receiver reports | 🔴 **open** — `ReceiverSupervisor.kt:175` sets it (C-07, B-06) |
+| AC-V4.8 | A release build writes warnings and errors to the log (NFR-31) | The device procedure **DT-18** | The log of a release APK contains a warning of the receiver and no debug message; the address is reduced | 🔴 **open** — no release tree exists (B-15) |
+| AC-V4.9 | The network security configuration exists and permits cleartext only for the LAN (NFR-28) | The device procedure **DT-17** | `app/src/main/res/xml/network_security_config.xml` exists, names no public domain, and an `http://` media URL plays | 🔴 **open** — the file does not exist (B-13) |
+| AC-V4.10 | The i18n gate compares the **values** of the protocol strings, not only the keys (FR-68) | `./scripts/check-i18n-completeness.sh` | The script fails when a `protocol_*` value differs between two locales | 🔴 **open** — the comparison is not implemented (C-08, B-08) |
+| AC-V4.11 | The published build targets the API level the Play policy demands (NFR-21) | `grep -n "targetSdk" app/build.gradle.kts` and the console of the submission day | The target API level is at least the minimum the console shows on the day of the upload | 🟡 open — `targetSdk = 35` today; the obligation changes with the calendar |
+| AC-V4.12 | The native libraries are aligned for a 16 KB page size (NFR-22) | `zipalign -c -P 16 -v 4 app-googletv-release.apk` | Every `.so` of the bundle is reported as aligned for 16 KB | 🟠 open — the NDK supports it, the shipped libraries are not verified (B-17) |
+| AC-V4.13 | Every dependency version is pinned and the licence inventory exists (NFR-32) | `grep -nE '\+\|latest\|snapshot' gradle/libs.versions.toml` + a read of `NOTICE` | The grep returns 0 matches and `NOTICE` names every dependency with its licence | 🟠 open — the versions are pinned, the inventory is missing (B-18) |
+| AC-V4.14 | The release is signed with the production key and the signature is verified (NFR-33) | `apksigner verify --print-certs app-googletv-release.apk` | The output says *Verified* and the fingerprint is the production one, not the alpha one | 🟠 open — no signed release was verified in this environment (B-19) |
+| AC-V4.15 | The legacy criteria point at test methods that exist (C-06) | `grep -rn "testSdpParsing\|testTxtRecordContents\|testMediaCodecInit\|testNalUnitExtraction\|testDecryption\|testAacFrameExtraction\|testOversizedMessageRejected\|testMalformedMessageHandled" app/src/test` | The grep returns 0 matches — every criterion names a backtick test that exists | ✅ met — the eight rows were corrected in v3.0 |
+| AC-V4.16 | The binary plist decoder refuses a payload above 1 MB by itself (FR-74) | `./gradlew :app:testGoogletvDebugUnitTest --tests "com.phairplay.airplay.handshake.PlistCodecTest"` | `PlistCodec.decode` throws for a payload above 1 MB, even when the caller passes no budget | 🔴 **open** — no size guard exists (B-09) |
+
+**Definition of Done:** All 16 criteria pass. AC-V4.1 … AC-V4.6, AC-V4.11 and
+AC-V4.15 are met. The remaining nine are the open points of the remediation
+backlog; each of them is a **finding**, not a task with an unknown state.
+are met. The remaining eleven are the open points of the remediation backlog;
+each of them is a **finding**, not a task with an unknown state.
 
 ---
 

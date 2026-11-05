@@ -1,3 +1,43 @@
+# ARCHIVED — SUPERSEDED BY v4.0
+
+> **This document is an archive, not the specification.**
+>
+> * **Status:** Superseded on 2026-11-05 by [`../REQUIREMENTS.md`](../REQUIREMENTS.md) **v4.0**.
+>   The machine-readable baseline of that version is
+>   [`../REQUIREMENTS_MATRIX.md`](../REQUIREMENTS_MATRIX.md).
+> * **Why it was replaced:** v3.0 states every requirement as free text. It therefore
+>   carries **no source of obligation** (binding external obligation vs. internal project
+>   norm vs. optional hardening), **no owner**, **no verification method**, **no expected
+>   deliverable** and **no status that points at code, test and evidence**. The
+>   requirement ↔ test ↔ evidence chain could only be reconstructed by hand, and the
+>   reconstruction differed from reviewer to reviewer. v4.0 adds the eight attributes
+>   to every requirement and makes the deviation from the code explicit instead of
+>   leaving it in a prose parenthesis.
+> * **Concrete defects of v3.0 that v4.0 fixes** (each one was verified against the
+>   code on `main` @ `34a166c`):
+>   1. **NFR-21 and NFR-22 do not exist.** The identifier sequence jumps from NFR-20 to
+>      NFR-23. v4.0 keeps the gap open for two genuine requirements (the Google Play
+>      target API level and the 16 KB page size) instead of leaving it unexplained.
+>   2. **NFR-28 names a proof that does not exist.** It cites
+>      `app/src/main/res/xml/network_security_config.xml`; the file is not in the
+>      repository.
+>   3. **NFR-23 describes a state that has passed.** It names
+>      `service/PhairPlayService.kt` (650 lines) and `miracast/MiracastReceiver.kt`
+>      (439 lines) as being above the soft limit; the largest Kotlin file today is
+>      `ui/DiagnosticsFragment.kt` with 396 lines.
+>   4. **NFR-31 is stated as if it were met.** A release tree that writes warnings and
+>      errors does not exist (`PhairPlayApp.kt` plants a tree only under
+>      `BuildConfig.DEBUG`).
+>   5. **FR-11, FR-50, FR-59 and FR-66 carry their deviation inside the requirement
+>      text.** v4.0 moves the deviation into the status column, where a reader of the
+>      matrix sees it without reading the prose.
+> * **How to use this file:** for the *history* — what the project promised before the
+>      baseline was introduced. Not for the current state. Every statement below was
+>      true for the specification of 2026-10-24; several of them are no longer true of
+>      the code, and the change log of v4.0 says which.
+
+---
+
 # PhairPlay – Requirements
 
 Version: 3.0
@@ -160,7 +200,7 @@ Date: 2026-10-24
 
 ### 1.9 UPnP / DLNA MediaRenderer
 
-PhairPlay implements a UPnP MediaRenderer (see [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md)).
+PhairPlay implements a UPnP MediaRenderer (see [ADR-004](../../decisions/ADR-004-dlna-mediarenderer-roadmap.md)).
 All DLNA logic lives in the package `com.phairplay.dlna`; the AirPlay 2 stack is not
 touched by it, and DLNA is an **additional** receiver — it replaces neither AirPlay,
 nor Miracast, nor Cast.
@@ -292,7 +332,7 @@ PhairPlay actually does — not what a Miracast sink would do.
 | HDR10 / Dolby Vision (AirPlay) | Optional, API 31+ required | v2 optional |
 
 > **Correction v3.0 (2026-10-24).** In v2.2 this table listed *"DLNA / UPnP — Out of
-> scope — Not planned"*. That contradicted [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md),
+> scope — Not planned"*. That contradicted [ADR-004](../../decisions/ADR-004-dlna-mediarenderer-roadmap.md),
 > which accepted DLNA as milestone M12, and it contradicted the code: the package
 > `com.phairplay.dlna` is implemented and shipped. The row was removed and the
 > requirement was moved into §1.9 (FR-44 … FR-57). The exclusion table now lists
