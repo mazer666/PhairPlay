@@ -13,6 +13,11 @@ captures/
 *.aab
 *.ap_
 
+# Release artefacts — built by scripts/release.sh --artifacts-only.
+# They are large binaries and belong into the release directory of the machine
+# or into the CI artefacts, not into the repository.
+/dist/
+
 # Android Studio
 *.iws
 *.ipr

@@ -44,12 +44,15 @@ KEYSTORE_FILE="${HOME}/.config/phairplay/phairplay-release.jks"
 . "$RELEASE_LIB/verify.sh"
 # shellcheck source=release/github.sh
 . "$RELEASE_LIB/github.sh"
+# shellcheck source=release/artifacts.sh
+. "$RELEASE_LIB/artifacts.sh"
 
 GH_OWNER=""
 GH_REPO=""
 RELEASE_BRANCH=""
 TEST_STATUS="green"
 SKIP_TESTS="false"
+ARTIFACTS_ONLY="false"
 
 usage() {
     cat <<'EOF'
@@ -59,10 +62,17 @@ Usage:
   ./scripts/release.sh --setup                     set up the keystore and the credentials (once)
   ./scripts/release.sh v1.0.0-alpha.3             cut a release
   ./scripts/release.sh v1.0.0-alpha.3 --skip-tests  cut a release without the JVM test suite
+  ./scripts/release.sh v1.0.0-alpha.3 --artifacts-only
+                                                  build and verify the artefacts without
+                                                  tagging and without publishing them
 
 Options:
   --setup, -s     create the release keystore and store the credentials outside the repository
   --skip-tests    do not run the JVM protocol suite; the release notes state that it was not run
+  --artifacts-only
+                  build and verify the artefacts, but do NOT tag and do NOT publish
+                  them: they land in dist/release/<version>/ with a manifest, the
+                  checksums, the provenance and the verification report
   -h, --help      show this help and exit
 
 The version has to follow the release scheme of docs/spec/PROJECT_PLAN.md:
@@ -299,6 +309,9 @@ main() {
             --skip-tests)
                 SKIP_TESTS="true"
                 ;;
+            --artifacts-only)
+                ARTIFACTS_ONLY="true"
+                ;;
             -h|--help)
                 usage
                 exit 0
@@ -322,7 +335,11 @@ main() {
         usage >&2
         exit 1
     fi
-    cmd_release "$tag"
+    if [ "$ARTIFACTS_ONLY" = "true" ]; then
+        cmd_build_artifacts "$tag"
+    else
+        cmd_release "$tag"
+    fi
 }
 
 main "$@"

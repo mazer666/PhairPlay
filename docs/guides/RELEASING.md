@@ -127,7 +127,27 @@ between "the script said it worked" and "the release is good":
 
 ---
 
-## 5. When something goes wrong
+## 5. Building without publishing
+
+`./scripts/release.sh <version> --artifacts-only` builds and verifies the
+release **without** creating a tag and **without** publishing anything. The
+artefacts land in `dist/release/<version>/` together with their manifest, the
+checksums, the build provenance and the verification report — see
+[`RELEASE_ARTIFACTS.md`](RELEASE_ARTIFACTS.md).
+
+Use it when the artefacts should be checked before anybody sees them: for a
+release that an owner has to authorise, for an internal test track, or simply
+to have a signed, described and checksummed build on the machine.
+
+The publish act stays a separate, explicit command:
+
+```bash
+./scripts/release.sh v1.0.0-alpha.8
+```
+
+---
+
+## 6. When something goes wrong
 
 | Symptom | Cause | What to do |
 |---|---|---|
@@ -146,7 +166,7 @@ stops, nothing was published. Fix the cause and run it again.
 
 ---
 
-## 6. Where the files are
+## 7. Where the files are
 
 | What | Where | Belongs into the repository? |
 |---|---|---|
@@ -159,7 +179,7 @@ stops, nothing was published. Fix the cause and run it again.
 
 ---
 
-## 7. Before a stable release
+## 8. Before a stable release
 
 An alpha can be cut with the script alone. A **stable** release needs more,
 because it is the version that other people install:
