@@ -36,19 +36,30 @@ artifacts_write_third_party_notices() {
             printf '## Components\n\n'
             printf '| Component | Version | Licence | PURL |\n|---|---|---|---|\n'
             awk '
-                /"bom-ref"/ { ref = $0; sub(/.*"bom-ref": "/, "", ref); sub(/".*/, "", ref) }
+                # WHY the state machine: the JSON of a component holds more than one
+                # "name" — the name of the component, the name of the licence and the
+                # names of the properties. The component starts with its "bom-ref",
+                # its own name comes before its version, and the licence name comes
+                # after it. A component is therefore complete when the next
+                # "bom-ref" starts, not when a brace ends.
+                function flush(   label, line) {
+                    if (n != "" && v != "" && ref !~ /phairplay@/) {
+                        label = (g == "") ? n : g ":" n
+                        printf "| %s | %s | %s | `%s` |\n", label, v, (lic == "" ? "unknown" : lic), p
+                    }
+                    ref = ""; g = ""; n = ""; v = ""; p = ""; lic = ""
+                }
+                /"bom-ref"/ {
+                    flush()
+                    ref = $0; sub(/.*"bom-ref": "/, "", ref); sub(/".*/, "", ref)
+                }
                 /"group"/   { g = $0; sub(/.*"group": "/, "", g); sub(/".*/, "", g) }
-                /"name"/    { if (name == "") { n = $0; sub(/.*"name": "/, "", n); sub(/".*/, "", n) } }
+                /"name"/    { if (n == "" && v == "") { n = $0; sub(/.*"name": "/, "", n); sub(/".*/, "", n) } }
                 /"version"/ { v = $0; sub(/.*"version": "/, "", v); sub(/".*/, "", v) }
                 /"purl"/    { p = $0; sub(/.*"purl": "/, "", p); sub(/".*/, "", p) }
+                /"licenses"/ { next }
                 /"license"/ { if (lic == "") { l = $0; sub(/.*"name": "/, "", l); sub(/".*/, "", l); lic = l } }
-                /"phairplay:usage"/ { u = $0; sub(/.*"value": "/, "", u); sub(/".*/, "", u) }
-                /\}/ {
-                    if (n != "" && v != "" && ref !~ /phairplay@/) {
-                        printf "| %s | %s | %s | `%s` |\n", (g == "" ? n : g ":" n), v, (lic == "" ? "unknown" : lic), p
-                    }
-                    ref = ""; g = ""; n = ""; v = ""; p = ""; lic = ""; u = ""
-                }
+                END { flush() }
             ' "$sbom"
             printf '\n'
         else
