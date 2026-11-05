@@ -11,6 +11,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.0.0-alpha.8] — 2026-11-05
+
+> **What this release is.** The release of the *security, compliance and
+> production readiness* cycle. Nothing of the user interface changed; what
+> changed is what the app refuses, what the build proves, and what the
+> documentation claims. **No device test has been executed** — the release is
+> an alpha, and the 16 cases of the device test plan are still open.
+
+### Added
+- **The requirement baseline v4.0** — every requirement with eight attributes,
+  a codec matrix, the acceptance criteria with a contradiction register, and a
+  **traceability matrix that is generated** instead of written. The generator
+  (`scripts/build-traceability.sh`) fails when a requirement loses its proof.
+- **Three new gates** — the native libraries (16 KB page size, the ELF and the
+  ZIP alignment of the artefacts that were built), the secret scan of the
+  repository, and the dependency decisions (the SBOM in the CycloneDX format
+  plus the allowlist of the assessed dependencies and the version ceilings of
+  the known advisories). Each gate has a self-test that proves it turns red.
+- **The third-party notices and the SBOM of the release** — the artefacts of a
+  release now say what is inside them.
+
+### Fixed
+- **A stretched picture that the decoder scaled down** — a decoder that scales
+  the picture down reports the scaled size as its crop rectangle; a uniform
+  scaling does not change the aspect, so the aspect comparison could not see
+  it. A crop that shrinks the picture by more than a tenth in one dimension is
+  now treated as a scaling, and the size of the stream wins.
+- **A plist body could exhaust the stack** — the decoder of the binary
+  property lists refused a body above 1 MB and turns every failure of the
+  parse, including a `StackOverflowError`, into a refusal instead of letting
+  it kill the request thread.
+- **Two different rules for the media URL** — the AirPlay stack and the DLNA
+  stack had two scheme lists, and the DLNA one was the wider. There is now one
+  rule, in one place, and it returns the reason of the refusal.
+
+### Changed
+- **The diagnostics report carries no free text** — the name of the sender, the
+  title, the artist and the album are replaced by a truncated hash that keeps
+  two log lines correlatable and is useless to a reader.
+- **The cloud backup excludes the settings** — no state of the app leaves the
+  device through the backup of the system.
+
+### Documentation
+- The compliance matrix of the Google Play Store with the source, the verbatim
+  wording and the evidence of every requirement; the data safety draft; the
+  checklist of the console; the threat model, the findings and the permission
+  list; the risk register and the release readiness.
+
+### Known limitations — unchanged
+- **0 of 16 device test cases executed.** The performance numbers (RAM, CPU,
+  frame rate, latency) are **not measured**.
+- The Google Cast application ID is not registered; the app reports this
+  honestly instead of pretending.
+- The Miracast media path does not exist (ADR-004).
+
+---
+
 ## [v1.0.0-alpha.7] — 2026-11-02
 
 > **What this release is.** The release for the **Google Play Store**: the privacy
