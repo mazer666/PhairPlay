@@ -80,6 +80,15 @@ internal object OutputSizeResolver {
     const val MAX_EDGE = 8192
 
     /**
+     * Largest shrink a real crop may have in one dimension.
+     *
+     * WHY 10%: a crop trims the padding the encoder added — usually 8 to 16 pixels on
+     * one edge, which is under 2% of the height. A shrink of more than a tenth in one
+     * dimension is a picture the decoder scaled down, not a rectangle it cut out.
+     */
+    const val MAX_CROP_SHRINK = 0.10
+
+    /**
      * Decides the size to use for the aspect-fit.
      *
      * @param coded    The size the decoder reports for the picture (MediaFormat width/height).
@@ -90,21 +99,69 @@ internal object OutputSizeResolver {
      */
     fun resolve(coded: PictureSize, crop: PictureSize?, reference: PictureSize?): OutputSize {
         val codedUsable = isPlausible(coded)
-        val cropUsable = crop != null && isPlausible(crop)
 
-        if (!codedUsable && !cropUsable) {
+        if (!codedUsable && (crop == null || !isPlausible(crop))) {
             // Nothing usable at all: fall back to the SPS size, the caller drops it if it is
             // implausible too. Better a wrong number than a crash in the render path.
             val fallback = reference?.takeIf { isPlausible(it) } ?: coded
             return OutputSize(fallback.width, fallback.height, false, "no plausible size, using the SPS size")
         }
 
-        if (!cropUsable) {
+        if (crop == null || !isPlausible(crop)) {
             val fallback = if (codedUsable) coded else reference!!
             return OutputSize(fallback.width, fallback.height, false, "no usable crop, using the coded size")
         }
 
         val trueSize = pickReference(coded, reference)
+
+        // The picture the crop is measured against: the size the decoder decoded.
+        // When that size is not plausible, the size of the stream is the only
+        // remaining reference.
+        val base = if (codedUsable) coded else trueSize
+
+        // A crop is a sub-rectangle of the picture the decoder decoded: it cannot be
+        // bigger than it in either dimension.
+        //
+        // WHY this is checked against the decoded picture and not against the stream
+        // size: the crop rectangle is a property of the decoder's picture. A decoder
+        // that scaled the picture up reports a rectangle that is bigger than the
+        // picture it decoded — that is not a crop, it is a scaled picture.
+        val cropFits = crop.width <= base.width && crop.height <= base.height
+        if (!cropFits) {
+            // A crop cannot be bigger than the picture it crops. A decoder that
+            // reports one has scaled the picture up — the coded size is the
+            // honest one.
+            return OutputSize(
+                trueSize.width,
+                trueSize.height,
+                false,
+                "the crop is bigger than the picture, the decoder scaled it up — using the coded aspect",
+            )
+        }
+
+        // A crop that is much smaller than the picture is a scaled-down picture.
+        //
+        // WHY the aspect comparison cannot see this: a uniform scaling does not
+        // change the aspect, so a decoder that scaled 1280x720 down to 854x480 and
+        // reported the scaled size as its crop keeps the aspect exactly. Only the
+        // size shows the difference. A real crop trims the padding the encoder
+        // added — a few pixels on one edge, under 2% of the height — so a shrink of
+        // more than [MAX_CROP_SHRINK] in one dimension is a scaling and not a crop.
+        val shrink = minOf(
+            crop.width.toDouble() / base.width,
+            crop.height.toDouble() / base.height,
+        )
+        if (shrink < 1.0 - MAX_CROP_SHRINK) {
+            val shrinkPercent = String.format(Locale.US, "%.1f", (1.0 - shrink) * 100.0)
+            return OutputSize(
+                trueSize.width,
+                trueSize.height,
+                false,
+                "the crop is $shrinkPercent% smaller than the picture, " +
+                    "the decoder scaled it down — using the coded aspect",
+            )
+        }
+
         val deviation = aspectDeviation(crop!!, trueSize)
         val percent = String.format(Locale.US, "%.1f", deviation * 100.0)
 

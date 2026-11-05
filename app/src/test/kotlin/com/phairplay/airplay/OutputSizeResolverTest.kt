@@ -182,6 +182,80 @@ class OutputSizeResolverTest {
     }
 
     /**
+     * Test: A resolution change replaces the reference size. The decoder is
+     * recreated for the new size, so the new coded picture decides — a crop of
+     * the new picture is legitimate again.
+     */
+    @Test
+    fun `resolve_after_resolution_change_uses_the_new_reference`() {
+        val result = OutputSizeResolver.resolve(
+            coded = PictureSize(1280, 720),
+            crop = PictureSize(1280, 718),
+            reference = PictureSize(1280, 720),
+        )
+
+        assertEquals(1280, result.width)
+        assertEquals(718, result.height)
+        assertTrue(result.cropAccepted)
+    }
+
+    /**
+     * Test: After a resolution change the new decoder scales again — the new
+     * coded aspect wins, not the size of the previous picture.
+     */
+    @Test
+    fun `resolve_after_resolution_change_rejects_a_scaled_crop_again`() {
+        val result = OutputSizeResolver.resolve(
+            coded = PictureSize(1280, 720),
+            crop = PictureSize(854, 480),
+            reference = PictureSize(1280, 720),
+        )
+
+        assertEquals(1280, result.width)
+        assertEquals(720, result.height)
+        assertFalse(result.cropAccepted)
+    }
+
+    /**
+     * Test: A deliberate content crop of a wide picture (16:9 → 4:3) changes the
+     * aspect by more than the tolerance and is therefore **not** used.
+     *
+     * WHY this is the intended behaviour: in both AirPlay use cases — mirroring
+     * a screen and playing a video — the sender encodes the content at its true
+     * aspect, so a crop that changes the aspect is a decoder artefact and not a
+     * deliberate framing. The decision is written down here so that it is
+     * visible and can be changed deliberately.
+     */
+    @Test
+    fun `resolve_deliberate_content_crop_is_not_used`() {
+        val result = OutputSizeResolver.resolve(
+            coded = PictureSize(1920, 1080),
+            crop = PictureSize(1440, 1080),
+            reference = PictureSize(1920, 1080),
+        )
+
+        assertEquals(1920, result.width)
+        assertEquals(1080, result.height)
+        assertFalse(result.cropAccepted)
+    }
+
+    /**
+     * Test: A crop that is bigger than the coded picture is implausible and is
+     * ignored — the decoder cannot crop more than it decoded.
+     */
+    @Test
+    fun `resolve_crop_larger_than_the_picture_is_ignored`() {
+        val result = OutputSizeResolver.resolve(
+            coded = PictureSize(1920, 1080),
+            crop = PictureSize(2560, 1440),
+            reference = PictureSize(1920, 1080),
+        )
+
+        assertEquals(1920, result.width)
+        assertEquals(1080, result.height)
+    }
+
+    /**
      * Test: Neither a plausible coded size nor a plausible crop — the SPS size is the
      * last remaining candidate.
      */
