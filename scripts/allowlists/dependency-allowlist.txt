@@ -1,0 +1,60 @@
+# dependency-allowlist.txt — the dependencies PhairPlay is allowed to ship.
+#
+# WHY: every dependency is a decision that somebody has to make on purpose.
+#      The version catalog says WHICH version is used; this list says that
+#      the dependency itself was looked at and accepted. A dependency that is
+#      not listed here has not been assessed, and the gate reports it as
+#      such — it does not count as "passed", because nobody took the
+#      decision.
+#
+# FORMAT
+#   <group>:<artifact>            one dependency per line
+#   # <justification>             a comment that says why it is accepted
+#
+# The comments are the interesting part: a list without a reason is a list
+# without a decision. When a dependency is removed, its line goes with it.
+#
+# MAINTAINED BY
+#   the team owner, together with scripts/allowlists/known-vulnerabilities.txt
+#
+
+# ── AndroidX ─────────────────────────────────────────────────────────────────
+androidx.appcompat:appcompat                   # the activity base of the TV UI
+androidx.constraintlayout:constraintlayout     # the layout of the settings screen
+androidx.core:core-ktx                         # the Kotlin extensions of the platform
+androidx.datastore:datastore-preferences       # the typed settings storage
+androidx.leanback:leanback                     # the TV focus management and the on-screen keyboard
+
+# ── Kotlin ───────────────────────────────────────────────────────────────────
+org.jetbrains.kotlin:kotlin-stdlib             # the Kotlin standard library
+org.jetbrains.kotlin:kotlin-stdlib-jdk7        # forced by the root build script for AGP 8
+org.jetbrains.kotlin:kotlin-stdlib-jdk8        # forced by the root build script for AGP 8
+org.jetbrains.kotlinx:kotlinx-coroutines-android  # the async I/O of the network and the media layer
+org.jetbrains.kotlinx:kotlinx-coroutines-core     # the same, for the JVM test runner
+org.jetbrains.kotlinx:kotlinx-coroutines-test     # the test dispatcher of the protocol tests
+
+# ── Google Play services ─────────────────────────────────────────────────────
+com.google.android.gms:play-services-cast-tv   # the Cast receiver, only in the googletv flavor
+
+# ── Cryptography ─────────────────────────────────────────────────────────────
+org.bouncycastle:bcprov-jdk18on                # AES-128-CTR and SRP-6a, see known-vulnerabilities.txt
+
+# ── AirPlay 2 ────────────────────────────────────────────────────────────────
+com.googlecode.plist:dd-plist                  # the binary property lists of the handshake, see known-vulnerabilities.txt
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+com.jakewharton.timber:timber                  # the tagged logging
+
+# ── Build ────────────────────────────────────────────────────────────────────
+com.android.application:com.android.application.gradle.plugin   # the Android Gradle Plugin
+org.jetbrains.kotlin.android:org.jetbrains.kotlin.android.gradle.plugin  # the Kotlin Android plugin
+org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin          # the Kotlin JVM plugin of the test runner
+com.android.tools:desugar_jdk_libs             # declared in the catalog, not used by any build script yet
+
+# ── Test ─────────────────────────────────────────────────────────────────────
+junit:junit                                     # the test framework
+io.mockk:mockk                                  # the mocking of the Android framework classes
+org.robolectric:robolectric                     # the real Android classes for the JVM tests
+org.robolectric:android-all                     # the Android framework jar of the Robolectric tests
+androidx.test.ext:junit                         # the instrumented test runner
+androidx.test.espresso:espresso-core            # the instrumented test assertions

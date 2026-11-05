@@ -1,0 +1,48 @@
+# known-vulnerabilities.txt — the version ceiling of the dependencies that
+# carry a known advisory.
+#
+# WHY: the gate has to run offline, so it cannot ask an advisory database
+#      what is known about the version in use. Instead this file records the
+#      decision of the team: for every dependency with an advisory, the
+#      highest version that is still accepted, and why. A dependency that is
+#      newer than the ceiling is a violation.
+#
+# FORMAT
+#   <group>:<artifact>  <max-allowed-version>  <note>
+#
+#   <note>   what the advisory is and what the team decided about it.
+#            A note that starts with WAIVED(<date>) accepts the version for
+#            the time being: the gate reports it as a warning, together with
+#            the date the waiver ends. When that date has passed, the waiver
+#            is over and the dependency becomes a violation again. A waiver
+#            without a date is not a waiver.
+#
+# SOURCES
+#   The advisories below were looked up on 2026-11-05. The links are in the
+#   note of the entry.
+#
+
+# Bouncy Castle: three advisories affect every version below 1.80.2.
+#   CVE-2026-0636  LDAP injection in LDAPStoreHelper (bcprov)
+#   CVE-2025-14813 use of a broken or risky cryptographic algorithm
+#   CVE-2026-5598  covert timing channel in the FrodoEngine
+# The build pins 1.78.1, so all three are open. PhairPlay uses Bouncy Castle
+# for AES-128-CTR and for SRP-6a, not for LDAP, but the ceiling is set for
+# the whole artifact. The upgrade to 1.80.2 or newer is the open task.
+# Sources: https://github.com/advisories/GHSA-p93r-85wp-75v3
+#           https://nvd.nist.gov/vuln/detail/CVE-2026-0636
+org.bouncycastle:bcprov-jdk18on  1.80.2  WAIVED(2026-12-15): CVE-2026-0636, CVE-2025-14813 and CVE-2026-5598 affect every version below 1.80.2; the build pins 1.78.1, the upgrade to 1.80.2 or newer is the open task
+
+# dd-plist: three advisories affect the parsers of the property lists.
+#   GHSA-xjjv-qfjr-95c3  excessive memory allocation and integer overflow in
+#                         the binary property list parser
+#   GHSA-mw7c-28pj-jpmr  uncontrolled recursion in the binary and the XML
+#                         property list parsers
+#   GHSA-vqvm-6237-5phf  uncontrolled recursion in the ASCII property list
+#                         parser
+# The fix is committed upstream, but as of 2026-11-05 no release carries it,
+# so the ceiling is the version that is planned. This is the dependency that
+# parses the binary property lists of an AirPlay sender, so the AirPlay
+# handshake has to limit the size and the depth of a payload on its own.
+# Source: https://github.com/3breadt/dd-plist/issues/104
+com.googlecode.plist:dd-plist  1.30  WAIVED(2026-12-15): GHSA-xjjv-qfjr-95c3, GHSA-mw7c-28pj-jpmr and GHSA-vqvm-6237-5phf affect the property list parsers of every release up to 1.29.0; the fix is committed upstream but not released yet, the build pins 1.28

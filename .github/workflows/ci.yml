@@ -1,3 +1,33 @@
+# CI — the pipeline of PhairPlay.
+#
+# WHAT: every push to main and every pull request runs five groups of checks:
+#       the structure of the repository, the JVM protocol tests, the Android
+#       build with lint, the native libraries of the shipped artefacts, and
+#       the security and the supply chain of the build.
+#
+# WHY: the checks are split so that a red run says WHERE the problem is.
+#       A developer who waits for the whole pipeline to find out that a
+#       native library is aligned to 4 KB instead of 16 KB has lost half an
+#       hour; a job that fails in the second minute says it in one line.
+#
+# THE GATES
+#   quality-gate          the structure rules of docs/CONTRIBUTING.md
+#   jvm-tests             the protocol tests of the JVM test runner
+#   android-build         Android Lint and the debug APKs, both flavours
+#   native-libraries      the ABIs, the ELF alignment and the ZIP alignment
+#                         of the native libraries of the built artefacts
+#   security-supply-chain the secret scan, the SBOM and the decision on every
+#                         dependency of the build
+#
+# PUBLISHING
+#   This workflow never publishes anything. A manual run (workflow_dispatch)
+#   only builds the release artefacts and stores them in the artefact store
+#   of the run; the publication stays an explicit act of the owner.
+#
+# PERMISSIONS
+#   The workflow only reads the repository. Nothing is written back, so the
+#   token of the runner needs nothing but "contents: read".
+
 name: CI
 
 on:
@@ -5,6 +35,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,6 +43,8 @@ permissions:
 jobs:
   quality-gate:
     name: Quality gate (repository structure)
+    # A manual run builds the artefacts; it does not repeat the checks.
+    if: github.event_name != 'workflow_dispatch'
     runs-on: self-hosted
     timeout-minutes: 10
 
@@ -20,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Make the check scripts executable
-        run: chmod +x scripts/check-file-size.sh scripts/check-kdoc-headers.sh scripts/check-docs-links.sh scripts/check-i18n-completeness.sh scripts/check-privacy-policy.sh
+        run: chmod +x scripts/*.sh
 
       # The five scripts are the machine-readable form of the project rules in
       # docs/CONTRIBUTING.md. Every one of them exits 1 when it finds a
@@ -67,6 +100,7 @@ jobs:
 
   jvm-tests:
     name: JVM protocol tests
+    if: github.event_name != 'workflow_dispatch'
     runs-on: self-hosted
     timeout-minutes: 30
 
@@ -98,6 +132,7 @@ jobs:
 
   android-build:
     name: Android lint & debug APK (${{ matrix.flavor }})
+    if: github.event_name != 'workflow_dispatch'
     runs-on: self-hosted
     timeout-minutes: 45
     strategy:
@@ -154,4 +189,176 @@ jobs:
           name: debug-apk-${{ matrix.flavor }}
           path: ${{ matrix.apk_path }}
           retention-days: 7
+          if-no-files-found: error
+
+  native-libraries:
+    name: Native libraries (16 KB page size)
+    # WHAT: the ABIs, the ELF alignment and the alignment inside the ZIP of
+    #      the native libraries of the debug APKs.
+    # WHY: Google Play rejects an app whose 64-bit libraries are aligned to
+    #      4 KB instead of 16 KB. The check reads the artefacts that are
+    #      actually built, because the build script alone cannot show a
+    #      library that was compiled with the wrong page size.
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: self-hosted
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant Gradle wrapper execute permission
+        run: chmod +x gradlew
+
+      # The NDK and CMake are needed for the native libraries; zipalign comes
+      # from the build tools and is required by the check below.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0 ndk;28.2.13676358 cmake;3.22.1'
+
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Make the check scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Build the debug APKs of both flavours
+        run: ./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug --stacktrace
+
+      # --require-zipalign makes the check fail when the build tools are
+      # missing: without zipalign the alignment inside the ZIP cannot be
+      # verified, and a check that cannot verify must not report a pass.
+      - name: Check the native libraries of the artefacts
+        run: |
+          ./scripts/check-native-libs.sh \
+            --apk app/build/outputs/apk/googletv/debug/app-googletv-debug.apk \
+            --apk app/build/outputs/apk/firetv/debug/app-firetv-debug.apk \
+            --require-zipalign
+
+      # The self-test proves that the gate above turns red on a broken
+      # artefact. A gate that cannot turn red proves nothing.
+      - name: Prove that the native library gate can turn red
+        run: ./scripts/test-check-native-libs.sh
+
+      - name: Upload the checked APKs
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: native-checked-apks
+          path: |
+            app/build/outputs/apk/googletv/debug/app-googletv-debug.apk
+            app/build/outputs/apk/firetv/debug/app-firetv-debug.apk
+          retention-days: 7
+          if-no-files-found: error
+
+  security-supply-chain:
+    name: Security & supply chain
+    # WHAT: the secret scan of the repository, the SBOM of the declared
+    #      dependencies and the decision on every one of them.
+    # WHY: a credential in the history of the repository and a dependency
+    #      nobody ever looked at are both found after the fact, when they
+    #      cost the most. Both gates run offline, so they also run on a
+    #      machine without a network.
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make the check scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Scan the repository for credentials
+        run: ./scripts/check-secrets.sh
+
+      - name: Prove that the secret scan can turn red
+        run: ./scripts/test-check-secrets.sh
+
+      - name: Build the SBOM of the declared dependencies
+        run: ./scripts/build-sbom.sh
+
+      - name: Prove that the SBOM builder can turn red
+        run: ./scripts/test-build-sbom.sh
+
+      - name: Check the dependencies against the decisions of the team
+        run: ./scripts/check-dependencies.sh
+
+      - name: Prove that the dependency gate can turn red
+        run: ./scripts/test-check-dependencies.sh
+
+      # The SBOM is kept for 30 days, so that the state of the supply chain
+      # of a build can still be looked at when a release is prepared.
+      - name: Upload the SBOM
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sbom-cyclonedx
+          path: dist/sbom/
+          retention-days: 30
+          if-no-files-found: error
+
+  build-only:
+    name: Build only (manual, publishes nothing)
+    # WHAT: a manual run that builds the release artefacts and stores them
+    #      in the artefact store of the run.
+    # WHY: the publication of a release stays an explicit act of the owner.
+    #      This job never talks to the Play Console, never creates a tag and
+    #      never pushes anything; it only builds and uploads the files.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: self-hosted
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant Gradle wrapper execute permission
+        run: chmod +x gradlew
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0 ndk;28.2.13676358 cmake;3.22.1'
+
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      # The release build needs the signing credentials. They are only in the
+      # environment of the runner; without them the artefacts stay unsigned.
+      - name: Build the release artefacts
+        run: |
+          ./gradlew \
+            :app:assembleGoogletvRelease \
+            :app:assembleFiretvRelease \
+            :app:bundleGoogletvRelease \
+            :app:bundleFiretvRelease \
+            --stacktrace
+
+      - name: Upload the release artefacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-artefacts
+          path: |
+            app/build/outputs/apk/googletv/release/
+            app/build/outputs/apk/firetv/release/
+            app/build/outputs/bundle/
+          retention-days: 30
           if-no-files-found: error
