@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup rules for Android 11 (API 30) and older.
+
+    WHY THIS FILE EXISTS: on Android 12 and newer the rules of
+    `data_extraction_rules.xml` apply. Older systems only know this file, and the
+    platform documentation asks for both: "Even if your app targets Android 12 or
+    higher, you must also specify another set of XML backup rules to support devices
+    that run Android 11 (API level 30) or lower."
+
+    WHAT THE RULES DO: every domain is excluded, so the Ed25519 identity of the
+    receiver and the keys of the paired controllers never leave the device — neither
+    into a cloud backup nor onto another device.
+
+    The path "." means the whole domain.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

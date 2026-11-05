@@ -1,37 +1,43 @@
 package com.phairplay.dlna
 
-import com.phairplay.util.HostAddressPolicy
-import java.util.Locale
+import com.phairplay.util.FetchableUrlPolicy
 
 /**
  * DlnaMediaUri — validates the media URI a control point hands to `SetAVTransportURI`.
  *
- * WHY: The renderer must not be *too* strict here. A control point that offers a URI
- * the renderer refuses makes the whole device useless, and the classic mistake is to
- * accept only `file://` paths. At the same time the value is untrusted network input:
- * it must be bounded in length and free of control characters before it reaches the
- * media stack or a log line.
+ * WHY the renderer must not be *too* strict here: a control point that offers a URI the
+ * renderer refuses makes the whole device useless, and the classic mistake is to accept
+ * only `file://` paths. At the same time the value is untrusted network input and the
+ * renderer fetches it itself, so it has to be bounded and its address has to be checked.
  *
- * The accepted scheme list is deliberately wide (HTTP(S) for the normal case, plus
- * the streaming and file schemes real control points emit). The *address* of the URI is
- * checked separately by [HostAddressPolicy], because the renderer fetches the media
- * itself and a hostile control point must not be able to aim the TV at the cloud
- * metadata service of the router.
+ * WHY there is no scheme list here: the receiver fetches the URI itself, so the question
+ * "may the receiver fetch this URL?" is exactly the question [FetchableUrlPolicy]
+ * answers for the AirPlay stack too. A second, wider list in this file was a second
+ * truth: `file`, `smb`, `ftp`, `rtsp`, `udp` and friends were accepted here while the
+ * AirPlay path refused them — and `file://` turned the television into a reader for
+ * everything the app's own UID may read. The rule now stands in one place only, and
+ * this class is the DLNA-shaped view of it.
+ *
+ * WHAT IS ACCEPTED: `http` and `https` with a readable host whose address passes the
+ * shared address policy — loopback, link-local (and with it the cloud metadata address
+ * `169.254.169.254`), the multicast and broadcast ranges and the obfuscated notations of
+ * an address are refused. A **public** address stays allowed: the control point decides
+ * which medium the owner wants to see, and PhairPlay itself sends nothing.
+ *
+ * THE TRADE-OFF: a control point that offers an `rtsp://`, `smb://` or `ftp://` URI now
+ * gets the SOAP fault `402 Invalid Args` instead of a playback attempt. That is the
+ * safer variant — the renderer cannot speak those protocols itself, and accepting the
+ * scheme would mean handing the path to the media stack unchecked. It is recorded as an
+ * open owner decision (see `docs/security/FINDINGS.md`), because the compatibility cost
+ * lands on real control points.
  *
  * Example:
  *   DlnaMediaUri.validate("http://192.168.1.5/movie.mp4")  // Accepted
- *   DlnaMediaUri.validate("http://169.254.169.254/latest")  // Rejected("link-local address")
- *   DlnaMediaUri.validate("")                               // Rejected("empty")
+ *   DlnaMediaUri.validate("http://169.254.169.254/latest")  // Rejected("the address is a link-local address")
+ *   DlnaMediaUri.validate("file:///etc/passwd")             // Rejected("the URL scheme is not supported")
+ *   DlnaMediaUri.validate("")                               // Rejected("the URL is empty")
  */
 object DlnaMediaUri {
-
-    /** Longest URI accepted; beyond this the request is refused instead of truncated. */
-    const val MAX_URI_LENGTH = 4096
-
-    private val ALLOWED_SCHEMES = setOf(
-        "http", "https", "rtsp", "rtmp", "rtmpe", "rtmps", "ftp", "file", "smb",
-        "mms", "mmsh", "mmst", "udp", "pnm"
-    )
 
     /** Result of a URI validation. */
     sealed class Result {
@@ -50,23 +56,15 @@ object DlnaMediaUri {
      */
     fun validate(uri: String?): Result {
         val trimmed = uri?.trim().orEmpty()
-        if (trimmed.isEmpty()) return Result.Rejected("empty URI")
-        if (trimmed.length > MAX_URI_LENGTH) return Result.Rejected("URI too long")
-        if (trimmed.any { it.code < 0x20 || it.code == 0x7F }) {
-            return Result.Rejected("URI contains control characters")
+        // The shared rule decides everything; this class only shapes the answer for the
+        // DLNA stack. The rule is asked about the *trimmed* value, because a control
+        // point may pad the URI and the trimmed value is what reaches the media stack.
+        val reason = FetchableUrlPolicy.check(trimmed)
+        return if (reason == null) {
+            Result.Accepted(trimmed)
+        } else {
+            Result.Rejected(reason)
         }
-        val separator = trimmed.indexOf(':')
-        if (separator <= 0) return Result.Rejected("URI has no scheme")
-        val scheme = trimmed.substring(0, separator).lowercase(Locale.US)
-        if (scheme.any { !it.isLetterOrDigit() && it != '+' && it != '-' && it != '.' }) {
-            return Result.Rejected("URI scheme is malformed")
-        }
-        if (scheme !in ALLOWED_SCHEMES) return Result.Rejected("unsupported URI scheme")
-        // The renderer fetches the URI itself, so the address has to be checked as well.
-        // Without this, a hostile control point could point the TV at the cloud metadata
-        // service of the router. See HostAddressPolicy for the rules.
-        HostAddressPolicy.check(trimmed)?.let { return Result.Rejected(it) }
-        return Result.Accepted(trimmed)
     }
 
     /** Convenience predicate around [validate]. */

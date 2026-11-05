@@ -341,7 +341,9 @@ class SettingsFragment : Fragment() {
                 textDisplayNameValue.text = newName.ifEmpty {
                     getString(R.string.setting_display_name_system_default)
                 }
-                Logger.i("Display name updated to: '${newName.ifEmpty { "(system default)" }}'")
+                // WHY the name is not logged: it is the name the owner gave their
+                // television, and a log excerpt may end up in a public issue tracker.
+                Logger.i("Display name updated (${newName.length} chars)")
             }
             .setNeutralButton(R.string.setting_display_name_reset) { _, _ ->
                 saveAndRestart { it.copy(displayName = "") }

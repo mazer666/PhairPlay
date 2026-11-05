@@ -15,7 +15,8 @@ import org.junit.Test
  *
  * WHAT WE TEST:
  * - `GetProtocolInfo` returns a non-empty Source *and* Sink protocol list,
- * - `SetAVTransportURI` accepts the URIs a real control point sends,
+ * - `SetAVTransportURI` accepts the URIs a real control point sends and refuses the
+ *   local schemes,
  * - `GetPositionInfo` returns the times in the literal `H:MM:SS` format,
  * - the remaining AVTransport and RenderingControl actions answer correctly,
  * - hostile SOAP bodies (XXE, billion laughs, broken XML) are refused.
@@ -88,11 +89,17 @@ class DlnaSoapDispatcherTest {
     }
 
     @Test
-    fun `SetAVTransportURI accepts a file URI and an rtsp URI`() {
+    fun `SetAVTransportURI refuses a local scheme and accepts an https URI`() {
+        // WHY this test was reversed: the renderer used to accept `file://` and
+        // `rtsp://`. A `file://` URI turns the television into a reader for the app's
+        // own sandbox, and the receiver speaks neither protocol itself. The rule now
+        // stands in one place — `com.phairplay.util.FetchableUrlPolicy` — and the
+        // DLNA stack uses it like the AirPlay stack does.
         listOf(
             "file:///C:/Users/test/movie.mkv",
+            "file:///data/data/com.phairplay.googletv/shared_prefs/phairplay_prefs.xml",
             "rtsp://192.168.1.10:554/live",
-            "https://example.invalid/stream.mp4"
+            "smb://192.168.1.10/share/movie.mkv"
         ).forEach { uri ->
             val result = dispatch(
                 "/upnp/control/AVTransport",
@@ -100,8 +107,24 @@ class DlnaSoapDispatcherTest {
                 envelope("AVTransport", "SetAVTransportURI", "<CurrentURI>$uri</CurrentURI>")
             )
 
-            assertEquals("URI must be accepted: $uri", 200, result.statusCode)
+            assertEquals("URI must be refused: $uri", 500, result.statusCode)
+            assertTrue(
+                "the answer must be the Invalid Args fault: $uri",
+                result.body.contains("<errorCode>402</errorCode>")
+            )
         }
+
+        // The normal case still works — the rule must not break the renderer.
+        val accepted = dispatch(
+            "/upnp/control/AVTransport",
+            "urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI",
+            envelope(
+                "AVTransport",
+                "SetAVTransportURI",
+                "<CurrentURI>https://example.invalid/stream.mp4</CurrentURI>"
+            )
+        )
+        assertEquals(200, accepted.statusCode)
     }
 
     @Test

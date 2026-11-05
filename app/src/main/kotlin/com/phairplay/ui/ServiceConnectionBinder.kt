@@ -1,5 +1,6 @@
 package com.phairplay.ui
 
+import com.phairplay.util.Logger
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -13,7 +14,6 @@ import com.phairplay.service.PhairPlayService
 import com.phairplay.service.ProtocolState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 /**
  * ServiceConnectionBinder — Binds the Activity to the service and mirrors its state.
@@ -78,7 +78,7 @@ internal class ServiceConnectionBinder(
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = (binder as? PhairPlayService.LocalBinder)?.getService()
             isBound = true
-            Timber.d("MainActivity: bound to PhairPlayService")
+            Logger.d("MainActivity: bound to PhairPlayService")
 
             // Wire the streaming Surface so the service can pass it to VideoDecoder
             service?.setVideoSurfaceProvider { surfaceProvider() }
@@ -90,7 +90,7 @@ internal class ServiceConnectionBinder(
         override fun onServiceDisconnected(name: ComponentName?) {
             service = null
             isBound = false
-            Timber.d("MainActivity: unbound from PhairPlayService")
+            Logger.d("MainActivity: unbound from PhairPlayService")
         }
     }
 

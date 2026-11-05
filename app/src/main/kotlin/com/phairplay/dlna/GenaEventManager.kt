@@ -45,7 +45,8 @@ class GenaEventManager(
      * @param requestedTimeoutSeconds the timeout the control point asked for; it is
      *   clamped into the range the renderer supports.
      * @return the subscription with its SID and the effective timeout.
-     * @throws IllegalArgumentException when the callback URL is not allowed.
+     * @throws IllegalArgumentException when the callback URL is not allowed or when the
+     *   renderer already carries [MAX_SUBSCRIPTIONS] subscriptions.
      */
     fun subscribe(
         callbackHeader: String?,
@@ -57,6 +58,20 @@ class GenaEventManager(
             "GENA callback must be a private IPv4 URL on the local subnet"
         }
         require(servicePath.startsWith("/upnp/event/")) { "Unknown event service path" }
+        // WHY the cap: every subscription is remembered until it expires (up to 30
+        // minutes), and every state change posts a NOTIFY to every subscriber of the
+        // service. Without a cap, any device in the network could register thousands of
+        // subscriptions in a few seconds and turn one `Play` action into thousands of
+        // simultaneous outbound connections — the renderer would run out of sockets and
+        // its own HTTP server would stop answering. The cap bounds the registry AND the
+        // fan-out with one number, so the two can never drift apart.
+        //
+        // The price is that a control point that arrives when the cap is reached does
+        // not receive state events. The playback path does not depend on GENA, so the
+        // damage is limited to the notification of the state.
+        require(subscriptions.size < MAX_SUBSCRIPTIONS) {
+            "the renderer carries the maximum of $MAX_SUBSCRIPTIONS event subscriptions"
+        }
         startPurgeLoop()
         val timeout = clampTimeout(requestedTimeoutSeconds)
         val sid = "uuid:${UUID.randomUUID()}"
@@ -227,6 +242,16 @@ class GenaEventManager(
 
         /** Longest subscription timeout the renderer accepts. */
         const val MAX_TIMEOUT_SECONDS = 1_800
+
+        /**
+         * Largest number of event subscriptions the renderer carries at the same time.
+         *
+         * WHY 32: a household has a handful of control points (a phone, a laptop, a
+         * TV). 32 leaves room for every normal case and bounds the memory of the
+         * registry and the number of simultaneous outbound NOTIFY connections of one
+         * state change.
+         */
+        const val MAX_SUBSCRIPTIONS = 32
 
         private const val PURGE_INTERVAL_MS = 30_000L
         private const val HTTP_TIMEOUT_MS = 3_000

@@ -1,5 +1,6 @@
 package com.phairplay.service
 
+import com.phairplay.util.Logger
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -8,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 /**
  * BootReceiver — starts [PhairPlayService] on device boot if "Start on boot" is enabled.
@@ -36,7 +36,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
 
-        Timber.d("BootReceiver: BOOT_COMPLETED received")
+        Logger.d("BootReceiver: BOOT_COMPLETED received")
 
         // goAsync() extends the execution window beyond the 10-second BroadcastReceiver limit.
         val pendingResult: PendingResult = goAsync()
@@ -45,13 +45,13 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 val settings = SettingsRepository(context).settingsFlow.first()
                 if (settings.startOnBoot) {
-                    Timber.i("BootReceiver: startOnBoot=true → starting PhairPlayService")
+                    Logger.i("BootReceiver: startOnBoot=true → starting PhairPlayService")
                     ServiceController.start(context)
                 } else {
-                    Timber.d("BootReceiver: startOnBoot=false → not starting service")
+                    Logger.d("BootReceiver: startOnBoot=false → not starting service")
                 }
             } catch (e: Exception) {
-                Timber.e(e, "BootReceiver: failed to read settings or start service")
+                Logger.e("BootReceiver: failed to read settings or start service", e)
             } finally {
                 pendingResult.finish()
             }

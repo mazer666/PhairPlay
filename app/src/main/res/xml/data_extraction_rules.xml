@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Data extraction rules (Android 12 / API 31 and newer).
+
+    WHY THIS FILE EXISTS: `android:allowBackup="false"` in the manifest switches the
+    *cloud* backup off on every Android version. It does **not** switch the
+    device-to-device transfer off: the platform documentation says that on devices of
+    some manufacturers a device-to-device migration of the app's files happens anyway,
+    and that the rules for it are the ones of this file, not the manifest attribute.
+
+    WHY IT MATTERS HERE: the app holds the receiver's long-term Ed25519 identity
+    (`shared_prefs/phairplay_prefs.xml` → `pairing_ed25519_seed`) and the public keys
+    of the paired controllers (`shared_prefs/phairplay_pairings.xml`). A device-to-device
+    transfer would carry both to the new device, where the identity of the television
+    would live on a machine that has nothing to do with it.
+
+    WHAT THE RULES DO: every domain is excluded — from the cloud backup and from the
+    device transfer, and in both the credential-encrypted and the device-protected
+    storage. Nothing of the app leaves the device, neither into a cloud backup nor
+    onto another device.
+
+    The rules of Android 11 and older live in `backup_rules.xml` and are named by
+    `android:fullBackupContent` in the manifest.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+        <exclude domain="device_root" />
+        <exclude domain="device_file" />
+        <exclude domain="device_database" />
+        <exclude domain="device_sharedpref" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+        <exclude domain="device_root" />
+        <exclude domain="device_file" />
+        <exclude domain="device_database" />
+        <exclude domain="device_sharedpref" />
+    </device-transfer>
+</data-extraction-rules>

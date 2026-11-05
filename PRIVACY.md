@@ -1,6 +1,6 @@
 # Privacy policy of PhairPlay
 
-**Last updated:** 2026-11-02
+**Last updated:** 2026-11-05
 **Applies to:** every version of PhairPlay for Google TV and Fire TV, from 1.0.0-alpha.1 on
 
 PhairPlay shows the screen of your phone or laptop on your television. It is a
@@ -72,6 +72,16 @@ All of it lives in the private storage of the application
 because `android:allowBackup="false"` is set, **none of it is included in the
 Android cloud backup**.
 
+**And none of it leaves the device in any other way either.** `android:allowBackup
+="false"` alone is not enough for that: on Android 12 and newer the *device-to-device
+transfer* — the migration of the app's data onto a newly set-up device — follows the
+data extraction rules, and the platform documentation says that on devices of some
+manufacturers it happens even when the backup is switched off. PhairPlay therefore
+names two rule files in the manifest (`res/xml/data_extraction_rules.xml` for Android
+12 and newer, `res/xml/backup_rules.xml` for Android 11 and older), and both exclude
+every domain. The identity of the television and the keys of the paired controllers
+therefore stay on the television that holds them.
+
 | What | Where | Why |
 |---|---|---|
 | Your settings: display name, the switches for AirPlay / Miracast / Cast / DLNA, PIN authentication, "start on boot", debug overlay, high resolution, mirror audio | `datastore/phairplay_settings.preferences_pb` | The settings belong to you and must survive a restart. |
@@ -129,6 +139,13 @@ cannot record anything, cannot read your files, and cannot see where you are.
   sender, and the title of a playing track are logged as they are — that is a
   known and accepted limitation, listed in
   `docs/audit/2026-10-24-security-audit.md`.
+* The **diagnostics report** that you can copy out of the app is reduced a second
+  time, and more strictly. The report on the screen names the television and its
+  address, because that is what you need in order to find the device. The **copied**
+  text does not: it carries no IP address, no MAC address, no UUID, neither the name
+  of the television nor the name of the sender. What stays is what makes a bug report
+  useful — the version, the platform, the state of every protocol, the ports, the
+  result of the self test and the resource measurement.
 
 ## 6. The permissions that are declared but never requested
 

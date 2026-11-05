@@ -160,7 +160,8 @@ class MdnsService(
         acquireMulticastLock()
 
         val effectiveName = resolveDisplayName(displayNameOverride)
-        Logger.i("Starting mDNS advertising as '$effectiveName'")
+        // WHY the name is not logged: it is the name the owner gave their television.
+        Logger.i("Starting mDNS advertising")
 
         tracker.reset()
         registrar.registerAll(effectiveName)

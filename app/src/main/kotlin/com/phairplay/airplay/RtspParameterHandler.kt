@@ -27,7 +27,10 @@ internal class RtspParameterHandler(
 
     internal fun handleGetParameter(request: RtspRequest): RtspResponse {
         val query = request.body.trim()
-        Logger.i("GET_PARAMETER body='$query'")
+        // WHY the body is not logged: it is free text that the sender chose. A sender
+        // could put anything into it, and a log excerpt that a user pastes into a public
+        // issue tracker would carry it. The length is enough to debug the request.
+        Logger.i("GET_PARAMETER body (${query.length} B)")
         // macOS queries "volume" during setup and aborts if it gets no value back. Report the
         // last value the sender set so its volume slider reflects the receiver.
         return if (query.startsWith("volume")) {
@@ -62,7 +65,15 @@ internal class RtspParameterHandler(
             contentType.contains("dmap") || looksLikeDmap(request.bodyBytes) -> {
                 val meta = DmapParser.parseNowPlaying(request.bodyBytes)
                 onNowPlayingMetadata(meta.title, meta.artist, meta.album)
-                Logger.i("SET_PARAMETER now-playing: title='${meta.title}' artist='${meta.artist}' album='${meta.album}'")
+                // WHY the title, the artist and the album are not logged: they say what
+                // the owner is listening to. That is personal data, and it has no place
+                // in a log that a user may paste into a public issue tracker. The length
+                // of the title is enough to tell "no metadata" from "metadata".
+                Logger.i(
+                    "SET_PARAMETER now-playing metadata received " +
+                        "(title ${meta.title?.length ?: 0} chars, artist ${meta.artist?.length ?: 0} chars, " +
+                        "album ${meta.album?.length ?: 0} chars)"
+                )
             }
             else -> Logger.d("SET_PARAMETER (${request.bodyBytes.size}B, $contentType, unhandled)")
         }

@@ -1,5 +1,6 @@
 package com.phairplay
 
+import com.phairplay.util.Logger
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -21,7 +22,6 @@ import com.phairplay.ui.PhotoScreen
 import com.phairplay.ui.PinScreen
 import com.phairplay.ui.ServiceConnectionBinder
 import com.phairplay.ui.StreamingScreen
-import timber.log.Timber
 
 /**
  * MainActivity — The single Activity hosting PhairPlay's navigation and fragments.
@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        Timber.d("MainActivity created")
+        Logger.d("MainActivity created")
         bindViews()
         setupOverlayScreens()
         setupNavigation()
@@ -107,10 +107,10 @@ class MainActivity : AppCompatActivity() {
         // service must keep running). Backgrounding via Home goes through onStop only (no destroy),
         // so the receiver keeps advertising for a quick return.
         if (isFinishing) {
-            Timber.d("MainActivity finishing — stopping service so mirroring doesn't linger")
+            Logger.d("MainActivity finishing — stopping service so mirroring doesn't linger")
             ServiceController.stop(this)
         } else {
-            Timber.d("MainActivity destroyed (recreation) — leaving service running")
+            Logger.d("MainActivity destroyed (recreation) — leaving service running")
         }
     }
 
@@ -242,7 +242,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-        Timber.d("Keep-screen-on: $keepOn")
+        Logger.d("Keep-screen-on: $keepOn")
     }
 
     /** Returns the SurfaceView Surface for the VideoDecoder. */

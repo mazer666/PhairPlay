@@ -1,7 +1,5 @@
 package com.phairplay.ui
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -16,14 +14,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.phairplay.BuildConfig
 import com.phairplay.R
 import com.phairplay.diagnostics.DiagnosticProtocol
 import com.phairplay.diagnostics.DiagnosticSession
 import com.phairplay.diagnostics.DiagnosticsLabels
-import com.phairplay.diagnostics.DiagnosticsPlatform
-import com.phairplay.diagnostics.DiagnosticsPort
-import com.phairplay.diagnostics.DiagnosticsPorts
 import com.phairplay.diagnostics.DiagnosticsReport
 import com.phairplay.diagnostics.DiagnosticsReportBuilder
 import com.phairplay.diagnostics.ProcessMemoryProbe
@@ -31,7 +25,6 @@ import com.phairplay.diagnostics.ResourceSample
 import com.phairplay.diagnostics.SelfTest
 import com.phairplay.diagnostics.SelfTestResult
 import com.phairplay.dlna.DlnaNetworkAddress
-import com.phairplay.dlna.SsdpMessages
 import com.phairplay.service.PhairPlayService
 import com.phairplay.service.Protocol
 import com.phairplay.service.ProtocolState
@@ -90,6 +83,9 @@ class DiagnosticsFragment : Fragment() {
 
     /** The last measurement of the memory and the CPU load of the app process. */
     private var resourceSample: ResourceSample? = null
+
+    /** The report as it is shown on the screen — the base of the exported copy. */
+    private var currentReport: DiagnosticsReport? = null
 
     /** The probe that measures the resources — built on the first measurement. */
     @Volatile
@@ -254,67 +250,40 @@ class DiagnosticsFragment : Fragment() {
     private fun renderReport() {
         val labels = labels ?: return
         val context = context ?: return
-        val report = DiagnosticsReport(
-            deviceName = displayName,
+        val report = DiagnosticsReportFactory.report(
+            displayName = displayName,
             localAddress = localAddress,
-            appVersion = appVersion(),
-            platform = platform(),
             serviceState = DiagnosticsLabelsFactory.serviceStateText(context, serviceState),
             protocolStates = protocolStates.toMap(),
-            ports = ports(labels),
+            ports = DiagnosticsReportFactory.ports(labels, descriptionPort),
             selfTestResults = selfTestResults,
             activeSession = activeSession,
             resourceSample = resourceSample
         )
+        // The report is kept so that the copy button can build the *export* version of
+        // it — the text on the screen names the device, the exported text does not.
+        currentReport = report
         textReport.text = DiagnosticsReportBuilder.build(report, labels)
     }
-
-    /**
-     * The version of the build.
-     *
-     * WHY the version code is added: the version name carries the flavour suffix,
-     * so "1.0.0-alpha.1-googletv" alone does not say which build of the release the
-     * owner is running. The version code does.
-     */
-    private fun appVersion(): String = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
-
-    /**
-     * The platform of the build.
-     *
-     * WHY the flavour decides and not the device: the flavour is fixed when the app
-     * is built. A device that reports what it thinks it is would name a platform
-     * the build does not have.
-     */
-    private fun platform(): String = when (BuildConfig.FLAVOR) {
-        FIRE_TV_FLAVOR -> DiagnosticsPlatform.FIRE_TV
-        else -> DiagnosticsPlatform.GOOGLE_TV
-    }
-
-    /** The ports the receiver listens on. */
-    private fun ports(labels: DiagnosticsLabels): List<DiagnosticsPort> = listOf(
-        DiagnosticsPort(labels.portAirPlay, DiagnosticsPorts.AIRPLAY),
-        DiagnosticsPort(labels.portDlnaDescription, descriptionPort ?: 0),
-        DiagnosticsPort(labels.portSsdp, SsdpMessages.PORT)
-    )
 
     // ─── The Buttons ─────────────────────────────────────────────────────────
 
     /**
      * Copies the report into the clipboard.
      *
-     * WHY the whole report: the fastest way to get help is to paste the report into
-     * a message. The report carries the address of the television and its name —
-     * both of which the owner has to share anyway — and nothing else.
+     * WHY the export version and not the text on the screen: the screen names the
+     * television and its address, because the owner has to find the device. The copied
+     * text leaves the app — into a bug tracker, a chat message, a forum thread — and
+     * there it becomes public and permanent. The exported report therefore carries no
+     * address, no MAC address, no UUID and neither the name of the television nor the
+     * name of the sender. See [DiagnosticsReportExporter].
      */
     private fun copyReportToClipboard() {
-        val text = textReport.text?.toString().orEmpty()
-        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        if (clipboard == null) {
-            Toast.makeText(requireContext(), R.string.diagnostics_copy_failed, Toast.LENGTH_SHORT).show()
-            return
-        }
-        clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.diagnostics_title), text))
-        Toast.makeText(requireContext(), R.string.diagnostics_copied, Toast.LENGTH_SHORT).show()
+        val labels = labels ?: return
+        val report = currentReport ?: return
+        val copied = DiagnosticsReportExporter.copyToClipboard(requireContext(), report, labels)
+        val message = if (copied) R.string.diagnostics_copied else R.string.diagnostics_copy_failed
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
 
     /**
@@ -387,10 +356,5 @@ class DiagnosticsFragment : Fragment() {
         val created = ProcessMemoryProbe()
         resourceProbe = created
         return created
-    }
-
-    companion object {
-        /** The name of the product flavour that builds for Amazon Fire TV. */
-        private const val FIRE_TV_FLAVOR = "firetv"
     }
 }

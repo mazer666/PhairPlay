@@ -7,6 +7,7 @@ import com.phairplay.cast.CastReceiver
 import com.phairplay.dlna.DlnaReceiver
 import com.phairplay.miracast.MiracastReceiver
 import com.phairplay.settings.AppSettings
+import com.phairplay.util.LogRedactor
 import com.phairplay.util.Logger
 
 /**
@@ -78,6 +79,11 @@ internal class ReceiverSupervisor(
      * @param settings Current app settings; read once per start/restart cycle.
      */
     internal fun startAirPlay(settings: AppSettings) {
+        // WHY the name is registered here: the display name is the name the owner gave
+        // their television, and it must not appear in a log excerpt that may end up in a
+        // public issue tracker. The call sites do not log it — this is the second line
+        // of defence, and it belongs where the name is known.
+        LogRedactor.registerPersonalString(settings.effectiveDisplayName)
         // Mirror the debug-overlay setting into the shared stats bus that StreamingScreen reads.
         com.phairplay.airplay.StreamStats.overlayEnabled = settings.showDebugOverlay
 
@@ -167,7 +173,7 @@ internal class ReceiverSupervisor(
                 }
             }
         ).also { it.start() }
-        Logger.d("AirPlay receiver started (displayName='${settings.effectiveDisplayName}')")
+        Logger.d("AirPlay receiver started")
     }
 
     /** Creates and starts the [MiracastReceiver]. */

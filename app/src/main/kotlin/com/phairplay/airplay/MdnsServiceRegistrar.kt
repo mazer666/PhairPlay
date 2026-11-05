@@ -129,8 +129,12 @@ internal class MdnsServiceRegistrar(
             onRegisteredName = { actualName ->
                 // Detect collision auto-renaming: NsdManager appended " (2)", " (3)", etc.
                 if (actualName != requestedName) {
-                    Logger.w("mDNS name collision detected: requested='$requestedName' " +
-                             "actual='$actualName' — NsdManager resolved automatically")
+                    // WHY the names are not written out: they are the name the owner gave
+                    // their television. The collision itself is what matters here.
+                    Logger.w(
+                        "mDNS name collision detected — NsdManager resolved automatically " +
+                            "(requested ${requestedName.length} chars, actual ${actualName.length} chars)"
+                    )
                 }
                 onActualNameRegistered(actualName)
             }
@@ -214,7 +218,7 @@ internal class MdnsServiceRegistrar(
             override fun onServiceRegistered(serviceInfo: NsdServiceInfo) {
                 // NsdManager may append " (2)" to resolve name conflicts.
                 // Log the actual name so we can debug picker-visibility issues.
-                Logger.i("mDNS registered: $serviceLabel as '${serviceInfo.serviceName}'")
+                Logger.i("mDNS registered: $serviceLabel (${serviceInfo.serviceName.length} chars)")
                 onRegisteredName?.invoke(serviceInfo.serviceName)
                 if (tracker.onRegistered(slot, gen)) {
                     onStateChange(ProtocolState.ADVERTISING)

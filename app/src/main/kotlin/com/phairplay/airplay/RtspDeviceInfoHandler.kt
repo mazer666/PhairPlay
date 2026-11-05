@@ -58,12 +58,30 @@ internal class RtspDeviceInfoHandler(
         if (n > 0) {
             runCatching {
                 val p = PlistCodec.decode(request.bodyBytes)
+                // WHY the values are not written out: the body comes from the sender,
+                // so the values are free text that a peer chose. The keys and the shape
+                // of the values are enough to debug the request.
                 Logger.d("/feedback body ($n B): " + p.entries.joinToString { (k, v) ->
-                    "$k=" + when (v) { is ByteArray -> "${v.size}B"; is List<*> -> "list[${v.size}]"; else -> v.toString() }
+                    "$k=" + describeValue(v)
                 })
             }.onFailure { Logger.d("/feedback body ($n B, non-plist)") }
         }
         return RtspResponse(200, "OK", protocol = request.responseProtocol())
+    }
+
+    /**
+     * Describes the shape of a value of the request body without writing the value out.
+     *
+     * WHY: the body comes from the sender. Its values are free text that a peer chose,
+     * and a log excerpt may end up in a public issue tracker. The size of the value is
+     * enough to see whether the sender sent something sensible.
+     */
+    private fun describeValue(value: Any?): String = when (value) {
+        is ByteArray -> "${value.size}B"
+        is List<*> -> "list[${value.size}]"
+        is String -> "string[${value.length}]"
+        null -> "none"
+        else -> value.javaClass.simpleName
     }
 
     /**
@@ -76,7 +94,7 @@ internal class RtspDeviceInfoHandler(
             runCatching {
                 val p = PlistCodec.decode(request.bodyBytes)
                 Logger.d("$label body ($n B): " + p.entries.joinToString { (k, v) ->
-                    "$k=" + when (v) { is ByteArray -> "${v.size}B"; is List<*> -> "list[${v.size}]"; else -> v.toString() }
+                    "$k=" + describeValue(v)
                 })
             }.onFailure { Logger.d("$label body ($n B, non-plist)") }
         }

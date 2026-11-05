@@ -84,7 +84,7 @@ class DlnaReceiver(
             descriptionServer = server
             ssdpAdvertiser = advertiser
             advertisedHost = localHost
-            Logger.i("DLNA MediaRenderer advertised as '$friendlyName' at ${server.descriptionUrl}")
+            Logger.i("DLNA MediaRenderer advertised at ${server.descriptionUrl}")
             onStateChanged(ProtocolState.ADVERTISING)
         } catch (e: Exception) {
             Logger.e("Failed to start DLNA receiver", e)

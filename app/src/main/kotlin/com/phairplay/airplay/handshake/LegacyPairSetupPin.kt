@@ -54,7 +54,9 @@ class LegacyPairSetupPin(private val pin: String, private val accessoryEdPublic:
         val k = BigInteger(1, sha1(pad(N), pad(G)))                                // k = H(PAD(N) | PAD(g))
         serverPublic = k.multiply(verifier).add(G.modPow(serverPrivate, N)).mod(N) // B = kv + g^b
         serverPublicBytes = toBytes(serverPublic)
-        Logger.i("pair-setup-pin step1: user='$username' → pk(${serverPublicBytes.size}B) + salt(${salt.size}B)")
+        // WHY the user name is not logged: it identifies the controller that wants to
+        // pair. The step itself is visible from the sizes.
+        Logger.i("pair-setup-pin step1: pk(${serverPublicBytes.size}B) + salt(${salt.size}B)")
         return Result(mapOf("pk" to serverPublicBytes, "salt" to salt))
     }
 

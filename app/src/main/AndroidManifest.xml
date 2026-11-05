@@ -116,9 +116,23 @@
         lint that the attribute is intentional — the same trick the NEARBY_WIFI_DEVICES
         permission uses above.
     -->
+    <!--
+        allowBackup="false" switches the cloud backup off. On Android 12 (API 31) and
+        newer it does NOT switch the device-to-device transfer off — that one is
+        governed by the two rule files, so both are named here:
+
+        - dataExtractionRules → res/xml/data_extraction_rules.xml (Android 12+)
+        - fullBackupContent   → res/xml/backup_rules.xml        (Android 11 and older)
+
+        Both exclude every domain. The app holds the long-term Ed25519 identity of the
+        receiver and the public keys of the paired controllers; neither may leave the
+        device. See docs/security/FINDINGS.md (SEC-19).
+    -->
     <application
         android:name=".PhairPlayApp"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:banner="@drawable/app_banner"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

@@ -154,7 +154,11 @@ class AirPlayReceiver(
      * Non-blocking — all network work runs in background coroutines.
      */
     fun start() {
-        Logger.i("AirPlayReceiver starting (displayName='$displayName')")
+        // WHY the display name is not logged: it is the name the owner gave their
+        // television. The reduction in util/LogRedactor knows it as well, so the second
+        // line of defence is in place — but the name does not belong in a log excerpt
+        // that may end up in a public issue tracker.
+        Logger.i("AirPlayReceiver starting")
         scope.launch {
             try {
                 startTimingHandler()

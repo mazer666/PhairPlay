@@ -23,18 +23,43 @@ package com.phairplay.util
  *  - **URLs**: the credentials and the query/fragment are replaced
  *    (`https://host/x?token=abc` → `https://host/x?<redacted>`). Signed media URLs carry access
  *    tokens, and a URL can also carry a user name and a password.
+ *  - **Personal strings**: the name of the television and the name of the sender are
+ *    registered with [registerPersonalString] and replaced wherever they appear. A name is
+ *    free text — no pattern can recognise "Wohnzimmer TV" — so the app hands the strings it
+ *    knows to the reduction, and the reduction removes them from every message. That way a
+ *    new log statement cannot leak the name of the household by accident.
  *
  * WHAT IS NOT REDACTED — AND WHY THAT IS NOT A GAP IN THIS CLASS
- *  Free-text names: the device name, the name of the sender, the title/artist of the track that
- *  is currently playing. A pattern cannot recognise them, so they must not be logged in the
- *  first place. That is a finding in the audit (SEC-05) with a fix for the owning track, not a
- *  limitation of this class.
+ *  Free text that the app does not know: the title, the artist and the album of the track
+ *  that is currently playing, and the body of a request the sender sent. Those must not be
+ *  logged in the first place — the call sites do not log them. The reduction is the second
+ *  line of defence, not the first.
  *
  * Example:
  *   LogRedactor.redact("client 192.168.1.42 connected")   // "client 192.168.1.x connected"
  *   LogRedactor.redact("mac aa:bb:cc:dd:ee:ff")            // "mac aa:bb:cc:xx:xx:xx"
  */
 object LogRedactor {
+
+    /**
+     * The text that replaces a personal string.
+     *
+     * WHY a name of its own and not "redacted": the reader of a log excerpt should be able
+     * to tell "a name was here" from "an address was here".
+     */
+    const val PERSONAL_PLACEHOLDER = "<name>"
+
+    /**
+     * A personal string shorter than this is not replaced.
+     *
+     * WHY: a two-letter name like "TV" occurs in ordinary words ("AirPlay TV session"), and
+     * replacing it would mangle every message. The call sites do not log the name at all;
+     * this class is the second line of defence, and it refuses to be a bad one.
+     */
+    private const val MIN_PERSONAL_LENGTH = 4
+
+    /** The names of the devices of the household — the strings that must not be logged. */
+    private val personalStrings = java.util.concurrent.CopyOnWriteArrayList<String>()
 
     /**
      * Removes identifying data from [message].
@@ -50,6 +75,41 @@ object LogRedactor {
         result = UUID_PATTERN.replace(result, UUID_PLACEHOLDER)
         result = MAC_PATTERN.replace(result) { match -> maskMac(match.value) }
         result = IPV4_PATTERN.replace(result) { match -> maskIpv4(match.value) }
+        // The personal strings come last: a name may contain an address-shaped word.
+        result = maskPersonalStrings(result)
+        return result
+    }
+
+    /**
+     * Registers a string that must not appear in a log message.
+     *
+     * WHY this exists: the name of the television and the name of the sender are free
+     * text. No pattern can recognise them, so the app — which knows them — hands them to
+     * the reduction, and the reduction removes them from every message that is written
+     * afterwards. The call sites do not log the names either; this is the second line of
+     * defence against the next developer who does.
+     *
+     * @param value the string to hide. A null, a blank string and a string shorter than
+     *   four characters are ignored.
+     */
+    fun registerPersonalString(value: String?) {
+        val trimmed = value?.trim().orEmpty()
+        if (trimmed.length < MIN_PERSONAL_LENGTH) return
+        if (personalStrings.any { it.equals(trimmed, ignoreCase = true) }) return
+        personalStrings.add(trimmed)
+    }
+
+    /** Forgets every registered personal string — used when the settings change. */
+    fun clearPersonalStrings() {
+        personalStrings.clear()
+    }
+
+    /** Replaces every registered personal string in [text]. */
+    private fun maskPersonalStrings(text: String): String {
+        var result = text
+        for (personal in personalStrings) {
+            result = result.replace(personal, PERSONAL_PLACEHOLDER)
+        }
         return result
     }
 

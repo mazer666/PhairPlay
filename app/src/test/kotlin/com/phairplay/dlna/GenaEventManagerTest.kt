@@ -170,6 +170,56 @@ class GenaEventManagerTest {
     }
 
     @Test
+    fun `the number of subscriptions is capped`() {
+        // The attack: any device in the network registers thousands of subscriptions,
+        // and every state change then posts a NOTIFY to each of them. The renderer
+        // would run out of sockets and stop answering its own control requests.
+        repeat(GenaEventManager.MAX_SUBSCRIPTIONS) {
+            manager.subscribe(
+                callbackHeader = "<http://$LOCAL_HOST:1400/event>",
+                servicePath = "/upnp/event/AVTransport"
+            )
+        }
+        assertEquals(GenaEventManager.MAX_SUBSCRIPTIONS, manager.activeSubscriptionCount())
+
+        val failure = runCatching {
+            manager.subscribe(
+                callbackHeader = "<http://$LOCAL_HOST:1400/event>",
+                servicePath = "/upnp/event/AVTransport"
+            )
+        }.exceptionOrNull()
+
+        assertNotNull("the subscription beyond the cap must be refused", failure)
+        assertEquals(
+            "the refused subscription must not be stored",
+            GenaEventManager.MAX_SUBSCRIPTIONS,
+            manager.activeSubscriptionCount()
+        )
+    }
+
+    @Test
+    fun `a freed slot can be used again`() {
+        val sids = (0 until GenaEventManager.MAX_SUBSCRIPTIONS).map {
+            manager.subscribe(
+                callbackHeader = "<http://$LOCAL_HOST:1400/event>",
+                servicePath = "/upnp/event/AVTransport"
+            ).sid
+        }
+        assertEquals(GenaEventManager.MAX_SUBSCRIPTIONS, manager.activeSubscriptionCount())
+
+        // A control point that goes away frees its slot — the cap must not turn into a
+        // permanent lockout of the event notification.
+        assertTrue(manager.unsubscribe(sids.first()))
+        val next = manager.subscribe(
+            callbackHeader = "<http://$LOCAL_HOST:1400/event>",
+            servicePath = "/upnp/event/AVTransport"
+        )
+
+        assertTrue(next.sid.isNotEmpty())
+        assertEquals(GenaEventManager.MAX_SUBSCRIPTIONS, manager.activeSubscriptionCount())
+    }
+
+    @Test
     fun `the callback guard is exposed for the policy tests`() {
         assertTrue(manager.isAllowedCallback(URI("http://$LOCAL_HOST:1400/event")))
         assertFalse(manager.isAllowedCallback(URI("http://127.0.0.1:1400/event")))
