@@ -72,11 +72,17 @@ jobs:
             check-kdoc-headers \
             check-docs-links \
             check-i18n-completeness \
-            check-privacy-policy
+            check-privacy-policy \
+            build-traceability
           do
             args=()
             if [ "$check" = "check-kdoc-headers" ]; then
               args=(--skip-nested)
+            fi
+            # The traceability matrix is verified, not rewritten: a build must not
+            # change the tree it is built from.
+            if [ "$check" = "build-traceability" ]; then
+              args=(--check)
             fi
             # The file size rule of docs/CONTRIBUTING.md applies to every source
             # file, not only to Kotlin. The shell scripts of scripts/ are source
