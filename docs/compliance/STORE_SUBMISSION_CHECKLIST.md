@@ -8,7 +8,7 @@
 Play Console in person.
 
 **How to use this list.** Work through it **in the order below** — the steps
-build on each other. The `Fertig?` column is left empty on purpose: tick it
+build on each other. The `Done?` column is left empty on purpose: tick it
 yourself as you go. The **Quelle** column names the section of
 [`../guides/GOOGLE_PLAY_STORE.md`](../guides/GOOGLE_PLAY_STORE.md) that belongs
 to the step; that guide holds the exact texts and paths.
@@ -31,7 +31,7 @@ to the step; that guide holds the exact texts and paths.
 
 ## Block 0 — Before the console (outside Play)
 
-| # | Schritt | Wo / was | Datei aus dem Repo | Fertig? |
+| # | Step | Where / what | File from the repo | Done? |
 |---|---|---|---|---|
 | 0.1 | Back up the release keystore outside the team storage | `~/.config/phairplay/phairplay-release.jks` + `~/.config/phairplay/release.env` | `scripts/release.sh --setup` creates both; the guide is `../guides/RELEASING.md` | ☐ |
 | 0.2 | Read the current fingerprint out of the key | `./scripts/cast-registration-info.sh` — it prints the package name, the SHA-1 and the SHA-256 | `scripts/cast-registration-info.sh` | ☐ |
@@ -47,7 +47,7 @@ to the step; that guide holds the exact texts and paths.
 
 ## Block 1 — The account and the app
 
-| # | Schritt | Wo in der Konsole | Was genau eintippen / klicken | Datei aus dem Repo | Fertig? |
+| # | Step | Where in the console | What exactly to type / click | File from the repo | Done? |
 |---|---|---|---|---|---|
 | 1.1 | Create the developer account (if it does not exist) | [play.google.com/console](https://play.google.com/console) → the developer account enrolment | Pay the one-time fee, complete the identity check, fill in the contact details | — | ☐ |
 | 1.2 | **Note the account type** — personal or organisation | Account settings | If it is *personal* and was created after 2023-11-13, the 12-testers / 14-days rule applies to production | — | ☐ |
@@ -62,7 +62,7 @@ to the step; that guide holds the exact texts and paths.
 *Menu: **Policy and programs → App content**.* Every card has to be answered
 before a release can be reviewed.
 
-| # | Schritt | Wo in der Konsole | Was genau eintippen / klicken | Datei aus dem Repo | Fertig? |
+| # | Step | Where in the console | What exactly to type / click | File from the repo | Done? |
 |---|---|---|---|---|---|
 | 2.1 | Privacy policy | *App content → Privacy policy* | `https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md` — the same policy is reachable in the app under *Settings → About → Privacy policy* | `PRIVACY.md`; the gate is `scripts/check-privacy-policy.sh` | ☐ |
 | 2.2 | Ads | *App content → Ads* | **No, my app does not contain ads** | `../guides/GOOGLE_PLAY_STORE.md` §3 Step 3 | ☐ |
@@ -83,7 +83,7 @@ before a release can be reviewed.
 
 *Menu: **Grow users → Store presence → Main store listing**.*
 
-| # | Schritt | Wo in der Konsole | Was genau eintippen / klicken | Datei aus dem Repo | Fertig? |
+| # | Step | Where in the console | What exactly to type / click | File from the repo | Done? |
 |---|---|---|---|---|---|
 | 3.1 | App name | *Main store listing* | `PhairPlay – AirPlay & DLNA TV` (max 30 characters) | `../guides/GOOGLE_PLAY_STORE.md` §3 Step 4 | ☐ |
 | 3.2 | Short description | *Main store listing* | `Open-source AirPlay 2 & UPnP/DLNA receiver for Android TV. Zero ads, LAN-only.` (max 80 characters) | `../guides/GOOGLE_PLAY_STORE.md` §3 Step 4 | ☐ |
@@ -102,7 +102,7 @@ before a release can be reviewed.
 read **after** the first upload, because the Play app signing key does not
 exist before that.*
 
-| # | Schritt | Wo in der Konsole | Was genau eintippen / klicken | Datei aus dem Repo | Fertig? |
+| # | Step | Where in the console | What exactly to type / click | File from the repo | Done? |
 |---|---|---|---|---|---|
 | 4.1 | Build the signed bundle | outside the console | `./scripts/release.sh v1.0.0-<version>` builds it, or: `. ~/.config/phairplay/release.env && export KEYSTORE_PATH KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD && ./gradlew --no-daemon -Dorg.gradle.jvmargs="-Xmx1024m" :app:bundleGoogletvRelease` | `scripts/release.sh`; `../guides/GOOGLE_PLAY_STORE.md` §2 | ☐ |
 | 4.2 | Upload the bundle | *Test and release → Testing → Internal testing → Create new release* | Upload `PhairPlay-<version>-GoogleTV.aab`. Use the **"Android TV only"** track if you want the TV release separated from a mobile one | `docs/compliance/GOOGLE_PLAY_COMPLIANCE.md` §C | ☐ |
@@ -116,7 +116,7 @@ exist before that.*
 
 ## Block 5 — The Android TV opt-in
 
-| # | Schritt | Wo in der Konsole | Was genau eintippen / klicken | Datei aus dem Repo | Fertig? |
+| # | Step | Where in the console | What exactly to type / click | File from the repo | Done? |
 |---|---|---|---|---|---|
 | 5.1 | Open the form factors | **Setup → Advanced settings** → **Form factors** tab | Click **+ Add release type** and select **Android TV** | `../guides/GOOGLE_PLAY_STORE.md` §3 Step 2 | ☐ |
 | 5.2 | Confirm the opt-in | the confirmation dialog | Confirm and **agree to the Android TV review policy** | `../guides/GOOGLE_PLAY_STORE.md` §3 Step 2 | ☐ |
@@ -128,7 +128,7 @@ exist before that.*
 
 ## Block 6 — The internal test
 
-| # | Schritt | Wo in der Konsole | Was genau eintippen / klicken | Datei aus dem Repo | Fertig? |
+| # | Step | Where in the console | What exactly to type / click | File from the repo | Done? |
 |---|---|---|---|---|---|
 | 6.1 | Create the tester group | *Test and release → Testing → Internal testing → Testers* | Add your own Google account. The internal track has **no** requirement — it is optional | `../compliance/GOOGLE_PLAY_COMPLIANCE.md` §E | ☐ |
 | 6.2 | Roll out to internal testing | *Internal testing → Create new release → Start rollout* | Start the rollout to the internal testers | — | ☐ |
@@ -139,7 +139,7 @@ exist before that.*
 
 ## Block 7 — Production (only after the closed test has run)
 
-| # | Schritt | Wo in der Konsole | Was genau eintippen / klicken | Datei aus dem Repo | Fertig? |
+| # | Step | Where in the console | What exactly to type / click | File from the repo | Done? |
 |---|---|---|---|---|---|
 | 7.1 | Wait for the 14 days | the Dashboard | The 14-day countdown starts when the 12th tester opts in. If a tester opts out, the clock restarts for them | `../compliance/GOOGLE_PLAY_COMPLIANCE.md` §E | ☐ |
 | 7.2 | Apply for production access | **Dashboard → Apply for production** | Answer the three sections: *About your closed test* (how you recruited, how they engaged), *About your app*, *About the testing* | `../compliance/GOOGLE_PLAY_COMPLIANCE.md` §E | ☐ |
