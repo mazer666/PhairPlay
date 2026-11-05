@@ -20,9 +20,11 @@
 # generated from the SBOM of the build, so it cannot name a component that is
 # not in the build, and it cannot forget one that is.
 artifacts_write_third_party_notices() {
-    local version="$1" dir="$2" file="$3" sbom
+    local version="$1" dir="$2" sbom
+    # The third argument is optional: the name of the file is derived from the
+    # directory when it is not given.
+    local file="${3:-$dir/THIRD-PARTY-NOTICES.md}"
     sbom="$REPO_ROOT/dist/sbom/phairplay-$version-sbom.cdx.json"
-    file="$dir/THIRD-PARTY-NOTICES.md"
 
     {
         printf '# Third-party notices — PhairPlay %s\n\n' "$version"
