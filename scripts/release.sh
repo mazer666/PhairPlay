@@ -227,6 +227,9 @@ cmd_release() {
         yellow "The tag $VERSION_TAG exists already and points at the current commit — the release is rebuilt."
     fi
 
+    step "Supply chain"
+    build_run_supply_chain
+
     step "Quality gate"
     build_run_quality_gate
 

@@ -12,7 +12,18 @@
 
 # The four repository checks of the quality gate. They need neither Gradle nor
 # an Android SDK, only bash — and each of them exits 1 on a violation.
-QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness check-docs-links check-privacy-policy"
+QUALITY_GATE_SCRIPTS="check-file-size check-kdoc-headers check-i18n-completeness check-docs-links check-privacy-policy check-secrets check-dependencies build-traceability"
+
+# The gates that need their own arguments, and what they get. The arguments are
+# the same as in the CI, so a gate cannot be green in one place and red in the
+# other.
+#
+#   check-file-size      the 400/550 rule applies to every source file, and a
+#                        shell script is source code too
+#   check-kdoc-headers   a nested class is documented by the header of the
+#                        class that contains it
+#   build-traceability   --check: the matrix is verified, not rewritten — a
+#                        release must not change the tree it is built from
 
 # The memory settings of every Gradle call of the release.
 #
@@ -69,21 +80,53 @@ build_prepare_environment() {
     green "Java:        $java_version"
 }
 
+build_run_supply_chain() {
+    # Builds the SBOM of the declared dependencies and checks every component
+    # against the decisions of the team.
+    #
+    # WHY this runs before the quality gate: the dependency gate reads the
+    # SBOM, and the SBOM is the only place where the versions of the build
+    # are written down. A gate that reads a file that nobody has built cannot
+    # prove anything.
+    step "Supply chain: SBOM and dependency decisions"
+    if ! ( cd "$REPO_ROOT" && ./scripts/build-sbom.sh ); then
+        die "The SBOM could not be built — the release is aborted."
+    fi
+    if ! ( cd "$REPO_ROOT" && ./scripts/check-dependencies.sh ); then
+        die "The dependency gate is red — the release is aborted. Fix the finding and run the release again."
+    fi
+    green "The supply chain is documented and every dependency has a decision."
+}
+
 build_run_quality_gate() {
     # Runs the four checks of the quality gate. A red check stops the release:
     # a release is never built from a red tree.
     local check
     for check in $QUALITY_GATE_SCRIPTS; do
         step "Quality gate: scripts/$check.sh"
-        # The KDoc check runs with --skip-nested, exactly as the CI runs it:
-        # a nested class is documented by the header of the class around it.
-        if [ "$check" = "check-kdoc-headers" ]; then
-            if ! "$REPO_ROOT/scripts/$check.sh" --skip-nested; then
-                die "The quality gate is red (scripts/$check.sh). Fix the finding and run the release again — nothing is published from a red tree."
-            fi
-        elif ! "$REPO_ROOT/scripts/$check.sh"; then
-            die "The quality gate is red (scripts/$check.sh). Fix the finding and run the release again — nothing is published from a red tree."
-        fi
+        # The gates that need arguments get the same arguments as in the CI.
+        case "$check" in
+            check-file-size)
+                if ! "$REPO_ROOT/scripts/$check.sh" --ext .kt --ext .sh; then
+                    die "The quality gate is red (scripts/$check.sh). Fix the finding and run the release again — nothing is published from a red tree."
+                fi
+                ;;
+            check-kdoc-headers)
+                if ! "$REPO_ROOT/scripts/$check.sh" --skip-nested; then
+                    die "The quality gate is red (scripts/$check.sh). Fix the finding and run the release again — nothing is published from a red tree."
+                fi
+                ;;
+            build-traceability)
+                if ! "$REPO_ROOT/scripts/$check.sh" --check; then
+                    die "The quality gate is red (scripts/$check.sh). Fix the finding and run the release again — nothing is published from a red tree."
+                fi
+                ;;
+            *)
+                if ! "$REPO_ROOT/scripts/$check.sh"; then
+                    die "The quality gate is red (scripts/$check.sh). Fix the finding and run the release again — nothing is published from a red tree."
+                fi
+                ;;
+        esac
     done
     green "The quality gate is green."
 }

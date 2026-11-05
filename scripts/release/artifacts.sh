@@ -20,6 +20,10 @@
 # The directory the artefacts are written into, relative to the repository root.
 ARTIFACT_ROOT="dist/release"
 
+# The third-party notices live in their own file, because they are a document
+# of their own and because this file must stay below the 400-line rule.
+. "$REPO_ROOT/scripts/release/notices.sh"
+
 # sha256 of a file, portable between Linux (sha256sum) and macOS (shasum).
 sha256_of() {
     if command -v sha256sum >/dev/null 2>&1; then
@@ -159,6 +163,12 @@ artifacts_write_manifest() {
         printf '    "deviceTests": { "executed": 0, "of": 16, "note": %s }\n' \
             "$(json_string "No device test has been executed in this environment — the device test plan is the only proof that needs real hardware.")"
         printf '  },\n'
+        printf '  "supplyChain": {\n'
+        printf '    "sbom": %s,\n' "$(json_string "$([ -f "$dir/sbom/phairplay-$version-sbom.cdx.json" ] && echo "sbom/phairplay-$version-sbom.cdx.json" || echo "")")"
+        printf '    "thirdPartyNotices": %s,\n' "$(json_string "THIRD-PARTY-NOTICES.md")"
+        printf '    "dependencyDecisions": %s,\n' "$(json_string "scripts/allowlists/dependency-allowlist.txt")"
+        printf '    "knownAdvisories": %s\n' "$(json_string "scripts/allowlists/known-vulnerabilities.txt")"
+        printf '  },\n'
         printf '  "publication": { "published": false, "reason": %s },\n' \
             "$(json_string "Built with --artifacts-only: the artefacts are on disk and are not published. Publishing needs an explicit authorisation.")"
         printf '  "artifacts": [\n'
@@ -276,6 +286,9 @@ cmd_build_artifacts() {
 
     build_prepare_environment
 
+    step "Supply chain"
+    build_run_supply_chain
+
     step "Quality gate"
     build_run_quality_gate
 
@@ -312,6 +325,13 @@ cmd_build_artifacts() {
     cp "$googletv_source" "$dir/PhairPlay-$VERSION_NUMBER-GoogleTV.apk"
     cp "$firetv_source" "$dir/PhairPlay-$VERSION_NUMBER-FireTV.apk"
     cp "$googletv_aab_source" "$dir/PhairPlay-$VERSION_NUMBER-GoogleTV.aab"
+    # The SBOM of this build belongs to the artefacts: it says what is inside
+    # the binaries that are shipped next to it.
+    if [ -f "$REPO_ROOT/dist/sbom/phairplay-$VERSION_NUMBER-sbom.cdx.json" ]; then
+        mkdir -p "$dir/sbom"
+        cp "$REPO_ROOT/dist/sbom/phairplay-$VERSION_NUMBER-sbom.cdx.json" "$dir/sbom/"
+    fi
+    artifacts_write_third_party_notices "$VERSION_NUMBER" "$dir"
     artifacts_write_source_archive "$VERSION_NUMBER" "$dir"
     artifacts_write_provenance "$VERSION_NUMBER" "$dir" "$dir/BUILD-PROVENANCE.txt"
     artifacts_write_verification_report "$VERSION_NUMBER" "$dir" "$dir/VERIFICATION.md"
