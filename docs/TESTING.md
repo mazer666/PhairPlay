@@ -216,7 +216,7 @@ The measured state on **2026-11-13** (commit `bdc51c8`):
 ```text
 OK: file size check passed — 225 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
 OK: KDoc header check passed — 292 class declaration(s) checked, all of them have a KDoc header.
-OK: documentation link check passed — 445 internal link(s) resolve, 87 external link(s) skipped.
+OK: documentation link check passed — 457 internal link(s) resolve, 87 external link(s) skipped.
 OK: i18n completeness check passed — 129 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
 OK: privacy policy check passed.
 OK: secret scan passed — 420 file(s) scanned, no credential found, 0 warning(s).

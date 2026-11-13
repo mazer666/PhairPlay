@@ -68,7 +68,13 @@ that leads nowhere costs more trust than a missing sentence.
 | [`2026-10-24-pr19-pr17-issue18-review_2026-11-13.md`](2026-10-24-pr19-pr17-issue18-review_2026-11-13.md) | 2026-11-13 | [`../spec/REQUIREMENTS.md`](../spec/REQUIREMENTS.md), [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) |
 | [`2026-10-24-security-audit_2026-11-13.md`](2026-10-24-security-audit_2026-11-13.md) | 2026-11-13 | [`../security/FINDINGS.md`](../security/FINDINGS.md) |
 | [`qa-quality-gate-negative-test_2026-11-13.md`](qa-quality-gate-negative-test_2026-11-13.md) | 2026-11-13 | the self-tests of the gates in `scripts/` |
-| [`M06-ACCEPTANCE_2026-11-13.md`](M06-ACCEPTANCE_2026-11-13.md) … [`M12-ACCEPTANCE_2026-11-13.md`](M12-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
+| [`M06-ACCEPTANCE_2026-11-13.md`](M06-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
+| [`M07-ACCEPTANCE_2026-11-13.md`](M07-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
+| [`M08-ACCEPTANCE_2026-11-13.md`](M08-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
+| [`M09-ACCEPTANCE_2026-11-13.md`](M09-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
+| [`M10-ACCEPTANCE_2026-11-13.md`](M10-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
+| [`M11-ACCEPTANCE_2026-11-13.md`](M11-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
+| [`M12-ACCEPTANCE_2026-11-13.md`](M12-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) | [`../spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) (v3.0) |
 | [`QA-DEVICE-TEST-ACCEPTANCE_2026-11-13.md`](QA-DEVICE-TEST-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) |
 | [`QA-I18N-ACCEPTANCE_2026-11-13.md`](QA-I18N-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | `scripts/check-i18n-completeness.sh`, [`../quality/QUALITY.md`](../quality/QUALITY.md) |
 | [`QA-QUALITY-GATE-ACCEPTANCE_2026-11-13.md`](QA-QUALITY-GATE-ACCEPTANCE_2026-11-13.md) | 2026-11-13 | [`../quality/CI-PIPELINE.md`](../quality/CI-PIPELINE.md) |

@@ -319,7 +319,7 @@ rule.
 | Files over the 550-line hard limit | **0** | the same output |
 | The largest file today | `airplay/SdpParser.kt` with **391** lines | the same script, sorted |
 | Classes with a KDoc header | **292 of 292** | `bash scripts/check-kdoc-headers.sh` → `OK: KDoc header check passed — 292 class declaration(s) checked, all of them have a KDoc header.` |
-| Internal documentation links that resolve | **all** of them — 445 at the time of the measurement | `bash scripts/check-docs-links.sh` → `OK: documentation link check passed — 445 internal link(s) resolve, 87 external link(s) skipped.` |
+| Internal documentation links that resolve | **all** of them — 457 at the time of the measurement | `bash scripts/check-docs-links.sh` → `OK: documentation link check passed — 457 internal link(s) resolve, 87 external link(s) skipped.` |
 | String keys in the language coverage | **129** — complete in `values/`, `values-de/` and `values-fr/` | `bash scripts/check-i18n-completeness.sh` → `OK: i18n completeness check passed — 129 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
 
 **The link count is a snapshot, the exit code is the contract.** Every document
