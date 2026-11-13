@@ -43,7 +43,7 @@ Owner: product track (`docs/spec/`)
 | Short name | Source |
 |---|---|
 | `PROJ-NORM` | Internal project norm — `docs/spec/REQUIREMENTS.md` itself, `docs/CONTRIBUTING.md`, `docs/DOCUMENTATION_POLICY.md` |
-| `AUDIT` | `docs/audit/2026-10-24-security-audit.md` (finding SEC-xx) |
+| `AUDIT` | `docs/security/FINDINGS.md` (finding SEC-xx) |
 | `PLAY-API` | Google Play target API level policy, state 2026-11-02, <https://support.google.com/googleplay/android-developer/answer/11926878> |
 | `PLAY-16K` | Android 16 KB page size requirement for Play, state 2026-11-02, <https://developer.android.com/guide/practices/page-sizes> |
 | `PROTO` | The protocol specification of the respective sender (AirPlay 2, WFD/RFC 2326, UPnP AV / GENA) |
@@ -317,7 +317,7 @@ The requirements that are **not** met today. Every one of them has an entry in
 
 | ID | Short | Severity | Backlog |
 |---|---|---|---|
-| FR-50 | The media URI scheme allow-list — **closed on 2026-11-05** by another track | — | B-01 (erledigt) |
+| FR-50 | The media URI scheme allow-list — **closed on 2026-11-05** by another track | — | B-01 (done) |
 | FR-59 | The Miracast card shows *advertising* before the receiver can report the error | Medium | B-06 |
 | FR-74 | The plist decoder has no own size guard | Low | B-09 |
 | NFR-11 … NFR-14 | No open point | — | — |

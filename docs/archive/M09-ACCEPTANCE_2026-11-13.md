@@ -1,5 +1,10 @@
 # Acceptance — M9: Fire TV port
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) and [the traceability matrix](../spec/TRACEABILITY.md).
+> Do not follow this document for new work.
+
 **Feature / milestone:** M9 — Fire TV flavour
 **Requirement IDs:** FR-06, FR-09, FR-10, AC-M9.1 … AC-M9.6 (plus the legacy round
 AR-7 / `AC-7.x`)

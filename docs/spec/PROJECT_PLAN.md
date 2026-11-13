@@ -27,7 +27,7 @@ Last Updated: 2026-11-05
 >    four channels the project ships through and the conditions that are still
 >    open for each of them.
 > 4. **The previous version is archived unchanged:**
->    [`archive/PROJECT_PLAN-v2.4.md`](archive/PROJECT_PLAN-v2.4.md).
+>    [`archive/PROJECT_PLAN-v2.4.md`](../archive/PROJECT_PLAN-v2.4_2026-11-13.md).
 
 ---
 
@@ -76,7 +76,7 @@ Phase 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 
 | 8 | M8 – Stability | 🟠 Partial | The frame-queue budget and the mDNS registration bookkeeping are proven by unit tests; the 30-minute session, the RAM, the CPU and the re-advertisement after a network outage are **not measured** |
 | 9 | M9 – Fire TV | 🟡 Implemented, device validation open | The flavour builds, carries no Play Services and degrades honestly; it has never been run on a Fire TV |
 | 10 | M10 – i18n | 🟠 Partial | EN / DE / FR are complete — **129 keys each**, proven by `scripts/check-i18n-completeness.sh`; the RTL baseline and the locale-aware formatting are still open; the texts have never been seen on a device |
-| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | `v1.0.0-alpha.7` is published (2026-11-02, 592 tests, 0 failures, lint green for both flavours). Still open: no signed APK was verified here, no device test was executed, and **8 of the 14 audit findings are open** |
+| 11 | M11 – Release | 🟠 Beta — not ready for v1.0.0 | `v1.0.0-alpha.7` is published (2026-11-02); `v1.0.0-alpha.8` is **built and verified but not published** (2026-11-05, 634 tests, 0 failures, lint green for both flavours, signed artefacts with SBOM and third-party notices). Still open: no device test was executed, and the findings of the security audit are not all closed |
 | 12 | M12 – DLNA | 🟠 Partial — control plane delivered, media path open | SSDP, description server, hardened SOAP dispatcher, GENA eventing, the Samsung DIAL extension and the playback wiring are implemented with **178** test methods; the media URI has an address policy **and** a scheme allow-list of `http`/`https` only (closed 2026-11-05) — still open: the accepted **public addresses**, the unresolved host names (SEC-04), the cleartext configuration (NFR-28) and the control point that has never talked to the renderer |
 
 The per-milestone acceptance records live in
@@ -148,7 +148,7 @@ release is only built when every condition of its row is true.
 |---|---|---|---|---|
 | `v1.0.0-alpha.1` … `alpha.6` | 2026-10-25 … 2026-11-02 — **shipped** | the M6–M18 cycles, the security findings SEC-01/02/03, the quality gate, the lint, the Play Store preparation, the aspect-ratio fix | Google TV + Fire TV | see `CHANGELOG.md` |
 | `v1.0.0-alpha.7` | 2026-11-02 — **shipped** | the privacy policy is reachable from inside the app, a new gate keeps it in step with the declared permissions, the certificate fingerprint in the guides is corrected | Google TV + Fire TV | the signed `.aab` for the Play Console, the store graphics and the step-by-step guide |
-| `v1.0.0-alpha.8` | *not scheduled* | the baseline v4.0 is merged and the traceability gate is part of the quality gate | Google TV + Fire TV | the requirement baseline v4.0, the traceability matrix, the remediation backlog |
+| `v1.0.0-alpha.8` | 2026-11-05 — **built, not published** | the baseline v4.0 is merged, the traceability gate is part of the quality gate, the supply-chain gates are in the pipeline | Google TV + Fire TV | the requirement baseline v4.0, the traceability matrix, the remediation backlog, the security hardening, the supply-chain artefacts (SBOM, third-party notices). **No tag and no release exist** — the artefacts are in `dist/release/1.0.0-alpha.8/`, the publication needs an explicit authorisation |
 | `v1.0.0-beta.1` | 2026-11-15 — *planned* | the owner has executed the 16 device test cases | Google TV + Fire TV | the same code as the last alpha, with the device findings fixed |
 | `v1.0.0-beta.2` | 2026-11-29 | the findings of beta.1 are fixed and re-validated | Google TV + Fire TV | fixes from the device test round |
 | `v1.0.0` | 2026-12-13 | two weeks of beta on real devices, no new critical finding, production key | Google TV + Fire TV | the first stable release |
@@ -247,7 +247,7 @@ one command, and it refuses to publish an unchecked build.
 > [`../project/RISKS.md`](../project/RISKS.md) — 17 entries with the likelihood,
 > the impact, the countermeasure, the owner and the status. It is authoritative.
 > The original planning view of the risks was part of v2.4 and is archived with
-> it: [`archive/PROJECT_PLAN-v2.4.md`](archive/PROJECT_PLAN-v2.4.md).
+> it: [`archive/PROJECT_PLAN-v2.4.md`](../archive/PROJECT_PLAN-v2.4_2026-11-13.md).
 >
 > The measures of the security, compliance and quality findings of 2026-11 are
 > in [`REMEDIATION_BACKLOG.md`](REMEDIATION_BACKLOG.md) — they are *not* risks

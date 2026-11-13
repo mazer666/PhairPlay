@@ -1,9 +1,14 @@
 # ARCHIVED — the legacy acceptance rounds AR-0 … AR-8
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the current acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) (v3.0).
+> Do not follow this document for new work.
+
 > **This document is an archive, not the specification.**
 >
 > * **Status:** superseded on 2026-11-05 by
->   [`../ACCEPTANCE_CRITERIA.md`](../ACCEPTANCE_CRITERIA.md) **v3.0**.
+>   [`../ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md) **v3.0**.
 > * **Why it was moved:** the rounds AR-0 … AR-8 belong to the milestones that
 >   were closed before the device test plan existed. Their identifiers stay
 >   valid — `AC-<n>.<m>` is bound to the round, not to a milestone — and the

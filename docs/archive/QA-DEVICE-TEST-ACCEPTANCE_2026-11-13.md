@@ -1,5 +1,10 @@
 # QA Acceptance Record — Device Test Plan
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the device test plan](../guides/DEVICE_TEST_PLAN.md).
+> Do not follow this document for new work.
+
 - **Milestone:** M6–M12, round 2 — "Quality gate: check scripts, CI workflow, language completeness, device test plan"
 - **Scope:** `docs/guides/DEVICE_TEST_PLAN.md`
 - **Tester:** QA & Test Engineer

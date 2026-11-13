@@ -1,5 +1,10 @@
 # Acceptance — M7: Google Cast receiver (graceful degradation)
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) and [the traceability matrix](../spec/TRACEABILITY.md).
+> Do not follow this document for new work.
+
 **Feature / milestone:** M7 — Google Cast receiver for Google TV
 **Requirement IDs:** FR-06, FR-08, FR-11, NFR-19, AC-M7.1 … AC-M7.6
 **Build / commit:** the integrated tree (branch `main`; the earlier stand was

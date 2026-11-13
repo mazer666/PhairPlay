@@ -1,5 +1,10 @@
 # QA Acceptance Record — Quality Gate (structure checks and CI)
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the pipeline document](../quality/CI-PIPELINE.md) and the self-tests of the gates in `scripts/`.
+> Do not follow this document for new work.
+
 - **Milestone:** M6–M12, round 2 — "Quality gate: check scripts, CI workflow, language completeness, device test plan"
 - **Scope:** `scripts/`, `.github/workflows/`, `docs/guides/DEVICE_TEST_PLAN.md`, `app/src/main/res/values-de/`, `app/src/main/res/values-fr/`
 - **Tester:** QA & Test Engineer

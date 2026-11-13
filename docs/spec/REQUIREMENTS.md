@@ -11,7 +11,7 @@ Date: 2026-11-05
 > test and evidence. The machine-readable baseline is
 > [`REQUIREMENTS_MATRIX.md`](REQUIREMENTS_MATRIX.md); the traceability chain is
 > generated into [`TRACEABILITY.md`](TRACEABILITY.md); the previous version is
-> archived unchanged as [`archive/REQUIREMENTS-v3.0.md`](archive/REQUIREMENTS-v3.0.md).
+> archived unchanged as [`archive/REQUIREMENTS-v3.0.md`](../archive/REQUIREMENTS-v3.0_2026-11-13.md).
 >
 > **What changed against v3.0.** (1) The eight attributes were added to every
 > requirement. (2) The class of every requirement was made explicit — `EXT` =
@@ -158,7 +158,7 @@ evidence is **open**, never "probably fine". The open points are listed in
 
 ### 1.9 UPnP / DLNA MediaRenderer
 
-PhairPlay implements a UPnP MediaRenderer (see [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md)).
+PhairPlay implements a UPnP MediaRenderer (see [ADR-004](../adr/ADR-004-dlna-mediarenderer-roadmap.md)).
 All DLNA logic lives in the package `com.phairplay.dlna`; the AirPlay 2 stack is not
 touched by it, and DLNA is an **additional** receiver — it replaces neither AirPlay,
 nor Miracast, nor Cast.
@@ -313,7 +313,7 @@ actually does — not what a Miracast sink would do.
 | HDR10 / Dolby Vision (AirPlay) | Optional, API 31+ required | v2 optional |
 
 > **Correction v3.0 (2026-10-24).** In v2.2 this table listed *"DLNA / UPnP — Out of
-> scope — Not planned"*. That contradicted [ADR-004](../decisions/ADR-004-dlna-mediarenderer-roadmap.md)
+> scope — Not planned"*. That contradicted [ADR-004](../adr/ADR-004-dlna-mediarenderer-roadmap.md)
 > and the code: the package `com.phairplay.dlna` is implemented and shipped. The
 > requirement moved into §1.9 (FR-44 … FR-57); the table now lists only what is
 > genuinely not implemented.

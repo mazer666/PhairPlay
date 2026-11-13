@@ -1,5 +1,10 @@
 # Acceptance — M10: Internationalization
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) and [the traceability matrix](../spec/TRACEABILITY.md).
+> Do not follow this document for new work.
+
 **Feature / milestone:** M10 — i18n polish (English, German, French)
 **Requirement IDs:** FR-03, FR-65 … FR-68, NFR-13, AC-M10.1 … AC-M10.6
 **Build / commit:** the integrated tree (branch `main`; the earlier stand was

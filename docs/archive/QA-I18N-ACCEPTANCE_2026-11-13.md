@@ -1,5 +1,10 @@
 # QA Acceptance Record — Language Completeness (de, fr)
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the i18n gate](../../scripts/check-i18n-completeness.sh) and the current state in [the quality model](../quality/QUALITY.md).
+> Do not follow this document for new work.
+
 - **Milestone:** M6–M12, round 2 — "Quality gate: check scripts, CI workflow, language completeness, device test plan"
 - **Scope:** `app/src/main/res/values/strings.xml`, `app/src/main/res/values-de/strings.xml`, `app/src/main/res/values-fr/strings.xml`, `scripts/check-i18n-completeness.sh`
 - **Tester:** QA & Test Engineer

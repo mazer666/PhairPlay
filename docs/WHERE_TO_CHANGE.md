@@ -73,7 +73,7 @@ and ALAC). `test-runner/` holds the **JVM test module** that CI runs — see
 | …the **foreground notification** (its text, its actions) | `app/src/main/kotlin/com/phairplay/service/ServiceNotificationManager.kt` | — |
 | …the **re-advertisement after a network outage** | `app/src/main/kotlin/com/phairplay/service/NetworkRecoveryMonitor.kt` | FR-61 |
 | …the **start on boot** behaviour | `app/src/main/kotlin/com/phairplay/service/BootReceiver.kt` | FR-32 |
-| …the **permissions** | `app/src/main/AndroidManifest.xml`, and the permission table in [`audit/2026-10-24-security-audit.md`](audit/2026-10-24-security-audit.md) §4 | NFR-14 — a permission without a traced call site is a finding |
+| …the **permissions** | `app/src/main/AndroidManifest.xml`, and the permission table in [`security/FINDINGS.md`](security/FINDINGS.md) §4 | NFR-14 — a permission without a traced call site is a finding |
 
 ### AirPlay 2 — discovery and the RTSP control plane
 
@@ -167,7 +167,7 @@ and ALAC). `test-runner/` holds the **JVM test module** that CI runs — see
 | …the **build configuration**, the flavours, the dependencies | `app/build.gradle.kts`, `build.gradle.kts`, `settings.gradle.kts`, `gradle/libs.versions.toml` | — |
 | …the **JVM test module** (what it compiles, what it excludes) | `test-runner/build.gradle.kts` | [`TESTING.md`](TESTING.md) |
 | …the **CI pipeline** | `.github/workflows/ci.yml` and `.github/workflows/lint.yml` | — |
-| …the **quality gate** (the four structure checks) | `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`, `scripts/check-docs-links.sh`, `scripts/check-i18n-completeness.sh` | — |
+| …the **quality gate** (the eight repository checks) | `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`, `scripts/check-docs-links.sh`, `scripts/check-i18n-completeness.sh`, `scripts/check-privacy-policy.sh`, `scripts/check-secrets.sh`, `scripts/check-dependencies.sh`, `scripts/build-traceability.sh` | [`quality/CI-PIPELINE.md`](quality/CI-PIPELINE.md) |
 | …the **release process** | `scripts/release.sh` and the release section of [`../CHANGELOG.md`](../CHANGELOG.md) | — |
 | …the **device logs** that a user sends you | `tools/collect-device-logs.sh` | — |
 | …a **test** | `app/src/test/kotlin/com/phairplay/` (the package of the class under test) · `test-runner/` (the CI gate) | [`TESTING.md`](TESTING.md) |
@@ -225,7 +225,7 @@ does, why it exists and how to use it.
 
 Read [`ARCHITECTURE.md`](ARCHITECTURE.md) first, then write an **ADR** from
 [`adr/ADR_TEMPLATE.md`](adr/ADR_TEMPLATE.md). The existing decisions live in
-[`decisions/`](decisions/).
+[`decisions/`](adr/).
 
 ### "I want to change the documentation."
 

@@ -1,5 +1,10 @@
 # Acceptance — M12: UPnP / DLNA MediaRenderer
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) and [the traceability matrix](../spec/TRACEABILITY.md).
+> Do not follow this document for new work.
+
 **Feature / milestone:** M12 — UPnP / DLNA MediaRenderer (ADR-004 phases D1 … D4)
 **Requirement IDs:** FR-44 … FR-57, FR-64 … FR-67, NFR-13, NFR-22, NFR-26 … NFR-31,
 AC-M12.1 … AC-M12.20

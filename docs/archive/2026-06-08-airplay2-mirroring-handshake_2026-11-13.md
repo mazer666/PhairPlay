@@ -1,5 +1,10 @@
 # AirPlay 2 Mirroring Handshake Implementation Plan
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the technical specification](../spec/TECHNICAL_SPEC.md) and [the architecture](../ARCHITECTURE.md).
+> Do not follow this document for new work.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make PhairPlay actually receive a macOS screen-mirroring session by implementing the AirPlay 2 handshake it currently lacks: `GET /info` → `pair-setup`/`pair-verify` → `fp-setup` (FairPlay) → encrypted `SETUP` → the encrypted H.264 mirroring stream, decoded to the existing `VideoDecoder`.

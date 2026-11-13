@@ -79,9 +79,9 @@ app/src/main/kotlin/com/phairplay/
 The JVM test module lives outside the app: `test-runner/` — see
 [`TESTING.md`](TESTING.md).
 
-The production tree holds **114 Kotlin files**; the test tree under
-`app/src/test/kotlin/` holds **68** more — 65 test classes and three shared
-helpers.
+The production tree holds **135 Kotlin files** (134 in `main`, one in the
+`firetv` source set); the test tree under `app/src/test/kotlin/` holds **84**
+more — 78 test classes and six shared helpers.
 
 ---
 
@@ -253,9 +253,9 @@ RTSP control plane but nothing else.
 ## The protocol separation (ADR-001)
 
 PhairPlay runs **four independent receivers**. ADR-001
-([`decisions/ADR-001-multi-protocol.md`](decisions/ADR-001-multi-protocol.md))
+([`adr/ADR-001-multi-protocol.md`](adr/ADR-001-multi-protocol.md))
 and its amendment in ADR-004
-([`decisions/ADR-004-dlna-mediarenderer-roadmap.md`](decisions/ADR-004-dlna-mediarenderer-roadmap.md))
+([`adr/ADR-004-dlna-mediarenderer-roadmap.md`](adr/ADR-004-dlna-mediarenderer-roadmap.md))
 define the rule:
 
 > Every protocol is its own package, its own ports, its own state and its own
@@ -562,7 +562,7 @@ in the audit). Where anything is written — in a debug build — it is reduced.
 The app requests only the permissions it needs for the local network. No
 storage, no camera, no microphone. The permission table with the call site of
 every line is in
-[`audit/2026-10-24-security-audit.md`](audit/2026-10-24-security-audit.md) §4.
+[`security/FINDINGS.md`](security/FINDINGS.md) §4.
 
 ---
 
@@ -622,7 +622,7 @@ behaviour — which is necessary for compatibility.
 
 The architecture above describes the **code**. It does not describe a measured
 behaviour on a television: **no device test has ever been executed** — 0 of the
-15 cases of [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) have
+16 cases of [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) have
 been run. The DLNA media path in particular is unproven on a real device, and
 the cleartext `http://` fetch it needs is probably blocked by the platform
 default on API 35 (no `network_security_config.xml` exists).

@@ -1,10 +1,15 @@
 # ARCHIVED — SUPERSEDED BY v4.0
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the current requirements](../spec/REQUIREMENTS.md) (v4.0).
+> Do not follow this document for new work.
+
 > **This document is an archive, not the specification.**
 >
-> * **Status:** Superseded on 2026-11-05 by [`../REQUIREMENTS.md`](../REQUIREMENTS.md) **v4.0**.
+> * **Status:** Superseded on 2026-11-05 by [`../REQUIREMENTS.md`](../spec/REQUIREMENTS.md) **v4.0**.
 >   The machine-readable baseline of that version is
->   [`../REQUIREMENTS_MATRIX.md`](../REQUIREMENTS_MATRIX.md).
+>   [`../REQUIREMENTS_MATRIX.md`](../spec/REQUIREMENTS_MATRIX.md).
 > * **Why it was replaced:** v3.0 states every requirement as free text. It therefore
 >   carries **no source of obligation** (binding external obligation vs. internal project
 >   norm vs. optional hardening), **no owner**, **no verification method**, **no expected
@@ -200,7 +205,7 @@ Date: 2026-10-24
 
 ### 1.9 UPnP / DLNA MediaRenderer
 
-PhairPlay implements a UPnP MediaRenderer (see [ADR-004](../../decisions/ADR-004-dlna-mediarenderer-roadmap.md)).
+PhairPlay implements a UPnP MediaRenderer (see [ADR-004](../adr/ADR-004-dlna-mediarenderer-roadmap.md)).
 All DLNA logic lives in the package `com.phairplay.dlna`; the AirPlay 2 stack is not
 touched by it, and DLNA is an **additional** receiver — it replaces neither AirPlay,
 nor Miracast, nor Cast.
@@ -332,7 +337,7 @@ PhairPlay actually does — not what a Miracast sink would do.
 | HDR10 / Dolby Vision (AirPlay) | Optional, API 31+ required | v2 optional |
 
 > **Correction v3.0 (2026-10-24).** In v2.2 this table listed *"DLNA / UPnP — Out of
-> scope — Not planned"*. That contradicted [ADR-004](../../decisions/ADR-004-dlna-mediarenderer-roadmap.md),
+> scope — Not planned"*. That contradicted [ADR-004](../adr/ADR-004-dlna-mediarenderer-roadmap.md),
 > which accepted DLNA as milestone M12, and it contradicted the code: the package
 > `com.phairplay.dlna` is implemented and shipped. The row was removed and the
 > requirement was moved into §1.9 (FR-44 … FR-57). The exclusion table now lists

@@ -20,11 +20,11 @@ Owner: product track (`docs/spec/`)
 >
 > **Every entry is measured.** The reference column names the finding or the
 > requirement; the severity follows the scale of the security audit
-> ([`../audit/2026-10-24-security-audit.md`](../audit/2026-10-24-security-audit.md));
+> ([`../security/FINDINGS.md`](../security/FINDINGS.md));
 > the effort is an estimate for a developer who knows the codebase.
 >
 > **Status.** `open`, `in progress` or `done` (with
-> the commit). **Nothing in this backlog is "erledigt"** — no commit of this
+> the commit). **Nothing in this backlog is "done"** — no commit of this
 > cycle exists, because this cycle produced documents and scripts, not code.
 >
 > **Priority.** P1 blocks a distribution channel or a stable release. P2 blocks
@@ -50,7 +50,7 @@ Owner: product track (`docs/spec/`)
 
 | ID | Measure | Reference | Severity | Effort | Dependency | Status |
 |---|---|---|---|---|---|---|
-| **B-01** | Restrict the scheme allow-list of the media URI to `http` and `https` and **change the test** that asserted the opposite | FR-50, SEC-04, C-10, AC-M12.15, AC-V4.6 | **high** | M | — | **erledigt (2026-11-05)** — another track removed the own allow-list; `DlnaMediaUri` delegates to `FetchableUrlPolicy` (commits `b4e5afa`, `55acde4`) |
+| **B-01** | Restrict the scheme allow-list of the media URI to `http` and `https` and **change the test** that asserted the opposite | FR-50, SEC-04, C-10, AC-M12.15, AC-V4.6 | **high** | M | — | **done (2026-11-05)** — another track removed the own allow-list; `DlnaMediaUri` delegates to `FetchableUrlPolicy` (commits `b4e5afa`, `55acde4`) |
 | **B-13** | Add `app/src/main/res/xml/network_security_config.xml` that permits cleartext **only** for the private LAN ranges, and reference it in the manifest. Without it the GENA `NOTIFY` and the DACP reverse command cannot work on a device that enforces the platform default | NFR-28, SEC-10, AC-V4.9, **DT-17** | **medium** | M | B-01 (the media fetch must be narrow before cleartext is opened) | open |
 | **B-15** | Plant a release tree that writes warnings and errors (and drops the debug messages), and add a test class that asserts both. `PhairPlayApp.kt:40` plants a tree only under `BuildConfig.DEBUG`, so a release build writes **nothing** | NFR-31, SEC-07, AC-V4.8, **DT-18** | **medium** | S | none | open |
 | **B-17** | Verify the 16 KB page alignment of the shipped native libraries (`libplayfair.so`, `libalac.so`) with `zipalign -c -P 16 -v 4` on the release APK and the `.aab`, and correct the packaging if it fails | NFR-22, AC-V4.12 | **medium** | S | a release build of the team lead | open |
@@ -81,22 +81,25 @@ Owner: product track (`docs/spec/`)
 | **B-05** | Implement the RTL baseline for a future Arabic / Hebrew locale (the layout direction, the mirrored margins) | NFR-41, M10 | **low** | M | none | open |
 | **B-07** | Derive the advertised protocol list from the runtime capability snapshot of FR-65 instead of the fixed constant of `DlnaProtocolInfo` | NFR-66 | **low** | M | none | open |
 | **B-08** | Extend `scripts/check-i18n-completeness.sh` with the **value** comparison of the `protocol_*` keys. The gate compares the key set and the placeholders — not the values, which is what FR-68 and AC-M10.3 demand | FR-68, C-08, AC-V4.10 | **low** | S | none | open |
-| **B-09** | Give the binary plist decoder its own size limit (`PlistCodec.MAX_PLIST_BYTES` = 1 MB). Today the 1 MB budget of the RTSP reader is the only guard in front of it | FR-74 (new in v4.0), SEC-11, NFR-12, NFR-27, AC-V4.16 | **low** | S | none | open |
+| **B-09** | Give the binary plist decoder its own size limit (`PlistCodec.MAX_PLIST_BYTES` = 1 MB). Today the 1 MB budget of the RTSP reader is the only guard in front of it | FR-74 (new in v4.0), SEC-11, NFR-12, NFR-27, AC-V4.16 | **low** | S | none | **closed** (2026-11-05) | `PlistCodec.MAX_PLIST_BYTES = 1024 * 1024` exists (`app/src/main/kotlin/com/phairplay/airplay/handshake/PlistCodec.kt`), the decoder refuses a larger body before the parser starts, and `PlistCodecHardeningTest` proves it |
 | **B-10** | Add a contrast check for the colour resources of the TV theme. NFR-09 asks for a sufficient contrast ratio, and nothing proves it | NFR-09 | **low** | S | none | open |
-| **B-14** | Replace the **12** direct `Timber.` call sites outside `util/Logger.kt` by `Logger.`, so that the reduction of NFR-29 is active on every line. The files are `MainActivity.kt`, `PhairPlayApp.kt`, `BootReceiver.kt`, `ServiceConnectionBinder.kt`, `LogRedactor.kt` | NFR-29, SEC-08 | **low** | S | none | open |
+| **B-14** | Replace the **12** direct `Timber.` call sites outside `util/Logger.kt` by `Logger.`, so that the reduction of NFR-29 is active on every line. The files are `MainActivity.kt`, `PhairPlayApp.kt`, `BootReceiver.kt`, `ServiceConnectionBinder.kt`, `LogRedactor.kt` | NFR-29, SEC-08 | **low** | S | none | **closed** (2026-11-05) | Measured 2026-11-13: **no** direct `Timber.` call site is left outside `util/Logger.kt`. The two remaining mentions are the planting of the tree in `PhairPlayApp.kt` (which has to be `Timber`) and a sentence in the KDoc of `LogRedactor.kt`. `LogReductionCoverageTest` proves the coverage |
 | **B-20** | Re-check the target API level against the Play policy at every submission — the obligation changes with the calendar, it is not a one-off decision | NFR-21, AC-V4.11 | **low** | S | none — a rule, not a task | open |
-| **B-23** | Split `ui/DiagnosticsFragment.kt`. It grew to **407** lines and is the only file above the soft limit of 400 — the file-size gate reports 1 warning today (measured 2026-11-05: `221 file(s) checked, none above the hard limit of 550 lines, 1 warning(s)`) | NFR-23, `scripts/check-file-size.sh` | **low** | S | none | open |
+| **B-23** | Split `ui/DiagnosticsFragment.kt`. It grew to **407** lines and was the only file above the soft limit of 400 | NFR-23, `scripts/check-file-size.sh` | **low** | S | none | **closed** (2026-11-05) | The fragment was split: the report is built in `ui/DiagnosticsReportFactory.kt`, the export in `ui/DiagnosticsReportExporter.kt`, the redaction in `diagnostics/DiagnosticsExportRedactor.kt`. Measured 2026-11-13: **360 lines**, and the file-size gate reports **0 warnings** over 225 files |
 
 ---
 
 ## Summary
 
-| Priority | Count | Of which "erledigt" |
+| Priority | Count | Of which "done" |
 |---|---|---|
-| P1 — blocks a distribution channel | 6 | 1 (B-01, closed by another track) |
-| P2 — blocks a beta | 10 | 0 |
-| P3 — quality debt | 9 | 0 |
-| **Total** | **25** | **1** |
+| P1 — blocks a distribution channel | 6 | 1 (B-01) |
+| P2 — blocks a beta | 11 | 0 |
+| P3 — quality debt | 12 | 3 (B-09, B-14, B-23) |
+| **Total** | **26** | **4** |
+
+The identifiers run from B-01 to B-27; **B-04 was never used**. The counts
+above are measured on the rows of this document.
 
 **Two entries need a decision of the owner before they can be started:**
 **B-11** (the Miracast permission) and **B-12** (a public address as a media

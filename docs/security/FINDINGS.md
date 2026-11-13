@@ -3,7 +3,7 @@
 **Date:** 2026-11-05
 **Applies to:** `main` @ `34a166c` (release `v1.0.0-alpha.7`) plus the hardening
 changes of this cycle
-**Previous register:** [`../audit/2026-10-24-security-audit.md`](../audit/2026-10-24-security-audit.md)
+**Previous register:** [`../security/FINDINGS.md`](../security/FINDINGS.md)
 (SEC-01 … SEC-14)
 
 **Severity scale**

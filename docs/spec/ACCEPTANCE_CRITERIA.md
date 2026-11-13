@@ -152,7 +152,7 @@ meaning — `AC-<n>.<m>` is bound to the round, not to a milestone — and the
 mapping in §0.3 above still points at them.
 
 Their **text** is archived unchanged:
-[`archive/ACCEPTANCE_CRITERIA-legacy-rounds.md`](archive/ACCEPTANCE_CRITERIA-legacy-rounds.md).
+[`archive/ACCEPTANCE_CRITERIA-legacy-rounds.md`](../archive/ACCEPTANCE_CRITERIA-legacy-rounds_2026-11-13.md).
 
 **Three things about them must be known before a criterion of a legacy round is
 used as a proof:**
@@ -299,7 +299,7 @@ documentation, no unexplained open security finding.
 | AC-M11.3 | Signed release APKs are produced for both flavours | `KEYSTORE_PATH=… KEYSTORE_PASSWORD=… KEY_ALIAS=… KEY_PASSWORD=… ./gradlew :app:assembleGoogletvRelease :app:assembleFiretvRelease`, then `apksigner verify` on both APKs | Both APKs exist and `apksigner verify` reports "Verified" |
 | AC-M11.4 | `CHANGELOG.md` contains the entry of the released version, including the DLNA section and the documented limitations | Manual review of `CHANGELOG.md` | The entry names the version and the date and lists DLNA, Miracast and Cast with their real state |
 | AC-M11.5 | `README.md`, `SECURITY.md` and `PRIVACY.md` describe exactly the protocols that are shipped | `grep -n "DLNA\|Miracast\|Cast" README.md SECURITY.md PRIVACY.md` + review | No document claims a protocol that is not implemented; no document denies an implemented protocol |
-| AC-M11.6 | Every finding of the security audit is either fixed or documented as open with a reason | Review of `docs/audit/2026-10-24-security-audit.md` against the code | 0 findings that are open **and** unexplained |
+| AC-M11.6 | Every finding of the security audit is either fixed or documented as open with a reason | Review of `docs/security/FINDINGS.md` against the code | 0 findings that are open **and** unexplained |
 | AC-M11.7 | The version name in the code equals the released tag | `grep -n "versionName" app/build.gradle.kts` compared with the tag | The two values are equal |
 | AC-M11.8 | The DLNA pull semantics are documented for the user | `grep -n "file:///" README.md` | The README states that only `http`/`https` URLs can be played and that a `file:///` URI points at the sender's disk (FR-57) |
 

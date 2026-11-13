@@ -1,5 +1,10 @@
 # QA Audit — Negative test of the quality-gate scripts
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the self-tests of the gates](../../scripts/) — every gate of `scripts/` has a self-test that proves it turns red.
+> Do not follow this document for new work.
+
 - **Date:** 2026-10-24
 - **Tester:** QA & Test Engineer
 - **Scope:** `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`,

@@ -1,5 +1,10 @@
 # Acceptance — M11: Release (v1.0.0 readiness)
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) and [the traceability matrix](../spec/TRACEABILITY.md).
+> Do not follow this document for new work.
+
 **Feature / milestone:** M11 — Release engineering and the release artefacts
 **Requirement IDs:** FR-44 … FR-70 (release-relevant), NFR-19, NFR-22, NFR-26 … NFR-31,
 AC-M11.1 … AC-M11.8 (plus the legacy round AR-8 / `AC-8.x`)

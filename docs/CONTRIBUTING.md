@@ -82,10 +82,10 @@ repository structure checks, three of them are Gradle tasks.
 | # | Gate | Command | Expected result |
 |---|---|---|---|
 | 1 | File size | `bash scripts/check-file-size.sh` | `OK: file size check passed — 189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.` |
-| 2 | KDoc headers | `bash scripts/check-kdoc-headers.sh` | `OK: KDoc header check passed — 233 class declaration(s) checked, all of them have a KDoc header.` |
+| 2 | KDoc headers | `bash scripts/check-kdoc-headers.sh` | `OK: KDoc header check passed — 292 class declaration(s) checked, all of them have a KDoc header.` |
 | 3 | Documentation links | `bash scripts/check-docs-links.sh` | `OK: documentation link check passed — <N> internal link(s) resolve, <M> external link(s) skipped.` |
-| 4 | Language completeness | `bash scripts/check-i18n-completeness.sh` | `OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
-| 5 | The JVM protocol suite | `./gradlew :test-runner:test` | `BUILD SUCCESSFUL` — 549 tests, 0 failures, 0 errors, 0 skipped |
+| 4 | Language completeness | `bash scripts/check-i18n-completeness.sh` | `OK: i18n completeness check passed — 129 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
+| 5 | The JVM protocol suite | `./gradlew :test-runner:test` | `BUILD SUCCESSFUL` — 634 tests, 0 failures, 0 errors, 0 skipped |
 | 6 | The Android lint, both flavours | `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug` | `No issues found.` for **both** variants |
 | 7 | The debug APKs, both flavours | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug` | `BUILD SUCCESSFUL`, two APKs in `app/build/outputs/apk/` |
 
@@ -108,7 +108,7 @@ bash scripts/check-file-size.sh --help
 because a class that is nested inside another class is documented by the
 header of the class that contains it. The strict run (without the flag) is
 green as well — both exit codes are recorded in
-[`docs/acceptance/QA-QUALITY-GATE-ACCEPTANCE.md`](acceptance/QA-QUALITY-GATE-ACCEPTANCE.md).
+[`docs/archive/QA-QUALITY-GATE-ACCEPTANCE_2026-11-13.md`](archive/QA-QUALITY-GATE-ACCEPTANCE_2026-11-13.md).
 
 ---
 
@@ -386,7 +386,7 @@ role accept it. Do not start the code before the decision exists.
 **2. Write the ADR.** A new protocol stack needs an
 [ADR](adr/ADR_TEMPLATE.md) that answers: why this protocol, why next to the
 existing ones, what the boundaries are, and what the alternatives were. The
-existing records are in [`docs/decisions/`](decisions/) — ADR-001 (the
+existing records are in [`docs/adr/`](adr/) — ADR-001 (the
 multi-protocol model) and ADR-004 (the DLNA roadmap) are the two that matter
 most here.
 

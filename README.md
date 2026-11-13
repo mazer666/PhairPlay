@@ -20,9 +20,18 @@ PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and 
 
 **The latest published release is [`v1.0.0-alpha.7`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.7) (2026-11-02)** — it is the **release for the Google Play Store**: the privacy policy is now reachable from inside the app (Google Play asks for that), a new gate keeps the policy in step with the declared permissions, and the certificate fingerprint in the guides — wrong in four places — was corrected against the keystore. The release before it, [`v1.0.0-alpha.6`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.6), fixed a **stretched AirPlay picture**: some hardware decoders scale the decoded picture to the panel and report that scaled size as a crop, and PhairPlay used to trust it ([issue #21](https://github.com/mazer666/PhairPlay/issues/21)). The crop is now only used when its aspect ratio agrees with the size parsed from the stream's SPS; otherwise the coded aspect wins, which undoes the distortion. The release was **cut with the project's own release script** (`scripts/release.sh`, guide in [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)), which refuses to publish anything it has not checked itself. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+), plus the Google Play Store bundle. It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
 
+**The next release is built and verified, but not published.** `v1.0.0-alpha.8`
+(2026-11-05) carries the requirement baseline v4.0, the traceability chain, the
+hardening of the security findings and the supply-chain artefacts of the build
+— the SBOM, the third-party notices, the manifest and the checksums. The
+artefacts are signed and verified (`sha256sum -c`: 8 of 8 OK), but **there is
+no tag and no GitHub release**: building and publishing are two separate acts,
+and publishing needs an explicit authorisation. The guide is
+[`docs/guides/RELEASE_ARTIFACTS.md`](docs/guides/RELEASE_ARTIFACTS.md).
+
 The AirPlay 2 stack is implemented end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote.
 
-The **UPnP/DLNA MediaRenderer is implemented** — not planned. The package `com.phairplay.dlna` holds 28 production files: SSDP discovery, the device description server, the SOAP control plane (`ConnectionManager`, `AVTransport`, `RenderingControl`), GENA eventing and the Samsung Smart View extension. Miracast and Google Cast are still control-plane only.
+The **UPnP/DLNA MediaRenderer is implemented** — not planned. The package `com.phairplay.dlna` holds 29 production files: SSDP discovery, the device description server, the SOAP control plane (`ConnectionManager`, `AVTransport`, `RenderingControl`), GENA eventing and the Samsung Smart View extension. Miracast and Google Cast are still control-plane only.
 
 > **Nothing in this README has been tested on a television.** No device test has ever been executed — 0 of the 16 cases of [`docs/guides/DEVICE_TEST_PLAN.md`](docs/guides/DEVICE_TEST_PLAN.md) have been run, because no television was available. Everything below is proven by the automated test suite and by reading the code. What that does **not** say is listed under [Known Limitations](#known-limitations).
 
@@ -30,21 +39,22 @@ The **UPnP/DLNA MediaRenderer is implemented** — not planned. The package `com
 
 | Gate | Command | Result |
 |---|---|---|
-| JVM test suite | `./gradlew :test-runner:test` | 592 tests, 0 failures, 0 errors, 0 skipped (66 test classes) |
+| JVM test suite | `./gradlew :test-runner:test` | 634 tests, 0 failures, 0 errors, 0 skipped (72 test classes) |
 | Android lint | `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug` | `No issues found.` for both flavours |
 | Debug APKs | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug` | both build — Google TV 29.3 MB, Fire TV 16.3 MB |
-| Repository checks | the four `scripts/check-*.sh` (see [Option B](#option-b-build-from-source)) | all four green — file size, KDoc headers, documentation links, language completeness |
+| Repository checks | the eight scripts of the quality gate (see [Option B](#option-b-build-from-source)) | all eight green — file size, KDoc headers, documentation links, language completeness, privacy policy, secret scan, dependency decisions, requirement traceability |
 
 The quality model that owns these gates is [`docs/quality/QUALITY.md`](docs/quality/QUALITY.md); the full list of what is still open is in [`docs/project/RELEASE_READINESS.md`](docs/project/RELEASE_READINESS.md).
 
-**The security work of this cycle.** All three High findings of the [security audit](docs/audit/2026-10-24-security-audit.md) are closed:
+**The security work of this cycle.** The [security findings](docs/security/FINDINGS.md) carry 20 entries; **12 are fixed**, 5 are accepted with a written reason and 3 are open:
 
-- **SEC-01** — a sender can no longer make the television fetch an arbitrary URL. The AirPlay URL mode accepts only `http` and `https`, and the host has to pass an address policy (the receiver's own loopback, the link-local range including the router's cloud metadata service, the multicast and broadcast ranges and the obfuscated notations of an address are refused).
-- **SEC-02** — a picture is decoded with a pixel budget, so a small file can no longer exhaust the memory of the television.
-- **SEC-03** — the reassembled FU-A unit is capped at 8 MB, so a peer that opens a fragmented unit and never ends it cannot grow the buffer without bound.
-- **SEC-04 is partly closed** — the *address* of the DLNA media URI is checked now (loopback, link-local, multicast, broadcast, the metadata addresses and the obfuscated notations of an address are refused). The *scheme* list is still open, see [What PhairPlay Does NOT Do](#what-phairplay-does-not-do).
+- **The URL rule is one rule now** (SEC-01, SEC-04) — a device in the local network can no longer make the television fetch an arbitrary address. AirPlay and DLNA share one policy: only `http` and `https`, and the host has to pass an address check (the receiver's own loopback, the link-local range including the router's cloud metadata service, the multicast and broadcast ranges and the obfuscated notations of an address are refused). The rule also returns the *reason* of the refusal, so the answer names it.
+- **A picture cannot exhaust the memory** (SEC-02) — the decoder works with a pixel budget, so a small file can no longer kill the receiver.
+- **The buffers are bounded** (SEC-03, SEC-15) — the reassembled FU-A unit is capped at 8 MB, the GENA registry and its fan-out are bounded, so a peer that opens something and never ends it cannot grow a buffer without bound.
+- **The parsers cannot kill the request thread** (SEC-11, SEC-16) — the plist decoder refuses a body above 1 MB and turns *every* failure of the parse, including a `StackOverflowError`, into a refusal. The XML reader of the SOAP dispatcher refuses doctypes and external entities (XXE hardening).
+- **Nothing personal reaches the log** (SEC-05, SEC-08, SEC-17, SEC-19) — the log output is reduced centrally (the host part of an IP address, the device-specific half of a MAC address, complete UUIDs, the credentials of a URL, the name of the sender, the title, the artist and the album) and the exported diagnostics report carries no address and no name.
 
-On top of that the log output is reduced centrally (the host part of an IP address, the device-specific half of a MAC address, complete UUIDs and the credentials of a URL are replaced by placeholders), and the XML reader of the SOAP dispatcher refuses doctypes and external entities (XXE hardening).
+**Still open, and why:** SEC-07 (a release build logs nothing — the tree is planted only under `BuildConfig.DEBUG`), SEC-10 (cleartext HTTP is blocked by the platform default — an owner decision on `network_security_config.xml`) and SEC-20 (Google Cast has no registered application ID — only the owner can register it).
 
 ## Features
 
@@ -118,7 +128,7 @@ never run on a device either.
 - **Miracast renders no media** — the Wi-Fi Direct advertisement and the RTSP control plane work, the MPEG-TS media path does not exist
 - **Google Cast needs a registered app ID** — without one the SDK degrades gracefully and no Cast session can be tested end to end
 - **A UPnP renderer does not receive the file — it fetches it itself.** A `file:///` URI points at the *sender's* disk, which the television cannot read. A local file therefore only works when it is reachable over the network (`http` / `https`); see [`docs/guides/CASTING_TO_A_TV.md`](docs/guides/CASTING_TO_A_TV.md)
-- **The DLNA media URI accepts more than `http` / `https`.** `file`, `smb`, `ftp` and further schemes are still accepted on purpose, for compatibility with real control points. The *address* of the URI is checked (loopback, link-local, multicast, broadcast and the obfuscated notations of an address are refused); the *scheme* list is an open decision of the owner
+- **The DLNA media URI accepts only `http` and `https`.** The `file`, `smb` and `ftp` schemes a real control point may send are refused — a peer in the local network must not be able to make the television open an arbitrary address. A control point that offers a local file therefore needs an `http` URL that the television can reach; see [`docs/guides/CASTING_TO_A_TV.md`](docs/guides/CASTING_TO_A_TV.md)
 
 ---
 
@@ -323,7 +333,7 @@ document owns which question":
 | look up a term | [`GLOSSARY.md`](GLOSSARY.md) |
 | change the code | [`docs/WHERE_TO_CHANGE.md`](docs/WHERE_TO_CHANGE.md) and [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) |
 | see what is missing before v1.0.0 | [`docs/project/RELEASE_READINESS.md`](docs/project/RELEASE_READINESS.md) and [`docs/project/RISKS.md`](docs/project/RISKS.md) |
-| know how safe it is | [`SECURITY.md`](SECURITY.md), [`PRIVACY.md`](PRIVACY.md) and the [security audit](docs/audit/2026-10-24-security-audit.md) |
+| know how safe it is | [`SECURITY.md`](SECURITY.md), [`PRIVACY.md`](PRIVACY.md) and the [security audit](docs/security/FINDINGS.md) |
 
 ---
 

@@ -1,5 +1,10 @@
 # Acceptance — M8: Stability, reconnect and resource budgets
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) and [the traceability matrix](../spec/TRACEABILITY.md).
+> Do not follow this document for new work.
+
 **Feature / milestone:** M8 — Stability of the running receiver
 **Requirement IDs:** FR-36, FR-61 … FR-63, NFR-01 … NFR-04, NFR-27,
 AC-M8.1 … AC-M8.8 (plus the legacy round AR-6 / `AC-6.x`)

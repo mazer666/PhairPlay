@@ -6,7 +6,7 @@ receiver for Android TV and Fire TV.
 
 **Agents are roles, not permission to change product direction.** The accepted
 requirements in [`docs/spec/REQUIREMENTS.md`](docs/spec/REQUIREMENTS.md) and the
-accepted decisions in [`docs/decisions/`](docs/decisions/) outrank an agent's
+accepted decisions in [`docs/adr/`](docs/adr/) outrank an agent's
 preference. If you think the product direction is wrong, write a **CR**
 ([`docs/cr/CR_TEMPLATE.md`](docs/cr/CR_TEMPLATE.md)) — do not quietly implement
 your own opinion.
@@ -32,7 +32,7 @@ constraint that every change is reviewed against.
 | Source root | `app/src/main/kotlin/com/phairplay/` |
 | Test roots | `app/src/test/kotlin/com/phairplay/` (JVM), `test-runner/src/` (CI protocol suite), `app/src/androidTest/kotlin/com/phairplay/` (device) |
 | Licence | Apache 2.0 — see [`LICENSE`](LICENSE) |
-| Current version | `1.0.0-beta.3` (see [`CHANGELOG.md`](CHANGELOG.md)) |
+| Current version | `1.0.0-alpha.7` published; `1.0.0-alpha.8` built and verified, not published (see [`CHANGELOG.md`](CHANGELOG.md)) |
 
 ---
 
@@ -183,7 +183,7 @@ them.
 
 - [`SECURITY.md`](SECURITY.md) — the user-facing security policy
 - [`PRIVACY.md`](PRIVACY.md) — what leaves the television and what is stored
-- [`docs/audit/2026-10-24-security-audit.md`](docs/audit/2026-10-24-security-audit.md)
+- [`docs/security/FINDINGS.md`](docs/security/FINDINGS.md)
   — the current finding list, with severity, attack path and negative test
 - the state of the findings is reported in
   [`docs/quality/QUALITY.md`](docs/quality/QUALITY.md) §2
@@ -224,7 +224,7 @@ declare a release ready while a known **S4** finding is open (see
 - the dependency direction between the packages
 - the protocol isolation guarantee (ADR-001, ADR-004)
 - the architecture description in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- the architecture decision records in [`docs/decisions/`](docs/decisions/)
+- the architecture decision records in [`docs/adr/`](docs/adr/)
 
 **Must review**
 
@@ -286,11 +286,15 @@ missing. A criterion without a measured result is **not** passed.
 `.github/workflows/ci.yml` and `.github/workflows/lint.yml`):
 
 ```bash
-# 1 — the four repository structure checks
+# 1 — the repository structure checks
 ./scripts/check-file-size.sh
 ./scripts/check-kdoc-headers.sh --skip-nested
 ./scripts/check-docs-links.sh
 ./scripts/check-i18n-completeness.sh
+./scripts/check-privacy-policy.sh
+./scripts/check-secrets.sh
+./scripts/build-sbom.sh && ./scripts/check-dependencies.sh
+./scripts/build-traceability.sh --check
 
 # 2 — the JVM protocol suite
 ./gradlew :test-runner:test
@@ -364,10 +368,12 @@ An agent may say **"done"** only when *all* of the following hold:
 
 1. The implementation is complete. **No stubs, no dummy returns, no deleted or
    `@Ignore`d tests presented as a finished feature.**
-2. The four repository structure checks are green:
+2. The repository structure checks are green:
    `scripts/check-file-size.sh`, `scripts/check-kdoc-headers.sh`
-   (CI runs it with `--skip-nested`), `scripts/check-docs-links.sh` and
-   `scripts/check-i18n-completeness.sh`.
+   (CI runs it with `--skip-nested`), `scripts/check-docs-links.sh`,
+   `scripts/check-i18n-completeness.sh`, `scripts/check-privacy-policy.sh`,
+   `scripts/check-secrets.sh`, `scripts/check-dependencies.sh` (after
+   `scripts/build-sbom.sh`) and `scripts/build-traceability.sh --check`.
 3. The JVM suite is green: `./gradlew :test-runner:test` — **0 failures, 0
    errors, 0 skipped**. A skipped test is a gap that has to be written down,
    not a green checkmark.
@@ -479,7 +485,7 @@ Command: ./gradlew :test-runner:test
 | The measured state of all gates | the tables of the six dimensions | [`docs/quality/QUALITY.md`](docs/quality/QUALITY.md) |
 | Performance budgets | RAM ≤ 150 MB, CPU ≤ 30 %, ≥ 25 fps, ≤ 100 ms latency, A/V drift ≤ 40 ms | NFR-01…NFR-04 and [`docs/spec/ACCEPTANCE_CRITERIA.md`](docs/spec/ACCEPTANCE_CRITERIA.md) |
 | Privacy promise | no ads, no analytics, no telemetry, local network only | NFR-11 and [`PRIVACY.md`](PRIVACY.md) |
-| Decision records | ADR-001 … ADR-004 | [`docs/decisions/`](docs/decisions/) |
+| Decision records | ADR-001 … ADR-004 | [`docs/adr/`](docs/adr/) |
 
 ---
 

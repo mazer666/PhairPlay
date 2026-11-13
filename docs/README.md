@@ -1,7 +1,8 @@
 # PhairPlay Documentation Index
 
 Every document in this repository, what it owns, and where to look when you
-need something. Only files that exist are listed here.
+need something. **Only files that exist are listed here** — the archive is
+listed separately, at the end.
 
 **Start here if you are new:** [`../README.md`](../README.md) → what the product
 is and how to install it · [`../AGENTS.md`](../AGENTS.md) → how the team works ·
@@ -24,74 +25,58 @@ is still missing before `v1.0.0`.
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Every released and unreleased change, in the Keep-a-Changelog format. |
 | [`../LICENSE`](../LICENSE) | The Apache 2.0 licence text. |
 
-## Core specifications — `docs/spec/`
+## What the product must do — `docs/spec/`
 
 The product track owns this folder. It answers *what* the product does, not
 *how* it is built.
 
 | Document | What it owns |
 |---|---|
-| [`spec/REQUIREMENTS.md`](spec/REQUIREMENTS.md) | The requirement IDs (`FR-xx`, `NFR-xx`), the codec matrix per protocol, the target devices, and the explicit list of what is out of scope. The source of truth for *what the product must do*. |
+| [`spec/REQUIREMENTS.md`](spec/REQUIREMENTS.md) | The requirement IDs (`FR-xx`, `NFR-xx`) with their eight attributes, the target devices, and the explicit list of what is out of scope. The source of truth for *what the product must do*. |
+| [`spec/REQUIREMENTS_MATRIX.md`](spec/REQUIREMENTS_MATRIX.md) | The machine-readable matrix of the baseline v4.0: one row per requirement with its eight attributes. The generator of the traceability matrix reads it. |
+| [`spec/CODEC_MATRIX.md`](spec/CODEC_MATRIX.md) | The three codec matrices (AirPlay, WFD, Cast) and the DLNA section: which codec is required, optional or out of scope per protocol. |
 | [`spec/TECHNICAL_SPEC.md`](spec/TECHNICAL_SPEC.md) | The technical baseline behind the requirements: the protocol stacks, the system architecture, the AirPlay feature flags, the photo-streaming protocol, the DRM evaluation. |
-| [`spec/PROJECT_PLAN.md`](spec/PROJECT_PLAN.md) | The phased roadmap M0–M12 with the status of each milestone, its task list and its definition of done. |
-| [`spec/ACCEPTANCE_CRITERIA.md`](spec/ACCEPTANCE_CRITERIA.md) | The measurable acceptance criteria per milestone — each with a "How to Verify" and a "Pass Condition" — and the performance benchmark table. |
+| [`spec/ACCEPTANCE_CRITERIA.md`](spec/ACCEPTANCE_CRITERIA.md) | The measurable acceptance criteria — each with a "How to Verify" and a "Pass Condition" — the performance budget table, and the register of the criteria that contradict each other. |
+| [`spec/TRACEABILITY.md`](spec/TRACEABILITY.md) | The **generated** chain requirement → implementation → test → evidence → status. It is written by `scripts/build-traceability.sh` and may not be edited by hand. |
+| [`spec/DEVICE_PROCEDURES.md`](spec/DEVICE_PROCEDURES.md) | The hardware procedures DT-17 … DT-19 that are not part of the device test plan: cleartext in the local network, the log of a release build, the installation from the store. |
+| [`spec/PROJECT_PLAN.md`](spec/PROJECT_PLAN.md) | The phased roadmap M0–M12 with the status of each milestone, the release schedule with its **triggers**, and the four distribution channels with what is open for each. |
+| [`spec/REMEDIATION_BACKLOG.md`](spec/REMEDIATION_BACKLOG.md) | The prioritised, assignable measures of the product and specification track (`B-xx`). The store and release process has its own list in [`project/REMEDIATION_BACKLOG.md`](project/REMEDIATION_BACKLOG.md) (`RB-xx`); the two do not overlap. |
 
-## Acceptance records — `docs/acceptance/`
-
-One record per milestone. Each one walks through the same sections — functional,
-technical, performance, usability, accessibility, security and privacy,
-interoperability, known limitations, decision, release gate — and states for
-every criterion whether it is **proven by a test**, **proven only by the code**
-or **still open**, and why.
-
-| Document | What it owns |
-|---|---|
-| [`acceptance/M06-ACCEPTANCE.md`](acceptance/M06-ACCEPTANCE.md) | Whether the Miracast receiver meets FR-13 … FR-18 — and what the Wi-Fi Direct advertisement and the RTSP control plane already prove without a device. |
-| [`acceptance/M07-ACCEPTANCE.md`](acceptance/M07-ACCEPTANCE.md) | Whether the Google Cast receiver degrades gracefully without a registered app ID, and what still separates it from an end-to-end Cast session. |
-| [`acceptance/M08-ACCEPTANCE.md`](acceptance/M08-ACCEPTANCE.md) | Whether the running receiver stays stable: the bounded queues, the mDNS recovery, the resource budgets — and which endurance numbers are still unmeasured. |
-| [`acceptance/M09-ACCEPTANCE.md`](acceptance/M09-ACCEPTANCE.md) | Whether the Fire TV flavour is usable: the build, the D-pad navigation and the honest gap between "it compiles" and "it ran on a device". |
-| [`acceptance/M10-ACCEPTANCE.md`](acceptance/M10-ACCEPTANCE.md) | Whether the interface is really translated: the completeness of English, German and French, and what is still open (right-to-left, formatting). |
-| [`acceptance/M11-ACCEPTANCE.md`](acceptance/M11-ACCEPTANCE.md) | What a `v1.0.0` release still needs: the CI gate, the signed artefacts, the version bump and the device validation. |
-| [`acceptance/M12-ACCEPTANCE.md`](acceptance/M12-ACCEPTANCE.md) | Whether the UPnP/DLNA MediaRenderer works: every criterion AC-M12.1 … AC-M12.20 with its evidence, and the open media path. |
-| [`acceptance/QA-QUALITY-GATE-ACCEPTANCE.md`](acceptance/QA-QUALITY-GATE-ACCEPTANCE.md) | The acceptance record of the quality gate: what each of the four structure checks and the CI workflow must prove, and what was actually measured. |
-| [`acceptance/QA-I18N-ACCEPTANCE.md`](acceptance/QA-I18N-ACCEPTANCE.md) | The acceptance record of the language coverage: the key table of `en`/`de`/`fr`, the missing entries and the rule that keeps them complete. |
-| [`acceptance/QA-DEVICE-TEST-ACCEPTANCE.md`](acceptance/QA-DEVICE-TEST-ACCEPTANCE.md) | The acceptance record of the device test plan: whether every one of the 15 cases is copy-pasteable, has a time limit and has an evidence rule. |
-| [`acceptance/ACCEPTANCE_TEMPLATE.md`](acceptance/ACCEPTANCE_TEMPLATE.md) | The template for a new acceptance record: functional, technical, performance, usability, accessibility, security/privacy, interoperability, known limitations, decision. |
-
-## How the product works
+## How the product is built
 
 | Document | What it owns |
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | The beginner-friendly explanation of how AirPlay 2 works, the component overview per package, the full data-flow diagram, the design decisions and the security architecture. |
 | [`TESTING.md`](TESTING.md) | How to run the unit, instrumented and lint suites, what is and is not covered by an automated test, the manual device test scenarios, and the performance measurement commands. |
-
-## Contributing and working on the code
-
-| Document | What it owns |
-|---|---|
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | The six coding rules (file size, comments, tests, security, performance, flavours), the pull-request checklist and the commit-message style. |
 | [`WHERE_TO_CHANGE.md`](WHERE_TO_CHANGE.md) | The navigation table "I want to change X → that is here", with the real package paths. Read this before you edit anything. |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | The six coding rules (file size, comments, tests, security, performance, flavours), the pull-request checklist and the commit-message style. |
 | [`DOCUMENTATION_POLICY.md`](DOCUMENTATION_POLICY.md) | The same-change rule, the single-source-of-truth rule and the archive rule — what has to be updated together with a change, and where a document goes when it is replaced. |
-| [`quality/QUALITY.md`](quality/QUALITY.md) | The six-dimensional quality model with the measurement method, the current state and the target value per dimension, plus the severity grades S0–S4. |
-| [`adr/ADR_TEMPLATE.md`](adr/ADR_TEMPLATE.md) | The template for a new architecture decision record. |
-| [`cr/CR_TEMPLATE.md`](cr/CR_TEMPLATE.md) | The template for a change request against an accepted requirement or an accepted decision. |
 
-## Architecture decisions — `docs/decisions/`
-
-Accepted decisions. An agent that wants to change one of them writes a CR, not
-a pull request.
+## Security and compliance
 
 | Document | What it owns |
 |---|---|
-| [`decisions/ADR-001-multi-protocol.md`](decisions/ADR-001-multi-protocol.md) | Why AirPlay 2, Miracast and Google Cast are supported side by side, each independently switchable, and how DLNA was added as a fourth option. |
-| [`decisions/ADR-002-service-architecture.md`](decisions/ADR-002-service-architecture.md) | Why the receiver runs as a foreground service and how the receiver lifecycle is modelled. |
-| [`decisions/ADR-003-ui-design.md`](decisions/ADR-003-ui-design.md) | Why the UI is View-based instead of Jetpack Compose, and how the TV design language is applied. |
-| [`decisions/ADR-004-dlna-mediarenderer-roadmap.md`](decisions/ADR-004-dlna-mediarenderer-roadmap.md) | Why a UPnP/DLNA MediaRenderer was adopted, and the four-phase delivery plan D1–D4 behind it. |
+| [`security/THREAT_MODEL.md`](security/THREAT_MODEL.md) | The trust boundaries, the assets, the entry points of an untrusted input and the assumptions each guarantee rests on. |
+| [`security/FINDINGS.md`](security/FINDINGS.md) | Every security finding with its severity, the attack path, the fix and the test that proves it — plus the accepted residual risks. The single source of truth for the security state. |
+| [`security/PERMISSIONS.md`](security/PERMISSIONS.md) | Every declared permission, why the app asks for it, and what it does **not** enable. |
+| [`compliance/GOOGLE_PLAY_COMPLIANCE.md`](compliance/GOOGLE_PLAY_COMPLIANCE.md) | Every requirement of the Google Play Store for an Android TV app: the source with the URL and the retrieval date, the verbatim wording of the rule, the state and the evidence. |
+| [`compliance/DATA_SAFETY_DRAFT.md`](compliance/DATA_SAFETY_DRAFT.md) | The answers of the Play data safety form, derived from what the code does — the app sends nothing, measures nothing, and asks for nothing but the network. |
+| [`compliance/STORE_SUBMISSION_CHECKLIST.md`](compliance/STORE_SUBMISSION_CHECKLIST.md) | The steps of the Play console in the order in which they depend on each other, with the file of the repository that belongs to each step. |
 
-> **Migration note.** The templates in `docs/adr/` and `docs/cr/` are new. The
-> existing records still live in `docs/decisions/`. The numbering scheme of the
-> two locations will be reconciled in one step — see the open points in the
-> handover note, do not renumber the existing ADRs on your own.
+## Quality — `docs/quality/`
+
+| Document | What it owns |
+|---|---|
+| [`quality/QUALITY.md`](quality/QUALITY.md) | The six-dimensional quality model with the measurement method, the current state and the target value per dimension, plus the severity grades S0–S4. |
+| [`quality/CI-PIPELINE.md`](quality/CI-PIPELINE.md) | The pipeline of the repository: the jobs, the gates, the self-tests that prove the gates turn red, and the artefacts each job leaves behind. |
+
+## Project status — `docs/project/`
+
+| Document | What it owns |
+|---|---|
+| [`project/RELEASE_READINESS.md`](project/RELEASE_READINESS.md) | What is still missing before `v1.0.0`: what is proven, what is open, in which order it has to be closed, and which points genuinely need real hardware. |
+| [`project/RISKS.md`](project/RISKS.md) | The maintained risk register: every known risk with likelihood, impact, countermeasure, owner and status — the list of what could still go wrong. |
+| [`project/REMEDIATION_BACKLOG.md`](project/REMEDIATION_BACKLOG.md) | The prioritised measures of the store, the console and the release process (`RB-xx`). |
 
 ## Guides for users — `docs/guides/`
 
@@ -104,6 +89,7 @@ a pull request.
 | [`guides/CASTING_TO_A_TV.md`](guides/CASTING_TO_A_TV.md) | The step-by-step guide for getting a picture onto the television — from macOS, from Windows, from VLC and from a mobile UPnP controller — including the honest `file:///` limitation and the HTTP workaround. |
 | [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) | The 16 copy-pasteable hardware cases DT-01 … DT-16: the exact commands, the expected result, the time limit and the evidence per case — plus the result sheet for the Google TV and the Fire TV. |
 | [`guides/RELEASING.md`](guides/RELEASING.md) | How the owner cuts a signed release (`.apk` and `.aab`) and publishes it to GitHub Releases with `./scripts/release.sh`. |
+| [`guides/RELEASE_ARTIFACTS.md`](guides/RELEASE_ARTIFACTS.md) | What is in the artefact directory of a release, how long it is kept, how to retrieve it — and what the build **without** publishing does not do. |
 | [`guides/GOOGLE_PLAY_STORE.md`](guides/GOOGLE_PLAY_STORE.md) | Step-by-step guide for publishing the `googletv` Android App Bundle (`.aab`) on the Google Play Store, including Android TV opt-in, Data Safety answers, store listing texts and store graphics in `docs/playstore/assets/`. |
 
 > **One honest limitation applies to every user-facing guide:** a UPnP renderer
@@ -112,39 +98,39 @@ a pull request.
 > network-reachable `http`/`https` URLs. This is a property of the protocol,
 > not a bug.
 
-## Project status and risk — `docs/project/`
+## Architecture decisions — `docs/adr/`
+
+Accepted decisions. An agent that wants to change one of them writes a CR, not
+a pull request.
 
 | Document | What it owns |
 |---|---|
-| [`project/RELEASE_READINESS.md`](project/RELEASE_READINESS.md) | What is still missing before `v1.0.0`: what is proven, what is open, in which order it has to be closed, and which points genuinely need real hardware. |
-| [`project/RISKS.md`](project/RISKS.md) | The maintained risk register: every known risk with likelihood, impact, countermeasure, owner and status — the list of what could still go wrong. |
+| [`adr/ADR-001-multi-protocol.md`](adr/ADR-001-multi-protocol.md) | Why AirPlay 2, Miracast and Google Cast are supported side by side, each independently switchable, and how DLNA was added as a fourth option. |
+| [`adr/ADR-002-service-architecture.md`](adr/ADR-002-service-architecture.md) | Why the receiver runs as a foreground service and how the receiver lifecycle is modelled. |
+| [`adr/ADR-003-ui-design.md`](adr/ADR-003-ui-design.md) | Why the UI is View-based instead of Jetpack Compose, and how the TV design language is applied. |
+| [`adr/ADR-004-dlna-mediarenderer-roadmap.md`](adr/ADR-004-dlna-mediarenderer-roadmap.md) | Why a UPnP/DLNA MediaRenderer was adopted, and the four-phase delivery plan D1–D4 behind it. |
 
-## Reviews and audits — `docs/reviews/`, `docs/audit/`
-
-| Document | What it owns |
-|---|---|
-| [`reviews/2026-10-24-pr19-pr17-issue18-review.md`](reviews/2026-10-24-pr19-pr17-issue18-review.md) | The review of pull request #19, pull request #17 and issue #18, including the "wrong state on the screen" defect class that came out of it. |
-| [`audit/2026-10-24-security-audit.md`](audit/2026-10-24-security-audit.md) | The full security and privacy audit of 1.0.0-beta.3: threat model, attack surface table, 14 findings with severity, attack path, concrete fix and negative test, the permission audit and the accepted residual risks. The single source of truth for the security state of the release. |
-| [`audit/qa-quality-gate-negative-test.md`](audit/qa-quality-gate-negative-test.md) | The raw protocol of the negative test of the four check scripts — the proof that each one turns red on a real violation and green again when it is removed (22 cases, green → red → green). |
-
-## Planning material — `docs/superpowers/`
+## Templates and forms
 
 | Document | What it owns |
 |---|---|
-| [`superpowers/plans/2026-06-08-airplay2-mirroring-handshake.md`](superpowers/plans/2026-06-08-airplay2-mirroring-handshake.md) | The original design plan for the AirPlay 2 mirroring handshake, kept as the historical reference for how the flow was derived. |
+| [`acceptance/ACCEPTANCE_TEMPLATE.md`](acceptance/ACCEPTANCE_TEMPLATE.md) | The template for a new acceptance record: functional, technical, performance, usability, accessibility, security/privacy, interoperability, known limitations, decision. |
+| [`adr/ADR_TEMPLATE.md`](adr/ADR_TEMPLATE.md) | The template for a new architecture decision record. |
+| [`cr/CR_TEMPLATE.md`](cr/CR_TEMPLATE.md) | The template for a change request against an accepted requirement or an accepted decision. |
+| [`../.github/ISSUE_TEMPLATE/bug_report.md`](../.github/ISSUE_TEMPLATE/bug_report.md) | The bug report form, including the device, the sender and the log-collection step. |
+| [`../.github/ISSUE_TEMPLATE/feature_request.md`](../.github/ISSUE_TEMPLATE/feature_request.md) | The feature request form. |
 
 ## Archive — `docs/archive/`
 
+Everything that was **superseded** on 2026-11-13 lives in one folder: the
+security audit of 2026-10-24, the acceptance records of the milestone rounds
+M6 … M12, the review of the pull requests of 2026-10-24, the plan of the
+AirPlay handshake, and the previous versions of the project plan, the
+requirements and the acceptance criteria.
+
 | Document | What it owns |
 |---|---|
-| [`archive/README.md`](archive/README.md) | The naming convention and the rules for what moves into the archive and how an archived document is marked. |
-
-## Templates and forms — `.github/`
-
-| Document | What it owns |
-|---|---|
-| [`../.github/ISSUE_TEMPLATE/bug_report.md`](../.github/ISSUE_TEMPLATE/bug_report.md) | The bug report form, including the device, the sender and the log-collection step. |
-| [`../.github/ISSUE_TEMPLATE/feature_request.md`](../.github/ISSUE_TEMPLATE/feature_request.md) | The feature request form. |
+| [`archive/README.md`](archive/README.md) | The index of the archive: the rules for what moves in, how an archived document is marked, and which document replaced it. |
 
 ---
 
@@ -154,3 +140,7 @@ The index lists **only files that exist**. When you add a document, add a row
 here in the same change — that is the same-change rule of
 [`DOCUMENTATION_POLICY.md`](DOCUMENTATION_POLICY.md), and it is what keeps this
 page from turning into a list of hopes.
+
+When a document is replaced, move it to [`archive/`](archive/) with the
+banner of the archive rule and add it to the index of the archive — in the
+same change, and never without a link to its successor.

@@ -20,7 +20,7 @@ Three other documents own the details and are linked rather than repeated here:
   [`docs/spec/REQUIREMENTS.md`](../spec/REQUIREMENTS.md) and
   [`docs/spec/ACCEPTANCE_CRITERIA.md`](../spec/ACCEPTANCE_CRITERIA.md)
 - the security findings —
-  [`docs/audit/2026-10-24-security-audit.md`](../audit/2026-10-24-security-audit.md)
+  [`docs/security/FINDINGS.md`](../security/FINDINGS.md)
 - the release checklist —
   [`docs/project/RELEASE_READINESS.md`](../project/RELEASE_READINESS.md)
 
@@ -84,20 +84,20 @@ three did.
 | The Android lint gate | `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug` | No correctness defect that the static analyser can see, in either flavour |
 | The build gate | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug` | Both flavours compile into an installable APK |
 | The repository structure gate | the four scripts in `scripts/` | The rules of this model are mechanically enforced, not reviewed by hand |
-| Device scenarios | [`docs/guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) (15 cases) and [`docs/TESTING.md`](../TESTING.md) (scenarios 1–7) | The behaviour on real hardware, in the order a user meets it |
+| Device scenarios | [`docs/guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) (16 cases) and [`docs/TESTING.md`](../TESTING.md) (scenarios 1–7) | The behaviour on real hardware, in the order a user meets it |
 | The acceptance records | [`docs/acceptance/`](../acceptance/) | The criterion ID, the measured result and the evidence |
 
 A criterion counts as passed only when it has a **measured** result. "Looks
 right on my TV" is not a result.
 
-### Current state (measured 2026-10-24)
+### Current state (measured 2026-11-13)
 
 | Fact | Value | Source |
 |---|---|---|
-| Tests in the CI gate | **549** — **0** failures, **0** errors, **0** skipped | `./gradlew :test-runner:test` → the report in `test-runner/build/reports/tests/test/index.html` |
-| Test classes in that run | **59** | the same report |
-| The same gate before this cycle | **277** tests — the cycle added **234** | the earlier measurement of the same gate |
-| Test source files under `app/src/test/kotlin/com/phairplay/` | **68** | `find app/src/test/kotlin/com/phairplay -name "*.kt"` |
+| Tests in the JVM gate | **634** — **0** failures, **0** errors, **0** skipped | `./gradlew :test-runner:test` → the report in `test-runner/build/reports/tests/test/index.html` |
+| Test classes in that run | **72** | the same report |
+| The same gate before the cycles of 2026-10 and 2026-11 | **277** tests — the cycles added **357** | the earlier measurement of the same gate |
+| Test source files under `app/src/test/kotlin/com/phairplay/` | **84** | `find app/src/test/kotlin/com/phairplay -name "*.kt"` |
 | Test files **excluded from the CI gate** | **6** — `MainActivityTest.kt`, `airplay/VideoSubmissionTest.kt`, `airplay/MdnsServiceTest.kt`, `service/ServiceControllerTest.kt`, `util/NetworkUtilsTest.kt`, `ui/VideoAspectFitTest.kt` | the `exclude` block in `test-runner/build.gradle.kts` |
 | Why they are excluded | They touch Android framework classes that call JNI and are therefore unstable on the host JVM | the comment above the `exclude` block in the same file |
 | Instrumented test files | **1** (`app/src/androidTest/kotlin/com/phairplay/MainActivityTest.kt`) | the `androidTest` source set |
@@ -131,7 +131,7 @@ are covered.**
 
 | Method | Where | What it proves |
 |---|---|---|
-| The security audit | [`docs/audit/2026-10-24-security-audit.md`](../audit/2026-10-24-security-audit.md) | The threat model, the attack surface, every finding with its attack path, its concrete fix and its negative test |
+| The security audit | [`docs/security/FINDINGS.md`](../security/FINDINGS.md) | The threat model, the attack surface, every finding with its attack path, its concrete fix and its negative test |
 | The hardening guarantees | [`SECURITY.md`](../../SECURITY.md) §2 | The guarantees the code actually enforces |
 | The data-protection statement | [`PRIVACY.md`](../../PRIVACY.md) | What leaves the television, what is stored, which permission is needed for what |
 | The permission audit | the audit, §4 | Every line of `AndroidManifest.xml` traced to a call site |
@@ -314,13 +314,13 @@ rule.
 
 | Fact | Value | Source |
 |---|---|---|
-| Hand-written Kotlin files in the repository | **189** | `bash scripts/check-file-size.sh` → `OK: file size check passed — 189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.` |
+| Hand-written Kotlin files in the repository | **225** | `bash scripts/check-file-size.sh` → `OK: file size check passed — 225 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.` |
 | Files over the 400-line soft limit | **0** | the same output |
 | Files over the 550-line hard limit | **0** | the same output |
 | The largest file today | `airplay/SdpParser.kt` with **391** lines | the same script, sorted |
-| Classes with a KDoc header | **233 of 233** | `bash scripts/check-kdoc-headers.sh` → `OK: KDoc header check passed — 233 class declaration(s) checked, all of them have a KDoc header.` |
-| Internal documentation links that resolve | **all** of them — 281 at the time of the measurement | `bash scripts/check-docs-links.sh` → `OK: documentation link check passed — 281 internal link(s) resolve, 19 external link(s) skipped.` |
-| String keys in the language coverage | **80** — complete in `values/`, `values-de/` and `values-fr/` | `bash scripts/check-i18n-completeness.sh` → `OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
+| Classes with a KDoc header | **292 of 292** | `bash scripts/check-kdoc-headers.sh` → `OK: KDoc header check passed — 292 class declaration(s) checked, all of them have a KDoc header.` |
+| Internal documentation links that resolve | **all** of them — 445 at the time of the measurement | `bash scripts/check-docs-links.sh` → `OK: documentation link check passed — 445 internal link(s) resolve, 87 external link(s) skipped.` |
+| String keys in the language coverage | **129** — complete in `values/`, `values-de/` and `values-fr/` | `bash scripts/check-i18n-completeness.sh` → `OK: i18n completeness check passed — 129 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
 
 **The link count is a snapshot, the exit code is the contract.** Every document
 that is added or extended adds links, so the number above grows with every
@@ -332,7 +332,7 @@ that is, every internal link resolves.
 the KDoc header of the class that contains it, and the check counts 208
 declarations instead of 233. The strict run (without the flag) is green as
 well — both exit codes are recorded in
-[`docs/acceptance/QA-QUALITY-GATE-ACCEPTANCE.md`](../acceptance/QA-QUALITY-GATE-ACCEPTANCE.md).
+[`docs/archive/QA-QUALITY-GATE-ACCEPTANCE_2026-11-13.md`](../archive/QA-QUALITY-GATE-ACCEPTANCE_2026-11-13.md).
 
 **What the current cycle added** — five new classes in
 `app/src/main/kotlin/com/phairplay/util/`, all of them inside the size and
@@ -376,10 +376,10 @@ KDoc rules:
 
 | Method | How | What it proves |
 |---|---|---|
-| The device scenarios | [`docs/guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) (15 cases) | that a real sender can complete a real session |
+| The device scenarios | [`docs/guides/DEVICE_TEST_PLAN.md`](../guides/DEVICE_TEST_PLAN.md) (16 cases) | that a real sender can complete a real session |
 | The protocol suites | `./gradlew :test-runner:test` | that the parser accepts what the specification says and rejects the rest |
 | The cross-implementation matrix | the sender column of the acceptance record | which senders were actually tried |
-| The phase plan of ADR-004 | [`docs/decisions/ADR-004-dlna-mediarenderer-roadmap.md`](../decisions/ADR-004-dlna-mediarenderer-roadmap.md) | that a protocol is delivered in reviewable, testable steps |
+| The phase plan of ADR-004 | [`docs/adr/ADR-004-dlna-mediarenderer-roadmap.md`](../adr/ADR-004-dlna-mediarenderer-roadmap.md) | that a protocol is delivered in reviewable, testable steps |
 
 Interoperability is only claimed for a **sender × version × protocol**
 combination that was actually tried. A protocol that was not tried on real
@@ -436,9 +436,9 @@ property of the protocol and not a bug:
 | String keys covered in every language | **80 of 80** — `bash scripts/check-i18n-completeness.sh` exits 0 |
 | TV usability rules in the requirements | NFR-05…NFR-10: card-based layout, large focus indicators, D-pad navigation, 48 dp focus targets, 18 sp body text, the status visible within 1 second |
 | The step count for the common path | install → start the app → click AirPlay → pick the TV. The user-visible part is two clicks after the app is running — **read from the code, not measured on a device** |
-| Focus order, focus visibility, text scaling | **not measured** — the D-pad walkthrough needs a television; 0 of the 15 device cases were executed |
+| Focus order, focus visibility, text scaling | **not measured** — the D-pad walkthrough needs a television; 0 of the 16 device cases were executed |
 | Accessibility | **not systematically audited** — no automated accessibility scan, no documented TalkBack pass |
-| The "wrong state on the screen" defect class | already found and fixed once; see [`docs/reviews/2026-10-24-pr19-pr17-issue18-review.md`](../reviews/2026-10-24-pr19-pr17-issue18-review.md) |
+| The "wrong state on the screen" defect class | already found and fixed once; see [`docs/archive/2026-10-24-pr19-pr17-issue18-review_2026-11-13.md`](../archive/2026-10-24-pr19-pr17-issue18-review_2026-11-13.md) |
 
 ### Target
 
@@ -485,33 +485,41 @@ ones before it passed.
 | 5 | **The JVM suite** (`./gradlew :test-runner:test`) | minutes | The behaviour. It comes after the structure checks because a test that runs against a 900-line file still does not make that file reviewable. |
 | 6 | **Android lint**, both flavours | minutes | The static analysis of the real Android build — it sees the manifest, the resources and the API levels, which the JVM suite does not. |
 | 7 | **The debug APKs**, both flavours | minutes | The proof that the product can be built and installed. A green test suite does not prove that an APK exists. |
-| 8 | **The device test plan** (15 cases, both flavours) | hours, and it needs hardware | The last gate, because it is the only one that needs a person, a television and a sender. Everything above it can be automated; this cannot. |
+| 8 | **The device test plan** (16 cases, both flavours) | hours, and it needs hardware | The last gate, because it is the only one that needs a person, a television and a sender. Everything above it can be automated; this cannot. |
 
 Two properties of the order are worth keeping:
 
-- **The four structure checks run together and all of them report.** One push
+- **The structure checks run together and all of them report.** One push
   shows the complete list of problems instead of one problem per push — the
   CI job collects the exit codes and fails at the end.
 - **The KDoc check runs with `--skip-nested` in CI**, because a nested class
   is documented by the header of the class that contains it. The strict run is
   green as well.
 
-### 7.2 The status of the gate today (measured 2026-10-24)
+### 7.2 The status of the gate today (measured 2026-11-13)
 
 | # | Gate | Status | Blocking? |
 |---|---|---|---|
-| 1 | The JVM suite is green | **yes** — 549 tests, 0 failures, 0 errors, 0 skipped, 63 test classes | — |
+| 1 | The JVM suite is green | **yes** — 634 tests, 0 failures, 0 errors, 0 skipped, 72 test classes | — |
 | 2 | Lint and both debug APKs are green | **yes** — `No issues found.` in both flavours, both APKs build | — |
 | 3 | No known S4 finding | **yes** — SEC-01, SEC-02 and SEC-03 are closed, 0 open S4 | — |
 | 4 | Every open S3 has a written owner decision | **no** — SEC-04 (S3, the scheme list of the DLNA media URI) still needs the owner's decision; SEC-06 (S3) is open | **yes** |
-| 5 | The device scenarios ran on both flavours | **no** — 0 of 15 | **yes** |
+| 5 | The device scenarios ran on both flavours | **no** — 0 of 16 | **yes** |
 | 6 | The file-size rule holds | **yes** — 0 files above 400, 0 above 550 | — |
 | 7 | The documentation is up to date | **partly** — the documents of this cycle are updated; the open items are listed in [`docs/project/RELEASE_READINESS.md`](../project/RELEASE_READINESS.md) | depends on the change |
 | 8 | The limitations in the README are true of the build | **yes** — the README states that no device test has been executed | — |
 
 **Result: 5 of the 8 gates are green, one is partly met.** The two open gates
 are not technical blockers: they need a decision by the owner (gate 4) and
-hardware (gate 5). The pipeline — tests, lint, build, structure — is green.
+hardware (gate 5).
+
+**Where these gates were measured matters.** The lint runs on GitHub-hosted
+runners and is green on every push. The other gates — tests, build, structure,
+native libraries, supply chain — run in the `CI` workflow, and that workflow
+**has never executed**: the repository has no runner for it. The numbers above
+are therefore **local measurements** of the team lead. The state and the two
+ways out are written down in
+[`CI-PIPELINE.md`](CI-PIPELINE.md) § *The state of the pipeline*.
 
 ---
 

@@ -25,14 +25,14 @@ a follow-up, not in a later release, not in the author's head.
 | What the change does | What has to be updated in the same change |
 |---|---|
 | Changes product behaviour | `docs/spec/REQUIREMENTS.md` (and a CR in `docs/cr/` if the change is material), plus the matching guide under `docs/guides/` if a user can see the difference |
-| Adds or removes a package, changes a boundary | `docs/ARCHITECTURE.md`, `docs/WHERE_TO_CHANGE.md`, and an ADR in `docs/decisions/` if the decision is material |
+| Adds or removes a package, changes a boundary | `docs/ARCHITECTURE.md`, `docs/WHERE_TO_CHANGE.md`, and an ADR in `docs/adr/` if the decision is material |
 | Changes a default, a timeout, a size budget or a port | the owning class, `docs/quality/QUALITY.md` if it moves a quality target, and `docs/spec/ACCEPTANCE_CRITERIA.md` if it moves a criterion |
-| Changes a permission | `app/src/main/AndroidManifest.xml`, `PRIVACY.md` §4, and the permission table in `docs/audit/2026-10-24-security-audit.md` |
+| Changes a permission | `app/src/main/AndroidManifest.xml`, `PRIVACY.md` §4, and the permission table in `docs/security/PERMISSIONS.md` |
 | Changes what is stored or what leaves the device | `PRIVACY.md` §2 and §3, and `SECURITY.md` if a guarantee changes |
 | Changes the milestone status | `docs/spec/PROJECT_PLAN.md`, `CHANGELOG.md` |
 | Changes a test gate, a quality target or the severity scale | `docs/quality/QUALITY.md`, and `docs/spec/ACCEPTANCE_CRITERIA.md` |
 | Adds a document | the index in `docs/README.md` |
-| Adds a decision | an ADR in `docs/decisions/` (or `docs/adr/` after the migration) |
+| Adds a decision | an ADR in `docs/adr/` |
 | Changes a command that a contributor runs | `README.md` and `docs/CONTRIBUTING.md` — same change, always |
 
 ### How far "the same change" reaches
@@ -78,7 +78,9 @@ common way a documentation set becomes untrustworthy.
 | Milestone status | `docs/spec/PROJECT_PLAN.md` | `README.md` links to it |
 | Measurable acceptance criteria, performance budgets | `docs/spec/ACCEPTANCE_CRITERIA.md` | `docs/TESTING.md` links to it |
 | Architecture, package boundaries | `docs/ARCHITECTURE.md` | `docs/WHERE_TO_CHANGE.md` links to it |
-| The security state of the release, the findings | `docs/audit/2026-10-24-security-audit.md` | `SECURITY.md` is the short user-facing version |
+| The security state of the release, the findings | `docs/security/FINDINGS.md` | `SECURITY.md` is the short user-facing version |
+| The threat model, the boundaries of the trust | `docs/security/THREAT_MODEL.md` | — |
+| The declared permissions and their purpose | `docs/security/PERMISSIONS.md` | `PRIVACY.md` §4 links here |
 | The user-facing security policy | `SECURITY.md` | — |
 | The data-protection statement | `PRIVACY.md` | — |
 | The quality model, the severity grades, the current state per dimension | `docs/quality/QUALITY.md` | — |
@@ -115,7 +117,7 @@ Split the difference by question:
 - *What do I have to do to change it?* → `docs/CONTRIBUTING.md`,
   `docs/WHERE_TO_CHANGE.md`
 - *What may it never do?* → `PRIVACY.md`, `SECURITY.md`
-- *What did we decide and why?* → `docs/decisions/`
+- *What did we decide and why?* → `docs/adr/`
 
 If a sentence fits into none of these, it probably does not belong in a
 document at all.
@@ -190,10 +192,15 @@ the current behaviour: for that, read the live document the banner points to.
 
 ### The current state of the archive
 
-`docs/archive/` is currently **empty**: no document has been superseded yet
-since the repository was set up. `docs/archive/README.md` records the
-convention and must be updated in the same change as the first document that
-moves in.
+`docs/archive/` holds the documents that were superseded on **2026-11-13**: the
+audit of 2026-10-24, the acceptance records of the milestone rounds M6 … M12,
+the review of the pull requests of 2026-10-24, the plan of the AirPlay
+handshake, and the previous versions of the project plan, the requirements and
+the acceptance criteria.
+
+[`docs/archive/README.md`](archive/README.md) is the index of the archive and
+lists every archived document with the document that replaced it. It is
+updated in the same change as the document that moves in.
 
 ---
 

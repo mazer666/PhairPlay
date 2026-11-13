@@ -151,7 +151,7 @@ The publish act stays a separate, explicit command:
 
 | Symptom | Cause | What to do |
 |---|---|---|
-| `Quality gate failed` | One of the four checks is red | **Do not publish.** Fix the cause first — the message names the file and the line. |
+| `Quality gate failed` | One of the eight checks of the release gate is red | **Do not publish.** Fix the cause first — the message names the file and the line. |
 | `The version ... does not follow the release scheme` | The tag is not `v<major>.<minor>.<patch>[-<stage>.<n>]` | Use the correct scheme, for example `v1.0.0-alpha.7`. |
 | `The version inside the APK does not match the tag` | The build used a stale `app/build.gradle.kts` | The script bumps the file itself; if this appears, the working tree was changed after the bump. Start again. |
 | `The APK is not signed` | `KEYSTORE_PATH` does not point at the keystore, or the password is wrong | Check `~/.config/phairplay/release.env`. The file must exist and be readable. |

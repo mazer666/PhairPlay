@@ -8,7 +8,7 @@ Two test worlds exist in this project, and they answer different questions:
 | World | Question it answers | Command |
 |---|---|---|
 | **The JVM suite** | Does the protocol logic behave? | `./gradlew :test-runner:test` |
-| **The device plan** | Does it work on a television? | [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) — **0 of 15 cases have been executed** |
+| **The device plan** | Does it work on a television? | [`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md) — **0 of 16 cases have been executed** |
 
 If you only remember one thing: the JVM suite is green, and **no television has
 ever talked to PhairPlay**.
@@ -56,11 +56,15 @@ Measured on the integrated tree (2026-10-24):
 | Test classes | **59** |
 | Build | `BUILD SUCCESSFUL` (the recorded run of this tree took 3m 18s — [`spec/PROJECT_PLAN.md`](spec/PROJECT_PLAN.md)) |
 
-The test tree holds **65** test classes in total. **Six of them are excluded
+The test tree holds **78** test classes in total. **Six of them are excluded
 from the JVM module** and therefore never run — see §1.3:
 `MainActivityTest`, `VideoSubmissionTest`, `MdnsServiceTest`,
 `ServiceControllerTest`, `NetworkUtilsTest` and `VideoAspectFitTest`.
-59 + 6 = 65.
+72 + 6 = 78.
+
+The tree carries **672** `@Test` methods. **38 of them live in the six
+excluded classes** and are therefore never executed by the JVM module — 672 −
+38 = **634** tests, which is what a green run reports.
 
 **Before this cycle the suite had 277 tests.** The cycle added the DLNA
 control plane, the address policies, the picture decoder and the tests that came
@@ -186,7 +190,7 @@ same: the job `jvm-tests` runs `./gradlew :test-runner:test`, the job
 The lint reports say `No issues found.` for both variants; the debug APKs are
 uploaded by CI and fail the job when no APK was produced.
 
-### 1.6 The four structure checks
+### 1.6 The structure checks
 
 They are not tests of the product — they are tests of the repository. They run
 in the CI job `quality-gate` and every one of them exits **1** on a violation.
@@ -196,20 +200,31 @@ bash scripts/check-file-size.sh        ; echo "exit=$?"   # ≤ 400 soft / ≤ 5
 bash scripts/check-kdoc-headers.sh     ; echo "exit=$?"   # every class has a KDoc header
 bash scripts/check-docs-links.sh       ; echo "exit=$?"   # every internal link resolves
 bash scripts/check-i18n-completeness.sh ; echo "exit=$?"  # every language has every key
+bash scripts/check-privacy-policy.sh   ; echo "exit=$?"   # the policy names every permission
+bash scripts/check-secrets.sh          ; echo "exit=$?"   # no credential in the repository
+bash scripts/check-dependencies.sh     ; echo "exit=$?"   # every dependency has a decision
+bash scripts/build-traceability.sh --check ; echo "exit=$?"  # every requirement has a proof
 ```
 
-The measured state of this cycle:
+The last two need the SBOM of the build: `scripts/build-sbom.sh` writes it to
+`dist/sbom/`. The native libraries (the 16 KB page size) are checked by
+`scripts/check-native-libs.sh` against the artefacts that were built — it needs
+the APKs and therefore runs in its own CI job.
+
+The measured state on **2026-11-13** (commit `bdc51c8`):
 
 ```text
-OK: file size check passed — 189 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
-OK: KDoc header check passed — 233 class declaration(s) checked, all of them have a KDoc header.
-OK: documentation link check passed — 245 internal link(s) resolve, 19 external link(s) skipped.
-OK: i18n completeness check passed — 114 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: file size check passed — 225 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines.
+OK: KDoc header check passed — 292 class declaration(s) checked, all of them have a KDoc header.
+OK: documentation link check passed — 445 internal link(s) resolve, 87 external link(s) skipped.
+OK: i18n completeness check passed — 129 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).
+OK: privacy policy check passed.
+OK: secret scan passed — 420 file(s) scanned, no credential found, 0 warning(s).
 ```
 
-These four counts are a **snapshot of 2026-10-24**; the scripts print the
-current values on every run. The link count in particular moves with every
-document change — take the number from the script output, not from here.
+These counts are a **snapshot**; the scripts print the current values on every
+run. The link count in particular moves with every document change — take the
+number from the script output, not from here.
 
 The KDoc check runs with `--skip-nested` in CI (a nested declaration is covered
 by the KDoc header of the class that contains it).
@@ -239,7 +254,7 @@ by the KDoc header of the class that contains it).
 | **The MediaCodec submission path** | `VideoSubmissionTest` is excluded from the JVM module on purpose | the APK build + a device test |
 | **The mDNS registration** | `MdnsServiceTest` is excluded — `NsdManager` needs JNI | the AirPlay picker of a real sender (DT-03) |
 | **The Activity, the notification, the settings persistence** | AndroidX Leanback, `NotificationCompat` and DataStore are not on the classpath | the device plan (DT-01, DT-13, DT-14) |
-| **Every behaviour of the television** | No frame, no surface, no speaker, no system UI, no LAN | the device plan — **0 of 15 cases executed** |
+| **Every behaviour of the television** | No frame, no surface, no speaker, no system UI, no LAN | the device plan — **0 of 16 cases executed** |
 | **The cleartext `http://` media fetch** | The platform's cleartext policy is a device decision; no `network_security_config.xml` exists | a device test on API 35 (DT-09 / DT-10) |
 | **The aspect-fit arithmetic** | `VideoAspectFitTest` sits in the excluded `ui` package of the test tree and never runs (§1.3) | a narrow fix of the exclusion, then the suite |
 
@@ -251,7 +266,7 @@ consistent; it says nothing about the television.
 ## 3. The device test plan
 
 The authoritative list of everything that needs hardware is
-[`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md): **15 cases**
+[`guides/DEVICE_TEST_PLAN.md`](guides/DEVICE_TEST_PLAN.md): **16 cases**
 (DT-01 … DT-16), each with a copy-pasteable script, a time limit and an
 evidence requirement.
 
@@ -273,7 +288,7 @@ evidence requirement.
 | DT-14 | The notification and its actions |
 | DT-15 | Debug overlay and stability under load |
 
-**Status: 0 of 15 cases have been executed.** No television was available, so
+**Status: 0 of 16 cases have been executed.** No television was available, so
 every acceptance criterion that needs hardware is still open. The acceptance
 records in [`acceptance/`](acceptance/) mark each criterion as *proven by a
 test*, *proven on the code* or *still open*.

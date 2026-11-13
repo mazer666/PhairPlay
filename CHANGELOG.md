@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **The documentation was consolidated and brought onto the state of the code
+  (2026-11-13).** Every number in the documents was measured again:
+  634 tests in 72 test classes, 129 translation keys, 16 device test cases,
+  225 Kotlin files, 292 classes with a KDoc header, 135 production files.
+- **The superseded documents are in one archive** — `docs/archive/` — with the
+  banner of the archive rule and the date of the archiving change. The
+  security audit of 2026-10-24, the acceptance records of the milestone rounds
+  M6 … M12, the review of the pull requests of 2026-10-24, the plan of the
+  AirPlay handshake and the previous versions of the project plan, the
+  requirements and the acceptance criteria now live there. The index
+  `docs/archive/README.md` names the document that replaced each of them.
+- **The architecture decision records are in one place** — `docs/adr/` — and
+  the documentation policy names the new location.
+- **The index lists every live document.** Twelve documents were missing from
+  `docs/README.md` (the compliance matrix, the data safety draft, the threat
+  model, the traceability matrix, the remediation backlog, the release
+  artefacts guide …); they are listed now.
+- **The CI state is documented honestly.** The jobs of the `CI` workflow need a
+  `self-hosted` runner and the repository has **no runner** — every run since
+  2026-11-02 was cancelled. Only the lint is checked on a push; the other
+  gates are local measurements. The state and the two ways out are in
+  `docs/quality/CI-PIPELINE.md`.
+
 ---
 
 ## [v1.0.0-alpha.8] — 2026-11-05
@@ -280,7 +305,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The diagnostic counts are expressed as plural resources (`1 byte` / `1842 bytes`),
   which is what the Android lint asks for — and what is correct.
 - The FR-61 deviation in `docs/spec/REQUIREMENTS.md` is closed, and with it the
-  corresponding rows of `docs/acceptance/M08-ACCEPTANCE.md`.
+  corresponding rows of `docs/archive/M08-ACCEPTANCE_2026-11-13.md`.
 
 ---
 
@@ -314,7 +339,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - A binding release schedule with the triggers for alpha, beta and stable releases
   and the platform each of them ships.
-- `docs/acceptance/M06-ACCEPTANCE.md` … `docs/acceptance/M12-ACCEPTANCE.md` — the
+- `docs/archive/M06-ACCEPTANCE_2026-11-13.md` … `docs/archive/M12-ACCEPTANCE_2026-11-13.md` — the
   acceptance records of the milestones M6 … M12.
 - `docs/guides/DEVICE_TEST_PLAN.md` — 15 copy-pasteable device test cases.
 
@@ -328,7 +353,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limitations
 - Miracast is a control plane only — a real media path needs a system-level WFD
-  stack that a sideloaded app cannot register for (`docs/decisions/ADR-004-miracast-media-path.md`).
+  stack that a sideloaded app cannot register for (`docs/adr/ADR-004-miracast-media-path.md`).
 - Google Cast is not included: the Cast SDK needs a registered application ID.
 - The release APKs are signed with a new key. An installation from the Play Store
   has to be removed first.
@@ -348,13 +373,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `SECURITY.md` — the security policy: threat model, the hardening guarantees the code enforces, the supported versions, and how to report a vulnerability privately.
 - `PRIVACY.md` — the data protection statement: what leaves the television, what is stored on it, the permissions and their justification, and the explicit zero-telemetry commitment.
-- `docs/audit/2026-10-24-security-audit.md` — the security and privacy review of 1.0.0-beta.3 with 14 findings, each with its attack path, a concrete fix and a negative test.
+- `docs/security/FINDINGS.md` — the security and privacy review of 1.0.0-beta.3 with 14 findings, each with its attack path, a concrete fix and a negative test.
 - `docs/project/RISKS.md` — the maintained risk register: 17 entries with likelihood, impact, countermeasure, owner and status.
 - `docs/project/RELEASE_READINESS.md` — the release readiness checklist for a stable v1.0.0: what is proven, what is open, in which order it has to be closed, and what genuinely needs real hardware.
-- `docs/acceptance/M06-ACCEPTANCE.md` … `docs/acceptance/M12-ACCEPTANCE.md` — the acceptance records of the milestones M6 … M12. Each one states, for every criterion, whether it is proven by a test, proven only on the code, or still open — and why.
+- `docs/archive/M06-ACCEPTANCE_2026-11-13.md` … `docs/archive/M12-ACCEPTANCE_2026-11-13.md` — the acceptance records of the milestones M6 … M12. Each one states, for every criterion, whether it is proven by a test, proven only on the code, or still open — and why.
 - `docs/guides/DEVICE_TEST_PLAN.md` — the device test plan with 15 copy-pasteable cases (DT-01 … DT-15), the hardware and software prerequisites, the time limits per case and a result sheet.
-- `docs/acceptance/QA-QUALITY-GATE-ACCEPTANCE.md`, `docs/acceptance/QA-I18N-ACCEPTANCE.md`, `docs/acceptance/QA-DEVICE-TEST-ACCEPTANCE.md` — the acceptance records of the quality gate, of the language coverage and of the device test plan.
-- `docs/audit/qa-quality-gate-negative-test.md` — the raw protocol of the negative test of the four check scripts (22 cases, green → red → green).
+- `docs/archive/QA-QUALITY-GATE-ACCEPTANCE_2026-11-13.md`, `docs/archive/QA-I18N-ACCEPTANCE_2026-11-13.md`, `docs/archive/QA-DEVICE-TEST-ACCEPTANCE_2026-11-13.md` — the acceptance records of the quality gate, of the language coverage and of the device test plan.
+- `docs/quality/CI-PIPELINE.md` — the raw protocol of the negative test of the four check scripts (22 cases, green → red → green).
 
 ### Changed
 - **The DLNA renderer is now a documented, delivered part of the product** — the milestone M12 was "planned" in the project plan; the package `com.phairplay.dlna` exists with 29 production files and 157 of the 457 green JVM tests of the measured run (169 test methods in the tree today). `docs/spec/PROJECT_PLAN.md` now says so, and the per-sub-phase boxes reflect the code.

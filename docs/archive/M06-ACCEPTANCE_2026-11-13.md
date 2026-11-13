@@ -1,5 +1,10 @@
 # Acceptance — M6: Miracast receiver (discovery and control plane)
 
+> **ARCHIVED — superseded on 2026-11-13.**
+> This document is kept for historical reference only. It does **not** describe
+> the current build. The current version is [the acceptance criteria](../spec/ACCEPTANCE_CRITERIA.md) and [the traceability matrix](../spec/TRACEABILITY.md).
+> Do not follow this document for new work.
+
 **Feature / milestone:** M6 — Miracast / Wi-Fi Display receiver
 **Requirement IDs:** FR-13 … FR-18 (status "not implemented" for the media path),
 FR-58 … FR-60 (scope exclusion), AC-M6.1 … AC-M6.8

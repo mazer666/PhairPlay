@@ -209,4 +209,4 @@ permission inventory is
 [`docs/security/PERMISSIONS.md`](docs/security/PERMISSIONS.md), and the privacy
 counterpart is [`PRIVACY.md`](PRIVACY.md). The audit of the previous release is
 kept as the historical record:
-[`docs/audit/2026-10-24-security-audit.md`](docs/audit/2026-10-24-security-audit.md).
+[`docs/security/FINDINGS.md`](docs/security/FINDINGS.md).

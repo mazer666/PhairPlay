@@ -1,24 +1,34 @@
 # Release Readiness — Google Play publication and direct distribution
 
-**Version:** 2.1
+**Version:** 2.2
 **Prepared by:** Project Manager
-**Date:** 2026-11-05 (measured 15:58, re-measured 16:10 and 17:20)
-**Measured on:** commit `34a166c` (branch `main`), release tag `v1.0.0-alpha.7`
-**Supersedes:** revision 1.0 of 2026-10-24, which was written against the
-commits `2267672` / `51933eb`, the version `1.0.0-beta.3` and a device test
-plan with 15 cases. All of that is stale.
+**Date:** 2026-11-13 (re-measured), first measured 2026-11-05 at 15:58 / 16:10 / 17:20
+**Measured on:** commit `bdc51c8` (branch `main`), release tag `v1.0.0-alpha.7`
+**Supersedes:** revision 2.1 of 2026-11-05 and revision 1.0 of 2026-10-24,
+which was written against the commits `2267672` / `51933eb`, the version
+`1.0.0-beta.3` and a device test plan with 15 cases. All of that is stale.
 
-> **The tree moved during this measurement.** At 15:58 the repository was at
-> `34a166c` and all five gates were green. At 16:10 the tree stood at
-> `ee49f8e` ("feat(release): build the artefacts without publishing them") with
-> uncommitted changes from the security, the spec and the UI track: two gates
-> were red (`check-privacy-policy.sh` and `check-docs-links.sh`), the file-size
-> check reported one warning, and the DLNA scheme allowlist had been removed in
-> favour of a single `FetchableUrlPolicy`. **At 17:20 all five gates are green
-> again** — the privacy policy was brought up to the manifest date, the links in
-> `docs/spec/archive/` were repaired and `DiagnosticsFragment.kt` was split to
-> 360 lines. The rows below say which state they describe; the rows that
-> changed are marked **[16:10]** or **[17:20]**.
+> **What changed since revision 2.1 (measured 2026-11-13).**
+>
+> 1. **The release `v1.0.0-alpha.8` is built and verified** — but **not
+>    published**: there is no tag and no GitHub release. The artefacts, the
+>    manifest, the checksums, the SBOM and the third-party notices are in
+>    `dist/release/1.0.0-alpha.8/` of the build tree.
+> 2. **The quality gate has eight checks**, not five: the secret scan, the
+>    dependency gate and the traceability check were added in the cycle of
+>    2026-11-05.
+> 3. **The native library gate is now wired into the pipeline** — it was
+>    unwired in revision 2.1.
+> 4. **The CI pipeline has never run.** The jobs need a `self-hosted` runner
+>    and the repository has **no runner**; every run since 2026-11-02 was
+>    cancelled after 24 hours. The lint runs on GitHub-hosted runners and is
+>    green. Everything else below is a **local measurement**.
+> 5. The documentation was consolidated: the superseded documents are in
+>    `docs/archive/`, the ADRs are in `docs/adr/`.
+>
+> The rows below say which state they describe; the rows that changed in the
+> cycle of 2026-11-05 are marked **[16:10]** or **[17:20]**, the rows that
+> changed on 2026-11-13 are marked **[2026-11-13]**.
 
 ---
 
@@ -45,11 +55,12 @@ their opt-in.
 | # | Fact | How it was measured |
 |---|---|---|
 | 1 | The release is published with three assets | GitHub API, `releases/tags/v1.0.0-alpha.7`: `PhairPlay-1.0.0-alpha.7-GoogleTV.apk` = **16 600 258 B**, `PhairPlay-1.0.0-alpha.7-FireTV.apk` = **11 668 733 B**, `PhairPlay-1.0.0-alpha.7-GoogleTV.aab` = **9 003 755 B**; `prerelease: true`, published `2026-11-02T20:00:26Z` |
-| 2 | The JVM suite is green with **592** tests | Derived from the sources: 630 `@Test` methods in `app/src/test/kotlin` minus the 38 methods of the six excluded classes (`test-runner/build.gradle.kts`, `exclude` block) = 592. The excluded classes are `MainActivityTest` (9), `MdnsServiceTest` (12), `VideoSubmissionTest` (5), `ServiceControllerTest` (4), `NetworkUtilsTest` (5), `ui/VideoAspectFitTest` (3). |
-| 3 | All five repository gates are green **[15:58]** | `check-file-size.sh` → `216 file(s) checked, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh` → `280 class declaration(s) checked`; `check-i18n-completeness.sh` → `129 key(s) … complete in 2 language(s)`; `check-docs-links.sh` → `326 internal link(s) resolve`; `check-privacy-policy.sh` → `13 declared permissions are documented` |
-| 3b | **All five gates are green in the working tree [17:20]** | `check-file-size.sh` → `225 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh` → `292 class declaration(s) checked`; `check-i18n-completeness.sh` → `129 key(s) … complete in 2 language(s)`; `check-docs-links.sh` → `401 internal link(s) resolve`; `check-privacy-policy.sh` → `OK: privacy policy check passed.` At 16:10 two of them were red; the parallel tracks repaired them |
+| 2 | The JVM suite is green with **634** tests **[2026-11-13]** | Measured on the run of 2026-11-05: 634 test cases in 72 test classes, 0 failures, 0 errors, 0 skipped (`test-runner/build/test-results/test/*.xml`). Derived from the sources: 672 `@Test` methods in `app/src/test/kotlin` minus the 38 methods of the six excluded classes (`test-runner/build.gradle.kts`, `exclude` block) = 634. The excluded classes are `MainActivityTest` (9), `MdnsServiceTest` (12), `VideoSubmissionTest` (5), `ServiceControllerTest` (4), `NetworkUtilsTest` (5), `ui/VideoAspectFitTest` (3). |
+| 3 | The repository gates are green **[2026-11-13]** | `check-file-size.sh` → `225 file(s) checked, none above the hard limit of 550 lines, 0 warning(s) above the soft limit of 400 lines`; `check-kdoc-headers.sh` → `292 class declaration(s) checked`; `check-i18n-completeness.sh` → `129 key(s) … complete in 2 language(s)`; `check-docs-links.sh` → `445 internal link(s) resolve`; `check-privacy-policy.sh` → `OK: privacy policy check passed.`; `check-secrets.sh` → `420 file(s) scanned, no credential found`; `check-dependencies.sh` → `25 dependency/ies assessed, 2 waived`; `build-traceability.sh --check` → `108 requirement(s) … 0 without a proof`. **Local measurements** — the pipeline that runs them has no runner (row 3e). |
+| 3e | **The CI pipeline has never run [2026-11-13]** | `GET /repos/mazer666/PhairPlay/actions/runners` → `{"total_count": 0}`. Every `CI` run since 2026-11-02 ended in `cancelled` — the jobs were queued for 24 hours and never picked up. The `Lint` workflow runs on GitHub-hosted runners and is green. See [`../quality/CI-PIPELINE.md`](../quality/CI-PIPELINE.md). |
 | 3c | The DLNA scheme allowlist has been removed **[16:10]** | `DlnaMediaUri.validate()` delegates to `FetchableUrlPolicy` (`app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt:62`), whose `FETCHABLE_SCHEMES = setOf("http", "https")` (`app/src/main/kotlin/com/phairplay/util/FetchableUrlPolicy.kt:57`) refuses everything else. The new `DlnaMediaUriAttackTest` (6 methods) proves that a `file://` URI never reaches the playback controller. R-03 and R-04 changed accordingly |
-| 3d | The native library check exists but is not wired in **[16:10]** | `scripts/check-native-libs.sh` verifies the ELF alignment of the 64-bit libraries, the ZIP alignment and the ABIs; `grep -rn "check-native-libs" .github/ scripts/release/` → **0 matches** |
+| 3d | The native library check is wired into the pipeline **[2026-11-13]** | The CI job `native-libraries` builds both debug APKs and runs `scripts/check-native-libs.sh --require-zipalign` against them, and the self-test `scripts/test-check-native-libs.sh` proves the gate can turn red (10 cases). It runs in the same job as the self-test. |
+| 3f | The artefacts of `v1.0.0-alpha.8` are built, signed and verified, but **not published** **[2026-11-13]** | `dist/release/1.0.0-alpha.8/`: `PhairPlay-1.0.0-alpha.8-GoogleTV.apk` = 16 617 682 B, `PhairPlay-1.0.0-alpha.8-FireTV.apk` = 11 686 149 B, `PhairPlay-1.0.0-alpha.8-GoogleTV.aab` = 9 008 357 B, the source archive, `release-manifest.json` (`"publication": {"published": false}`), `SHA256SUMS` (verified with `sha256sum -c`: 8 of 8 OK), `BUILD-PROVENANCE.txt`, `VERIFICATION.md`, `THIRD-PARTY-NOTICES.md` and `sbom/phairplay-1.0.0-alpha.8-sbom.cdx.json`. No tag exists; `git tag` lists nothing above `v1.0.0-alpha.7`. |
 | 4 | The build configuration meets the Play target requirements | `targetSdk = 35`, `compileSdk = 35` (`app/build.gradle.kts:24`, `:30`); the `googletv` flavour has `minSdk = 29` (`:60`) |
 | 5 | The bundle carries 32- and 64-bit native code | `abiFilters += setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")` (`app/build.gradle.kts:40-42`) |
 | 6 | The manifest declares the TV form factor correctly | `android.software.leanback` `required="true"`, `android.hardware.touchscreen` `required="false"` (`app/src/main/AndroidManifest.xml:91-96`), the `LEANBACK_LAUNCHER` category (`:163-168`), `android:banner="@drawable/app_banner"` (`:136`) |
@@ -89,7 +100,7 @@ opted in. Only then can a build be uploaded to the internal test track.
 | A4 | Android App Bundle format | **met** | "From June 2023, new and existing TV apps are required to be published as App Bundles" (`https://developer.android.com/guide/app-bundle/`, retrieved 2026-11-05) | — |
 | A5 | 32- and 64-bit support | **met** | `abiFilters` (`app/build.gradle.kts:40-42`); TV-G6, "From August 1, 2026, TV apps must support both 32- and 64-bit architectures" (`https://developer.android.com/docs/quality-guidelines/tv-app-quality`, retrieved 2026-11-05) | — |
 | A6 | 16 KB page size support | **met (not checked by a gate)** | Measured for `v1.0.0-alpha.7`: the native libraries are aligned to `0x4000`, `zipalign -c -P 16 -v 4` reports every `.so` as OK (`docs/guides/GOOGLE_PLAY_STORE.md:88`). The release pipeline itself does **not** check it (`scripts/release/verify.sh` has no `zipalign` call) → risk R-24 | Platform (add the gate) |
-| A7 | Privacy policy in the store listing **and** inside the app | **met** (Text) / **open** (Konsole) | `PRIVACY.md` exists, is linked from the settings and is verified by `scripts/check-privacy-policy.sh` → exit 0. The console field is still empty | Owner (paste the URL) |
+| A7 | Privacy policy in the store listing **and** inside the app | **met** (text) / **open** (console) | `PRIVACY.md` exists, is linked from the settings and is verified by `scripts/check-privacy-policy.sh` → exit 0. The console field is still empty | Owner (paste the URL) |
 | A8 | Data safety section | **open** | The draft answers exist: `docs/compliance/DATA_SAFETY_DRAFT.md`. Requirement: "All developers must complete a clear and accurate Data safety section for every app" (`https://support.google.com/googleplay/android-developer/answer/10144311`, retrieved 2026-11-05) → risk R-21 | Owner |
 | A9 | Ads / app access / content rating / target audience / news / government / financial / health declarations | **open** | The exact answers are written down in `docs/guides/GOOGLE_PLAY_STORE.md:107-124` and in `docs/compliance/STORE_SUBMISSION_CHECKLIST.md` | Owner |
 | A10 | Foreground service declaration `connectedDevice` | **open** | The manifest is ready: `foregroundServiceType="connectedDevice"` (`app/src/main/AndroidManifest.xml:180-183`) with `FOREGROUND_SERVICE_CONNECTED_DEVICE` (`:43`) and the runtime prerequisite `CHANGE_WIFI_STATE` / `CHANGE_WIFI_MULTICAST_STATE` (`app/src/main/AndroidManifest.xml:37`, `:56`). Requirement: "you'll need to declare any foreground service types that you use … 3. Include a link to a video demonstrating each foreground service feature" (`https://support.google.com/googleplay/android-developer/answer/13392821`, retrieved 2026-11-05) → risk R-27 | Owner (form) + QA (video, needs a TV) |
@@ -102,7 +113,7 @@ opted in. Only then can a build be uploaded to the internal test track.
 | A17 | The Google Cast Application ID is registered | **open** | Without an ID the receiver reports `ERROR` (`app/src/googletv/kotlin/com/phairplay/cast/CastReceiver.kt:23-27`); the procedure is `docs/guides/CAST_APP_ID.md`. **The fingerprint that is registered must be the one of the key that signs the delivered build** → R-20 | Owner |
 | A18 | The listing does not advertise a feature the app cannot deliver | **open** | The listing advertises Miracast; the Wi-Fi Direct permissions are never requested at runtime (`MainActivity.kt:295-307` is the only `requestPermissions` call) → the feature cannot start on Android 10+ (SEC-06) → risk R-26 | Owner / Platform |
 | A19 | The internal test track has no tester requirement | **met** | "Internal testing … Requirements to access track: None." (`https://support.google.com/googleplay/android-developer/answer/14151465`, retrieved 2026-11-05) | — |
-| A20 | **[17:20]** The repository gates are green, so that the uploaded bundle matches the audited code | **met** | All five gates exit 0 (measured 17:20). `scripts/release.sh` aborts on a red gate (`scripts/release/build.sh:72-89`), so the condition is enforced by the tooling. The working tree still carries uncommitted parallel work — `scripts/release.sh:194-199` refuses to publish from a dirty tree → risk R-28 | The parallel tracks commit their work before the release cut |
+| A20 | **[2026-11-13]** The repository gates are green, so that the uploaded bundle matches the audited code | **met** | All eight gates exit 0 (measured 2026-11-13; five of them were measured at 17:20 on 2026-11-05). `scripts/release.sh` aborts on a red gate (`scripts/release/build.sh:72-89`), so the condition is enforced by the tooling. The working tree still carries uncommitted parallel work — `scripts/release.sh:194-199` refuses to publish from a dirty tree → risk R-28 | The parallel tracks commit their work before the release cut |
 
 ---
 
@@ -140,7 +151,7 @@ opted in. Only then can a build be uploaded to the internal test track.
 | B6 | The release notes state the open limitations honestly | **open** | The template is `docs/guides/RELEASING.md`; the current release notes already name the Miracast limitation, the missing Cast ID and the missing device validation | Release owner |
 | B7 | The version is bumped to `1.0.0` and the changelog has the entry | **open** | `versionCode = 10`, `versionName = "1.0.0-alpha.7"` (`app/build.gradle.kts:31-32`); `CHANGELOG.md` has an `[Unreleased]` section → risk R-11 | Release owner |
 | B8 | The release key is backed up outside the team storage | **open** | `scripts/release.sh --setup` creates `~/.config/phairplay/phairplay-release.jks`; the backup is an unconfirmed owner action → risk R-10 | Owner |
-| B9 | The owner decisions R-03 / R-04 (the scheme allowlist) and R-05 (cleartext) are written down | **open** | `docs/audit/2026-10-24-security-audit.md` SEC-04 (S3) and SEC-10; both need a written owner decision in the release notes, not a silent change | Owner |
+| B9 | The owner decisions R-03 / R-04 (the scheme allowlist) and R-05 (cleartext) are written down | **open** | `docs/security/FINDINGS.md` SEC-04 (S3) and SEC-10; both need a written owner decision in the release notes, not a silent change | Owner |
 | B10 | **[16:10]** The DLNA scheme allowlist is closed; the cleartext behaviour is still undecided | **open** (half) | The scheme part is **closed**: `DlnaMediaUri.validate()` delegates to `FetchableUrlPolicy` (`app/src/main/kotlin/com/phairplay/dlna/DlnaMediaUri.kt:62`), which accepts `http` and `https` only, and `DlnaMediaUriAttackTest` proves that a `file://` URI never reaches the playback controller. The **cleartext** part is still open: no `network_security_config.xml` exists — `app/src/main/res/xml/` holds `locales_config.xml`, `backup_rules.xml` and `data_extraction_rules.xml`, but no network configuration → risk R-05 | Owner + Platform |
 
 ---

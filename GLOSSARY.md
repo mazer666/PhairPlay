@@ -693,7 +693,7 @@ newcomer reads.
 
 **Architecture Decision Record** — a short document that records one decision:
 the context, the decision, the consequences and the alternatives that were
-rejected. The existing ones are in [`docs/decisions/`](docs/decisions/), and
+rejected. The existing ones are in [`docs/adr/`](docs/adr/), and
 the template is [`docs/adr/ADR_TEMPLATE.md`](docs/adr/ADR_TEMPLATE.md).
 
 An ADR is written *after* the decision, and it is never edited afterwards — a

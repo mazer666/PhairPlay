@@ -3,7 +3,7 @@
 > Copy this file, rename it to `ADR-XXXX-<short-slug>.md` and fill it in.
 >
 > **Where the record goes:** the existing records live in
-> [`../decisions/`](../decisions/). New records use the same folder until the
+> [`../decisions/`](./). New records use the same folder until the
 > migration described in the handover note is done; the numbering continues
 > after ADR-004. Do not renumber the existing records.
 >

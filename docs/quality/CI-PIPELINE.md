@@ -27,6 +27,50 @@ pushes. The token of the runner needs nothing but `contents: read`.
 Every job that is not `build-only` is skipped for a manual run, so that a
 manual run builds the artefacts and nothing else.
 
+## The state of the pipeline on 2026-11-13 — it has never run
+
+**The jobs of `ci.yml` need a `self-hosted` runner, and the repository has no
+runner.** Measured on 2026-11-13:
+
+```text
+$ curl -s -H "Authorization: token $GITHUB_TOKEN" \
+    https://api.github.com/repos/mazer666/PhairPlay/actions/runners
+{"total_count": 0, "runners": []}
+```
+
+Every run of the `CI` workflow since 2026-11-02 ended in **`cancelled`**. The
+jobs are queued, no runner picks them up, and GitHub cancels them after 24
+hours. The last three runs:
+
+| Run | Commit | Conclusion |
+|---|---|---|
+| `42095072486` | `bdc51c8` | cancelled — all six jobs queued, none started |
+| `42095072851` | `bdc51c8` | success — the `Lint` workflow (GitHub-hosted) |
+| `42094929408` | `36ed206` | success — the `Lint` workflow (GitHub-hosted) |
+
+**What this means for the claims of this repository:**
+
+- The **lint** of both flavours is checked on every push ✅ — that workflow runs
+  on GitHub-hosted runners and is green.
+- The **quality gate, the JVM tests, the native library gate and the supply
+  chain gate** are **not** checked on a push ❌ — they only run when a runner
+  is available. Until then they are verified **locally**, by the team lead,
+  and the numbers in [`../quality/QUALITY.md`](../quality/QUALITY.md) and in
+  [`../TESTING.md`](../TESTING.md) are local measurements.
+
+**Two ways out — an owner decision:**
+
+1. Bring the self-hosted runner back online and register it for this
+   repository. The jobs are written for it and need no change.
+2. Move the jobs to `ubuntu-latest`. The pipeline installs the SDK, the build
+   tools, the NDK and CMake itself (`android-actions/setup-android@v3`), and a
+   GitHub-hosted runner has 7 GB of RAM — more than the 3 GB the R8 build
+   needed on the development machine. The cost is the runner minutes.
+
+Until one of the two happens, this repository has **no CI proof** for four of
+its six jobs. A pipeline that has never run is not a proof, and the documents
+of this repository say so instead of claiming a green run.
+
 ## What a red gate looks like
 
 Every gate follows the same convention, so that a red run can be read without
@@ -95,11 +139,11 @@ artefacts, and that is where the minutes go.
 |---|---|
 | `scripts/check-native-libs.sh` (one debug APK, 25 MB) | 5.4 s (29.6 s with a cold cache) |
 | `scripts/test-check-native-libs.sh` | 5.5 s |
-| `scripts/check-secrets.sh` (372 versioned files) | 2.5 s |
-| `scripts/test-check-secrets.sh` | 3.1 s |
+| `scripts/check-secrets.sh` (420 versioned files) | 2.3 s |
+| `scripts/test-check-secrets.sh` | 2.7 s |
 | `scripts/build-sbom.sh` | 0.2 s |
 | `scripts/test-build-sbom.sh` | 0.5 s |
-| `scripts/check-dependencies.sh` (25 components) | 0.2 s |
+| `scripts/check-dependencies.sh` (25 components) | 0.1 s |
 | `scripts/test-check-dependencies.sh` | 1.0 s |
 
 The gates need no network, no `jq`, no `xmllint` and no Android SDK: they
@@ -131,6 +175,9 @@ Every gate runs on the machine of the developer, without a network:
 # the SBOM and the dependencies
 ./scripts/build-sbom.sh
 ./scripts/check-dependencies.sh
+
+# the chain from every requirement to its proof
+./scripts/build-traceability.sh --check
 
 # the self-tests of the gates
 ./scripts/test-check-native-libs.sh

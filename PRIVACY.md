@@ -138,7 +138,7 @@ cannot record anything, cannot read your files, and cannot see where you are.
 * The reduction cannot recognise free text. A device name, the name of the
   sender, and the title of a playing track are logged as they are — that is a
   known and accepted limitation, listed in
-  `docs/audit/2026-10-24-security-audit.md`.
+  `docs/security/FINDINGS.md`.
 * The **diagnostics report** that you can copy out of the app is reduced a second
   time, and more strictly. The report on the screen names the television and its
   address, because that is what you need in order to find the device. The **copied**
@@ -155,7 +155,7 @@ declared in the manifest, but the app never asks for them at runtime — only
 therefore never granted, and the Miracast (Wi-Fi Direct) advertisement cannot
 start. This is a functional gap, not a privacy feature: the location
 permission is not being collected, it is simply not working. It is recorded as
-finding **SEC-08** in `docs/audit/2026-10-24-security-audit.md`.
+finding **SEC-08** in `docs/security/FINDINGS.md`.
 
 ## 7. The children
 
@@ -171,7 +171,7 @@ permissions come from is
 `app/src/main/AndroidManifest.xml`, the log reduction is
 `app/src/main/kotlin/com/phairplay/util/LogRedactor.kt`, and the security
 review of the current release is
-`docs/audit/2026-10-24-security-audit.md`.
+`docs/security/FINDINGS.md`.
 
 ## 9. The changes of this policy
 
