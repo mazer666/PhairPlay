@@ -23,6 +23,7 @@ is still missing before `v1.0.0`.
 | [`../SECURITY.md`](../SECURITY.md) | The security policy for users: the threat model, the guarantees the code enforces, the limits, and how to report a vulnerability. |
 | [`../PRIVACY.md`](../PRIVACY.md) | The data protection statement: what leaves the television, what is stored on it, the permissions and their justification, the zero-telemetry commitment. |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Every released and unreleased change, in the Keep-a-Changelog format. |
+| [`CROSS-PROJECT-INTEROPERABILITY-CONTRACT.md`](../CROSS-PROJECT-INTEROPERABILITY-CONTRACT.md) | The requirements that bind PhairPlay, PhairDLNA and PhairPlayRust to each other: discovery without collisions, standard UPnP AV interoperability, no proprietary coupling, no forced account. A **draft of the owner**, not evidence of working interoperability. |
 | [`../LICENSE`](../LICENSE) | The Apache 2.0 licence text. |
 
 ## What the product must do — `docs/spec/`
