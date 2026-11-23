@@ -17,7 +17,7 @@ import com.phairplay.util.NetworkUtils
 object InfoResponder {
 
     fun build(context: Context, width: Int = 1920, height: Int = 1080, pinRequired: Boolean = false): ByteArray {
-        val mac = NetworkUtils.getMacAddress()
+        val mac = NetworkUtils.getAdvertisedMac(context)
         // When PIN access control is on, set the "pairing/PIN required" status bit so the sender runs
         // the SRP pair-setup flow. NOTE: exact flag semantics are sender-version-dependent — verify
         // against macOS and adjust if pairing doesn't trigger.

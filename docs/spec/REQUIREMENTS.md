@@ -1,6 +1,6 @@
 # PhairPlay – Requirements
 
-Version: 4.0
+Version: 4.1
 Status: Active
 Date: 2026-11-05
 
@@ -227,6 +227,11 @@ actually does — not what a Miracast sink would do.
 ### 1.18 Plist decoder — defence in depth (new in v4.0)
 
 - FR-74: The binary property list decoder MUST refuse a payload above 1 MB itself, independently of the caller that hands it the bytes. *Rationale: today the 1 MB budget of the RTSP reader is the only guard in front of `PlistCodec`; a future call site without that budget would have no second line of defence (audit finding SEC-11). **Class: REC — a recommendation, not a legal obligation.** Implementation target: `PlistCodec.MAX_PLIST_BYTES`. Proof: `PlistCodecTest` — a new case `decode refuses a payload above one megabyte`.* · **REC**
+
+### 1.19 Discovery — the name and the identity of the receiver (new in v4.1)
+
+- FR-75: The `_airplay._tcp` service MUST be advertised under an instance name that differs from the device name of the television. *Rationale: on Android 14 the platform registers its own remote-control service (`_androidtvremote2._tcp`) under the device name, and the mDNS daemon checks the instance name for uniqueness **across all service types**. A receiver that advertises the bare device name is rejected with a `NameConflictException` and never appears in any AirPlay picker, while the app itself looks healthy (issue #23, reproduced on an XGIMI MoGo 3 Pro with an iPhone 15 Pro as the sender). A registration that fails MUST be retried under a name that differs from the failed one. **Class: INT — an internal project norm.** Implementation: `MdnsServiceName.airPlayInstanceName()` and `MdnsServiceName.raopInstanceName()`. Proof: `MdnsServiceNameTest` — seven cases, including `airplay name is never the bare device name`.* · **INT**
+- FR-76: The device id that the app advertises MUST be unique per installation, MUST be stable across restarts, and MUST NOT be the hardware address of the television. *Rationale: the placeholder `aa:bb:cc:dd:ee:ff` was the same on every television in the world, so two receivers in one network claimed the same identity and overwrote each other in the pairing cache of the sender (issue #23). A random, locally administered address is unique, stable and carries no hardware address into the cleartext of the network. **Class: INT.** Implementation: `NetworkUtils.getAdvertisedMac()` and `NetworkUtils.generateLocallyAdministeredMac()`. Proof: `NetworkDeviceIdTest` — four cases, including the uniqueness of 50 generated addresses.* · **INT**
 
 
 ---

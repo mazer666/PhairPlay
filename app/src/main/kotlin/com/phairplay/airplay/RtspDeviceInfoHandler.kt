@@ -38,7 +38,9 @@ internal class RtspDeviceInfoHandler(
     /** GET /server-info — legacy XML plist of receiver identity for AirPlay video senders. */
     internal fun handleServerInfo(request: RtspRequest): RtspResponse {
         val info = mapOf(
-            "deviceid" to com.phairplay.util.NetworkUtils.getMacAddress(),
+            // The same device id as in the mDNS TXT record — a sender that compares
+            // the two must not see two different devices.
+            "deviceid" to com.phairplay.util.NetworkUtils.getAdvertisedMac(context),
             "features" to 0x1E5A7FFFF7L,
             "model" to "AppleTV5,3",
             "protovers" to "1.1",

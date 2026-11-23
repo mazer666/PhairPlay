@@ -36,7 +36,7 @@ off or by suppressing a lint.
 | SEC-09 | The GENA callback guard checks one address and connects to another | S4 | accepted for v1.0.0 |
 | SEC-10 | Cleartext HTTP is blocked by the platform default | S4 | **open** — owner decision |
 | SEC-11 | `PlistCodec` has no size limit of its own | S4 | **fixed (this cycle)** |
-| SEC-12 | The MAC address and the persistent UUID are broadcast in cleartext | S4 | accepted |
+| SEC-12 | The MAC address and the persistent UUID are broadcast in cleartext | S4 | **fixed (2026-11-23)** — the broadcast address is a random one, not the hardware address |
 | SEC-13 | The AirPlay PIN has only 10 000 combinations | S4 | accepted |
 | SEC-14 | The XML plist parser of the AirPlay stack is already hardened | S4 | accepted — no action |
 | SEC-15 | The GENA subscription registry and its notify fan-out are unbounded | S2 | **fixed (this cycle)** |
@@ -403,16 +403,24 @@ thread.
 
 ### SEC-12 — The MAC address and the persistent UUID are broadcast in cleartext
 
-**Severity:** S4 (accepted)
-**Location:** `airplay/MdnsService.kt` (TXT records),
+**Severity:** S4 (accepted — the remaining part cannot be changed)
+**Location:** `airplay/MdnsServiceRegistrar.kt` (TXT records),
 `airplay/handshake/InfoResponder.kt` (`deviceID`, `macAddress`),
 `dlna/DlnaDescriptionBuilder.kt` (`UDN`)
 
-**Accepted.** The AirPlay protocol identifies the receiver by its MAC address and by
-a persistent UUID, and both are sent in cleartext to every device in the network. A
-passive sniffer can therefore tell which television is on the network and track it
-over time. This cannot be changed while speaking AirPlay; it can only be avoided by
-switching the receiver off. Documented in `PRIVACY.md` §2 and in `SECURITY.md` §7.
+**Partly fixed on 2026-11-23.** The AirPlay protocol identifies the receiver by an
+address and by a persistent UUID, and both are sent in cleartext to every device in
+the network. The **hardware address of the television is no longer among them**:
+the app advertises a random, locally administered address that it generates once
+per installation (`NetworkUtils.getAdvertisedMac()`). A sniffer therefore learns
+that *a* receiver is present, but not which television of the household it is.
+The persistent UUID stays as it is — the protocol needs an identifier that
+survives a restart, and a random one would make the sender forget the pairing
+again and again.
+
+**Accepted.** The remaining part cannot be changed while speaking AirPlay; it can
+only be avoided by switching the receiver off. Documented in `PRIVACY.md` §2 and
+in `SECURITY.md` §7.
 
 ---
 

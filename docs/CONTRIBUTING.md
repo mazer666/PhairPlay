@@ -85,7 +85,7 @@ repository structure checks, three of them are Gradle tasks.
 | 2 | KDoc headers | `bash scripts/check-kdoc-headers.sh` | `OK: KDoc header check passed — 292 class declaration(s) checked, all of them have a KDoc header.` |
 | 3 | Documentation links | `bash scripts/check-docs-links.sh` | `OK: documentation link check passed — <N> internal link(s) resolve, <M> external link(s) skipped.` |
 | 4 | Language completeness | `bash scripts/check-i18n-completeness.sh` | `OK: i18n completeness check passed — 129 key(s) in app/src/main/res/values/strings.xml, complete in 2 language(s).` |
-| 5 | The JVM protocol suite | `./gradlew :test-runner:test` | `BUILD SUCCESSFUL` — 634 tests, 0 failures, 0 errors, 0 skipped |
+| 5 | The JVM protocol suite | `./gradlew :test-runner:test` | `BUILD SUCCESSFUL` — 645 tests, 0 failures, 0 errors, 0 skipped |
 | 6 | The Android lint, both flavours | `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug` | `No issues found.` for **both** variants |
 | 7 | The debug APKs, both flavours | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug` | `BUILD SUCCESSFUL`, two APKs in `app/build/outputs/apk/` |
 

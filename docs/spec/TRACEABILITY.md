@@ -2,17 +2,17 @@
 
 Version: 4.0
 Status: Generated — do not edit by hand
-Date: 2026-11-05
+Date: 2026-11-23
 Generator: `scripts/build-traceability.sh`
 
-> **This file is generated.** Run `./scripts/build-traceability.sh` to
-> rebuild it; a change written here by hand is lost at the next run.
-> The self-test of the generator is `scripts/test-build-traceability.sh`.
+> **This file is generated.** Run `./scripts/build-traceability.sh` to rebuild
+> it; a change written here by hand is lost at the next run. The self-test of
+> the generator is `scripts/test-build-traceability.sh`.
 >
 > The chain is: **requirement → implementation → test → evidence → status**.
 > The *status* column answers "is the requirement traceable?" — whether a
-> requirement is *met* is answered by the matrix of the requirements and
-> by the acceptance criteria.
+> requirement is *met* is answered by the matrix of the requirements and by
+> the acceptance criteria.
 
 | Requirement | Requirement (short) | Implementation | Test | Evidence | Status |
 |---|---|---|---|---|---|
@@ -90,6 +90,8 @@ Generator: `scripts/build-traceability.sh`
 | FR-72 | The app MUST offer the privacy policy from its own settings, so that the |  |  | gate `scripts/check-privacy-policy.sh` | gate |
 | FR-73 | The privacy policy MUST name **every** permission the app declares, and it MUST NOT |  |  | gate `scripts/check-privacy-policy.sh scripts/test-check-privacy-policy.sh` | gate |
 | FR-74 | The binary property list decoder MUST refuse a payload above 1 MB itself, independently |  | PlistCodecTest | `./gradlew :app:testGoogletvDebugUnitTest --tests "com.phairplay.airplay.handshake.PlistCodecTest"` | automated |
+| FR-75 | The `_airplay._tcp` service MUST be advertised under an instance name that differs from the |  | MdnsServiceNameTest | `./gradlew :app:testGoogletvDebugUnitTest --tests "com.phairplay.airplay.MdnsServiceNameTest"` «normal name is unchanged» «surrounding whitespace is trimmed»  | automated |
+| FR-76 | The device id that the app advertises MUST be unique per installation, MUST be |  | NetworkDeviceIdTest | `./gradlew :app:testGoogletvDebugUnitTest --tests "com.phairplay.util.NetworkDeviceIdTest"` «generated device address has the mac address format» «generated device address is locally administered and unicast»  | automated |
 | NFR-01 | Video latency ≤ 100ms on local 5 GHz Wi-Fi. |  |  | device procedure DT-03 | device |
 | NFR-02 | Frame rate ≥ 25fps sustained. |  |  | device procedure DT-15 | device |
 | NFR-03 | Peak RAM ≤ 150 MB (single active stream). *The budget is implemented as the | app/src/main/kotlin/com/phairplay/diagnostics/ProcessMemoryProbe.kt app/src/main/kotlin/com/phairplay/diagnostics/ResourceAssessment.kt app/src/main/kotlin/com/phairplay/diagnostics/PerformanceBudgets.kt | ResourceAssessmentTest ResourceProbeTest | `./gradlew :app:testGoogletvDebugUnitTest --tests "com.phairplay.diagnostics.ResourceAssessmentTest"` «the memory below the budget is ok» «the memory exactly at the budget is ok»  | automated |
@@ -129,8 +131,8 @@ Generator: `scripts/build-traceability.sh`
 
 | Metric | Value |
 |---|---|
-| Requirements | 108 |
-| `automated` — a test class of the tree proves it | 58 |
+| Requirements | 110 |
+| `automated` — a test class of the tree proves it | 60 |
 | `device` — the proof is a device procedure | 25 |
 | `gate` — the proof is a gate script | 13 |
 | `command` — the proof is a command | 8 |
@@ -140,5 +142,5 @@ Generator: `scripts/build-traceability.sh`
 The status legend: `automated` — a test class of the tree proves the
 requirement. `device` — the proof needs real hardware and is named by a
 `DT-xx` procedure that is defined. `gate` — the proof is a script of
-`scripts/`. `command` — the proof is a command. `excluded` — the feature
-is out of scope on purpose. `none` — no proof; the generator fails.
+`scripts/`. `command` — the proof is a command. `excluded` — the feature is
+out of scope on purpose. `none` — no proof; the generator fails.

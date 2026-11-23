@@ -298,7 +298,11 @@ class MdnsService(
         retryJob = scope.launch {
             delay(delayMs)
             if (!isStarted) return@launch
-            registrar.retryRegistration(slot)
+            // WHY the attempt number is passed on: a name that is already taken on the
+            // network stays taken. The next attempt therefore uses a different name —
+            // the receiver has to become visible, and a name that collides again
+            // would keep it invisible (issue #23).
+            registrar.retryRegistration(slot, failures)
         }
     }
 

@@ -1,6 +1,6 @@
-# PhairPlay – Requirements Baseline Matrix (v4.0)
+# PhairPlay – Requirements Baseline Matrix (v4.1)
 
-Version: 4.0
+Version: 4.1
 Status: Active
 Date: 2026-11-05
 Owner: product track (`docs/spec/`)
@@ -65,7 +65,7 @@ All code statements of this matrix were measured on `main` @ `34a166c` (2026-11-
 
 ```
 $ grep -rn "@Test" app/src/test --include=*.kt | wc -l      → 630 test methods
-$ grep -rln "@Test" app/src/test --include=*.kt | wc -l      → 72 test classes
+$ grep -rln "@Test" app/src/test --include=*.kt | wc -l      → 73 test classes
 $ find app/src/test -name "*.kt" | wc -l                     → 78 files (6 are helpers)
 $ find app/src/main -name "*.kt" | wc -l                     → 131 production files
 $ find app/src/main -name "*.kt" | xargs wc -l | sort -rn | head -1
@@ -239,6 +239,13 @@ $ find app/src/main -name "*.kt" | xargs wc -l | sort -rn | head -1
 | ID | Requirement | Why | Class + Source | Acceptance criterion | Owner | Verification | Artefact | Status |
 |---|---|---|---|---|---|---|---|---|
 | FR-74 | The binary property list decoder refuses a payload above 1 MB itself, independently of the caller | Today the 1 MB budget of the RTSP reader is the only guard; a future call site without that budget has no second line of defence | **REC** — voluntary hardening from `AUDIT` (SEC-11); **not** a legal obligation | `PlistCodec.decode` throws for a payload > 1 MB; the RTSP path still accepts a body at the limit | `airplay/handshake/PlistCodec.kt` | `PlistCodecTest` — a new case `decode refuses a payload above one megabyte` | `PlistCodec.MAX_PLIST_BYTES` | 🔴 **open** — no size guard exists today — backlog B-09 |
+
+### 1.19 New in v4.1 — discovery: the name and the identity of the receiver
+
+| ID | Requirement | Why | Class + Source | Acceptance criterion | Owner | Verification | Artefact | Status |
+|---|---|---|---|---|---|---|---|---|
+| FR-75 | The `_airplay._tcp` service is advertised under an instance name that differs from the device name of the television | On Android 14 the platform registers its own `_androidtvremote2._tcp` service under the device name and the mDNS daemon checks the instance name across all service types — the receiver is rejected with a `NameConflictException` and never appears in any picker (issue #23) | INT `PROJ-NORM` + `REC` (audit) | The advertised name carries the suffix; a failed registration is retried under a different name | `airplay/MdnsServiceRegistrar.kt` | `MdnsServiceNameTest` — seven cases, including `airplay name is never the bare device name` | `MdnsServiceName.airPlayInstanceName()` | ✅ code + test green — the device test DT-20 is open |
+| FR-76 | The advertised device id is unique per installation, stable across restarts, and not the hardware address of the television | The placeholder `aa:bb:cc:dd:ee:ff` was the same on every television, so two receivers overwrote each other in the pairing cache of the sender (issue #23) | INT `PROJ-NORM` | 50 generated addresses are distinct; the stored value is returned unchanged; the locally administered bit is set and the multicast bit is clear | `util/NetworkUtils.kt` | `NetworkDeviceIdTest` — four cases | `NetworkUtils.getAdvertisedMac()` | ✅ code + test green |
 
 ---
 

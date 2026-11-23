@@ -60,7 +60,7 @@ Does the feature do what the requirement says?
 **Test run output (paste the summary line, not the whole log):**
 
 ```
-<!-- e.g. "BUILD SUCCESSFUL — 634 tests completed, 0 failed" -->
+<!-- e.g. "BUILD SUCCESSFUL — 645 tests completed, 0 failed" -->
 ```
 
 ---

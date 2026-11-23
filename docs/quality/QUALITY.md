@@ -94,7 +94,7 @@ right on my TV" is not a result.
 
 | Fact | Value | Source |
 |---|---|---|
-| Tests in the JVM gate | **634** — **0** failures, **0** errors, **0** skipped | `./gradlew :test-runner:test` → the report in `test-runner/build/reports/tests/test/index.html` |
+| Tests in the JVM gate | **645** — **0** failures, **0** errors, **0** skipped | `./gradlew :test-runner:test` → the report in `test-runner/build/reports/tests/test/index.html` |
 | Test classes in that run | **72** | the same report |
 | The same gate before the cycles of 2026-10 and 2026-11 | **277** tests — the cycles added **357** | the earlier measurement of the same gate |
 | Test source files under `app/src/test/kotlin/com/phairplay/` | **84** | `find app/src/test/kotlin/com/phairplay -name "*.kt"` |
@@ -500,7 +500,7 @@ Two properties of the order are worth keeping:
 
 | # | Gate | Status | Blocking? |
 |---|---|---|---|
-| 1 | The JVM suite is green | **yes** — 634 tests, 0 failures, 0 errors, 0 skipped, 72 test classes | — |
+| 1 | The JVM suite is green | **yes** — 645 tests, 0 failures, 0 errors, 0 skipped, 73 test classes | — |
 | 2 | Lint and both debug APKs are green | **yes** — `No issues found.` in both flavours, both APKs build | — |
 | 3 | No known S4 finding | **yes** — SEC-01, SEC-02 and SEC-03 are closed, 0 open S4 | — |
 | 4 | Every open S3 has a written owner decision | **no** — SEC-04 (S3, the scheme list of the DLNA media URI) still needs the owner's decision; SEC-06 (S3) is open | **yes** |

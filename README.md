@@ -39,7 +39,7 @@ The **UPnP/DLNA MediaRenderer is implemented** — not planned. The package `com
 
 | Gate | Command | Result |
 |---|---|---|
-| JVM test suite | `./gradlew :test-runner:test` | 634 tests, 0 failures, 0 errors, 0 skipped (72 test classes) |
+| JVM test suite | `./gradlew :test-runner:test` | 645 tests, 0 failures, 0 errors, 0 skipped (73 test classes) |
 | Android lint | `./gradlew :app:lintGoogletvDebug :app:lintFiretvDebug` | `No issues found.` for both flavours |
 | Debug APKs | `./gradlew :app:assembleGoogletvDebug :app:assembleFiretvDebug` | both build — Google TV 29.3 MB, Fire TV 16.3 MB |
 | Repository checks | the eight scripts of the quality gate (see [Option B](#option-b-build-from-source)) | all eight green — file size, KDoc headers, documentation links, language completeness, privacy policy, secret scan, dependency decisions, requirement traceability |

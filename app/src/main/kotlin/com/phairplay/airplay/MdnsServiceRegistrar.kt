@@ -61,7 +61,7 @@ internal class MdnsServiceRegistrar(
      */
     internal fun registerAll(displayName: String) {
         requestedName = displayName
-        registerAirPlayService(displayName)
+        registerAirPlayService(displayName, attempt = 0)
         registerRaopService(displayName)
     }
 
@@ -90,9 +90,9 @@ internal class MdnsServiceRegistrar(
      *
      * The failed service is retried on its own; the sibling keeps its live registration.
      */
-    internal fun retryRegistration(slot: Int) {
+    internal fun retryRegistration(slot: Int, attempt: Int) {
         when (slot) {
-            SLOT_AIRPLAY -> registerAirPlayService(requestedName)
+            SLOT_AIRPLAY -> registerAirPlayService(requestedName, attempt)
             SLOT_RAOP    -> registerRaopService(requestedName)
         }
     }
@@ -105,14 +105,19 @@ internal class MdnsServiceRegistrar(
      *
      * @param displayName The name shown in sender AirPlay pickers.
      */
-    private fun registerAirPlayService(displayName: String) {
+    private fun registerAirPlayService(displayName: String, attempt: Int) {
+        // WHY the name is not the bare device name: the platform registers its own
+        // services under that name and checks the instance name across all service
+        // types (issue #23). The suffix makes the name unique on the device; the
+        // attempt number makes it unique on the network.
+        val instanceName = MdnsServiceName.airPlayInstanceName(displayName, attempt)
         val serviceInfo = NsdServiceInfo().apply {
-            serviceName = displayName
+            serviceName = instanceName
             serviceType = SERVICE_TYPE_AIRPLAY
             port = MdnsService.AIRPLAY_PORT
 
             // Core identity TXT records
-            setAttribute("deviceid", NetworkUtils.getMacAddress())
+            setAttribute("deviceid", NetworkUtils.getAdvertisedMac(context))
             setAttribute("features", AIRPLAY_FEATURES)
             setAttribute("model", AIRPLAY_MODEL)
             setAttribute("srcvers", AIRPLAY_SERVER_VERSION)
@@ -128,12 +133,17 @@ internal class MdnsServiceRegistrar(
             gen = gen,
             onRegisteredName = { actualName ->
                 // Detect collision auto-renaming: NsdManager appended " (2)", " (3)", etc.
-                if (actualName != requestedName) {
+                // WHY the comparison is against the instance name and not against the
+                // display name: the instance name carries the suffix that makes it
+                // unique on the device (issue #23). A difference between the instance
+                // name and the registered name therefore means that the **network**
+                // held a name that was already taken and the platform resolved it.
+                if (actualName != instanceName) {
                     // WHY the names are not written out: they are the name the owner gave
                     // their television. The collision itself is what matters here.
                     Logger.w(
                         "mDNS name collision detected — NsdManager resolved automatically " +
-                            "(requested ${requestedName.length} chars, actual ${actualName.length} chars)"
+                            "(requested ${instanceName.length} chars, actual ${actualName.length} chars)"
                     )
                 }
                 onActualNameRegistered(actualName)
@@ -164,10 +174,12 @@ internal class MdnsServiceRegistrar(
      * @param displayName The device name portion of the RAOP service name.
      */
     private fun registerRaopService(displayName: String) {
-        val macHex = NetworkUtils.getMacAddress().replace(":", "").uppercase()
+        val macHex = NetworkUtils.getAdvertisedMac(context).replace(":", "").uppercase()
 
         val serviceInfo = NsdServiceInfo().apply {
-            serviceName = "$macHex@$displayName"  // required RAOP format
+            // Required RAOP format "<MACADDRESS_NOCOLONS>@<DeviceName>" — built by
+            // the name logic so that the label stays inside the DNS-SD limit.
+            serviceName = MdnsServiceName.raopInstanceName(macHex, displayName)
             serviceType = SERVICE_TYPE_RAOP
             port = MdnsService.AIRPLAY_PORT
 

@@ -26,10 +26,10 @@ repository gates of `scripts/`:
 * `build-traceability.sh --check` → `OK: traceability — 108 requirement(s): 58
   automated, 25 device, 13 gate, 8 command, 4 excluded, 0 without a proof.`
 
-The JVM suite was measured on the run of 2026-11-05: **634** tests in 72 test
-classes, 0 failures, 0 errors, 0 skipped. Derived from the sources: 672 `@Test`
-methods in `app/src/test/kotlin` minus the 38 methods of the six excluded
-classes (`test-runner/build.gradle.kts`, `exclude` block) = 634.
+The JVM suite was measured on the run of 2026-11-23: **645** tests in 73 test
+classes, 0 failures, 0 errors, 0 skipped. Derived from the sources: 682 `@Test`
+methods in `app/src/test/kotlin` minus the 37 methods of the six excluded
+classes (`test-runner/build.gradle.kts`, `exclude` block) = 645.
 
 The DLNA scheme allowlist is **gone**: `DlnaMediaUri.validate()` now delegates
 to `FetchableUrlPolicy`, which accepts `http` and `https` only. See R-03 and

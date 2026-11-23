@@ -194,8 +194,8 @@ them has a test.
 |---|---|
 | PIN authentication is off by default | The product promise is "one tap and it works". A PIN on every connection would break the primary use case. The setting exists and is documented. |
 | The RTSP control plane is unencrypted | Required by the AirPlay protocol; the sender would not talk to an encrypted port. |
-| The device name and the MAC address are broadcast on the LAN | Required for the sender to find the receiver. The receiver can be switched off completely in Settings. |
-| The MAC address is used as the `deviceid` | Required by the protocol. It is never written to the disk and never logged. |
+| The device name and the identifiers of the app are broadcast on the LAN | Required for the sender to find the receiver. The receiver can be switched off completely in Settings. The hardware address of the television is **not** among them — the app advertises a random address of its own. |
+| A device id is used as the `deviceid` | Required by the protocol. It is a random address that the app generates for itself — not the hardware address of the television. It is stored in the app's own preferences and never logged. |
 | A release build logs nothing at all | Chosen over shipping a logging backend that could leak. The cost is that a crash in the field cannot be diagnosed from a user's device; the owner collects logs from a debug build instead. |
 | The Miracast (Wi-Fi Direct) path is currently non-functional on Android 10+ | The location / nearby-devices permissions are never requested at runtime. Fixing it means asking the user for a location permission — see finding SEC-06. |
 

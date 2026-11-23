@@ -43,7 +43,7 @@ for a home network.
 | What | Transport | Who can see it |
 |---|---|---|
 | The name of the TV (your device name, or the name you set in Settings) | mDNS service name and TXT record, DLNA `friendlyName` | Every device in the same Wi-Fi that listens for AirPlay/UPnP |
-| The MAC address of the TV | mDNS TXT record (`deviceid`), `GET /info`, `GET /server-info` | The same — the AirPlay protocol requires it |
+| A device id of the app — a random address that the app generates for itself, **not** the hardware address of the TV | mDNS TXT record (`deviceid`), `GET /info`, `GET /server-info` | The same — the AirPlay protocol requires an identity |
 | A random identifier of the TV (`pi`, and the DLNA `UDN`) | mDNS TXT record, DLNA device description | The same |
 | The public key of the TV | `GET /info` (`pk`) | The same |
 | The mirrored picture and sound | AirPlay (TCP 7000, UDP 6001/6002) and Miracast (TCP 7236) | The sender that started the session |
@@ -59,9 +59,12 @@ update check against a server.
 
 **The one thing to know:** while the receiver is switched on, the TV announces
 itself on the local network. A guest in your Wi-Fi can therefore see the name
-and the MAC address of your television. That is what the AirPlay protocol
-requires — a sender has to be able to find the receiver — and it cannot be
-switched off while the receiver is running. If that bothers you, switch the
+of your television and the identifiers of the app — a random device id and a
+random persistent id. **The hardware address of the television is not among
+them**: the app generates its own identity instead of reading the MAC address
+of the network card. What is announced is what the AirPlay protocol requires —
+a sender has to be able to find the receiver — and it cannot be switched off
+while the receiver is running. If that bothers you, switch the
 AirPlay receiver off in Settings; the TV then disappears from the network
 completely.
 
@@ -109,7 +112,7 @@ Nothing else is stored. There is no cache directory, no download directory, no
 |---|---|---|
 | `INTERNET` | AirPlay, Miracast and DLNA are socket protocols. Android requires this permission for every TCP or UDP socket. It does **not** mean that the app talks to the internet — the code contains no internet endpoint. | No. The app never opens a connection outside your LAN. |
 | `CHANGE_WIFI_MULTICAST_STATE` | The multicast lock that keeps mDNS (and therefore the AirPlay entry in the sender's menu) alive. | No. |
-| `ACCESS_WIFI_STATE` | Required by Wi-Fi Direct (Miracast) and by the Google Cast SDK. It is **not** used to read the IP or MAC address — those are read with `java.net.NetworkInterface`, which needs no permission. | No. |
+| `ACCESS_WIFI_STATE` | Required by Wi-Fi Direct (Miracast) and by the Google Cast SDK. It is **not** used to read the IP address or the hardware address of the network card — the app reads the IP address with `java.net.NetworkInterface`, which needs no permission, and it does not read the hardware address at all. | No. |
 | `ACCESS_NETWORK_STATE` | Detects that the TV came back from standby or changed Wi-Fi, so the advertisement can be repeated. | No. |
 | `CHANGE_WIFI_STATE` | Required by the Wi-Fi Direct framework (Miracast). | No. |
 | `NEARBY_WIFI_DEVICES` | Android 13+ replaced the location permission for Wi-Fi Direct with this one. The app declares it with `neverForLocation`: it never derives a location from a Wi-Fi result. | No — the flag promises exactly that. |

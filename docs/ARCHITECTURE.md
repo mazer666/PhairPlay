@@ -80,8 +80,8 @@ The JVM test module lives outside the app: `test-runner/` — see
 [`TESTING.md`](TESTING.md).
 
 The production tree holds **135 Kotlin files** (134 in `main`, one in the
-`firetv` source set); the test tree under `app/src/test/kotlin/` holds **84**
-more — 78 test classes and six shared helpers.
+`firetv` source set); the test tree under `app/src/test/kotlin/` holds **85**
+more — 79 test classes and six shared helpers.
 
 ---
 

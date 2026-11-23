@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The receiver was invisible in the AirPlay picker on Android 14** (issue #23,
+  reported on an XGIMI MoGo 3 Pro with an iPhone 15 Pro as the sender). Since
+  Android 14 the platform registers its own remote-control service
+  (`_androidtvremote2._tcp`) under the **device name** of the television, and the
+  mDNS daemon checks the instance name for uniqueness **across all service
+  types**. A receiver that advertised `_airplay._tcp` under the bare device name
+  was therefore rejected with a `NameConflictException` and never answered a
+  query — while the app itself looked healthy and the `_raop._tcp` service
+  registered without complaint.
+  - The `_airplay._tcp` service is now advertised as **`<Device name> (AirPlay)`**,
+    which is unique on the device. The name the owner chose stays readable in the
+    picker of the sender.
+  - A registration that fails anyway is retried under a name with its own
+    number, so that a name that is already taken on the network cannot keep the
+    receiver invisible.
+  - The `_raop._tcp` name is now built by the same rule and stays inside the
+    DNS-SD limit of 63 characters — the MAC prefix eats 13 of them, so a long
+    device name used to produce a label the daemon rejects.
+- **The advertised device id was the same on every television.** The placeholder
+  `aa:bb:cc:dd:ee:ff` was used whenever the platform did not hand out the real
+  MAC address — which is the case on every Android 10+ device. Two receivers in
+  one network claimed the same identity and overwrote each other in the pairing
+  cache of the sender. The app now advertises a **random, locally administered
+  address** that it generates once per installation and keeps across restarts.
+  The hardware address of the television is no longer broadcast (finding
+  SEC-12).
+
 ### Documentation
 
 - **The documentation was consolidated and brought onto the state of the code

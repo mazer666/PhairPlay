@@ -56,15 +56,15 @@ Measured on the integrated tree (2026-10-24):
 | Test classes | **59** |
 | Build | `BUILD SUCCESSFUL` (the recorded run of this tree took 3m 18s — [`spec/PROJECT_PLAN.md`](spec/PROJECT_PLAN.md)) |
 
-The test tree holds **78** test classes in total. **Six of them are excluded
+The test tree holds **79** test classes in total. **Six of them are excluded
 from the JVM module** and therefore never run — see §1.3:
 `MainActivityTest`, `VideoSubmissionTest`, `MdnsServiceTest`,
 `ServiceControllerTest`, `NetworkUtilsTest` and `VideoAspectFitTest`.
-72 + 6 = 78.
+73 + 6 = 79.
 
-The tree carries **672** `@Test` methods. **38 of them live in the six
-excluded classes** and are therefore never executed by the JVM module — 672 −
-38 = **634** tests, which is what a green run reports.
+The tree carries **682** `@Test` methods. **37 of them live in the six
+excluded classes** and are therefore never executed by the JVM module — 682 −
+37 = **645** tests, which is what a green run reports.
 
 **Before this cycle the suite had 277 tests.** The cycle added the DLNA
 control plane, the address policies, the picture decoder and the tests that came

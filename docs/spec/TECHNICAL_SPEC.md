@@ -1,6 +1,6 @@
 # PhairPlay – Technical Specification
 
-Version: 1.3
+Version: 1.4
 Status: Active
 Date: 2026-10-24
 
@@ -31,17 +31,38 @@ PhairPlay registers two mDNS services:
 | `_airplay._tcp` | Main AirPlay service — advertises device name, features, model |
 | `_raop._tcp` | Remote Audio Output Protocol — required for audio streaming negotiation |
 
+**The instance name of the two services.** The instance name is the label the
+sender shows in its picker. It is **not** the bare device name of the television:
+
+| Service | Instance name | Why |
+|---|---|---|
+| `_airplay._tcp` | `<Device name> (AirPlay)` | Since Android 14 the platform registers its own remote-control service (`_androidtvremote2._tcp`) under the device name, and the mDNS daemon checks the instance name for uniqueness **across all service types**. A receiver that advertises the bare device name is rejected with a `NameConflictException` and stays invisible in every AirPlay picker while the app looks healthy (issue #23). The suffix makes the name unique on the device; a registration that fails anyway is retried under a name with its own number. |
+| `_raop._tcp` | `<MAC>@<Device name> (AirPlay)` | The format the AirPlay protocol requires. The MAC part makes the name unique on the network, the device part is the same name the `_airplay._tcp` service uses. Both labels stay inside the DNS-SD limit of 63 characters — the MAC prefix eats 13 of them. |
+
 Each service registration includes **TXT records** that tell the sender what the receiver supports:
 
 | TXT Key | Value | Meaning |
 |---|---|---|
-| `deviceid` | MAC address (e.g., `aa:bb:cc:dd:ee:ff`) | Unique device identifier |
+| `deviceid` | MAC address (e.g., `aa:bb:cc:dd:ee:ff`) | Unique device identifier — see below |
 | `features` | Bitmask (e.g., `0x5A7FFFF7,0x1E`) | Which AirPlay features are supported |
 | `model` | `AppleTV5,3` | Tells macOS to treat us like an Apple TV |
 | `srcvers` | `220.68` | AirPlay server version |
 | `vv` | `2` | Protocol version 2 |
 | `pi` | UUID string | Persistent device UUID |
 | `pk` | 64-byte hex public key | Ed25519 public key (used in authenticated mode) |
+
+**The device id.** The `deviceid` is the identity of the receiver for the
+sender. It is **not** the hardware address of the television:
+
+- It is a **random, locally administered** address (the locally administered bit
+  is set, the multicast bit is clear), generated once per installation and
+  stored in the app's own preferences. It is therefore stable across restarts and
+  unique per installation.
+- It was a **placeholder** (`aa:bb:cc:dd:ee:ff`) before issue #23 — the same
+  value on every television in the world. Two receivers in one network claimed
+  the same identity and overwrote each other in the pairing cache of the sender.
+- It is never the hardware address of the device, so the television does not
+  broadcast its real MAC address into the cleartext of the network.
 
 **Android API used:** `android.net.nsd.NsdManager` — Android's built-in mDNS implementation.
 

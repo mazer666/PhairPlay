@@ -148,6 +148,43 @@ Backlog B-21.
 
 ---
 
+## DT-20 — The receiver appears in the picker of the sender (Android 14)
+
+**Proves:** FR-75 and FR-76 — the `_airplay._tcp` service is advertised under a
+name that does not collide with the services of the platform, and the advertised
+device id is unique and not the hardware address of the television.
+
+**Why a device is needed:** the collision only exists on the platform versions
+that check the instance name across all service types (Android 14 and newer).
+The behaviour of the mDNS daemon cannot be reproduced on the development machine.
+
+**Preconditions:** an Android 14 television (or dongle) with the release build
+installed; a phone with the sender (iOS or macOS) in the same network.
+
+**Steps:**
+
+```bash
+# 1. start the app on the television and read the registration out of the log
+adb logcat -d | grep -i "MdnsAdvertiser\|mDNS" | tail -20
+
+# 2. the advertisement must carry the suffix, and there must be no
+#    NameConflictException in the log
+adb logcat -d | grep -c "NameConflictException"
+
+# 3. the device id must not be the placeholder of every television
+adb logcat -d | grep -i "deviceid"
+```
+
+**Pass condition:** the log shows the `_airplay._tcp` registration **without**
+a `NameConflictException`; the instance name ends in `(AirPlay)`; the device id
+is not `aa:bb:cc:dd:ee:ff`; and the receiver **appears in the picker of the
+sender** within about five seconds.
+
+**Not executed yet.** The procedure was written after issue #23; the reporter of
+that issue offered to run it on his device.
+
+---
+
 ## Summary
 
 | Procedure | Proves | Requirements | State on 2026-11-05 |
@@ -156,3 +193,4 @@ Backlog B-21.
 | DT-17 | the cleartext configuration of the LAN | NFR-28 | **fails** — the configuration does not exist |
 | DT-18 | the log of a release build | NFR-31 | **fails** — a release build writes nothing |
 | DT-19 | the store installation and the in-app policy | FR-72, FR-73, NFR-21 | not executed — no internal track yet |
+| DT-20 | the advertisement of the receiver on Android 14 | FR-75, FR-76 | not executed — the reporter of issue #23 offered to run it |
