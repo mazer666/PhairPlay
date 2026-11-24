@@ -6,6 +6,7 @@ import android.net.nsd.NsdServiceInfo
 import com.phairplay.service.ProtocolState
 import com.phairplay.util.Logger
 import com.phairplay.util.NetworkUtils
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * MdnsServiceRegistrar — Registers the two mDNS services of an AirPlay receiver.
@@ -59,6 +60,7 @@ internal class MdnsServiceRegistrar(
      * The requested name is remembered so that a retry after a failed attempt registers
      * the very same name again — and so that a collision auto-renaming can be detected.
      */
+    @Synchronized
     internal fun registerAll(displayName: String) {
         requestedName = displayName
         registerAirPlayService(displayName, attempt = 0)
@@ -72,18 +74,35 @@ internal class MdnsServiceRegistrar(
      * IllegalArgumentException for a listener it does not know, which is not an error
      * here.
      */
+    @Synchronized
     internal fun unregisterAll() {
         val listeners = listOfNotNull(airPlayListener, raopListener)
         airPlayListener = null
         raopListener = null
         for (listener in listeners) {
             try {
+                pendingUnregistrations.incrementAndGet()
                 nsdManager.unregisterService(listener)
             } catch (e: Exception) {
+                // Never accepted by the platform, so no callback will arrive for it.
+                pendingUnregistrations.decrementAndGet()
                 Logger.d("mDNS unregister skipped: ${e.message}")
             }
         }
     }
+
+    /**
+     * True while an unregistration has been requested but the platform has not confirmed it.
+     *
+     * WHY: [NsdManager.unregisterService] is asynchronous. Registering the same instance name
+     * again before the old one is gone makes the platform rename the new one to "Name (2)" or
+     * reject it, and senders then see two receivers or a stale one. [MdnsService.restart]
+     * waits on this before it registers again.
+     */
+    internal fun hasPendingUnregistrations(): Boolean = pendingUnregistrations.get() > 0
+
+    // Unregistrations requested from the platform and not yet confirmed by a callback.
+    private val pendingUnregistrations = AtomicInteger(0)
 
     /**
      * Registers the service of [slot] again — used by the retry of a failed attempt.
@@ -249,10 +268,12 @@ internal class MdnsServiceRegistrar(
             }
 
             override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
+                pendingUnregistrations.updateAndGet { maxOf(0, it - 1) }
                 Logger.d("mDNS unregistered: $serviceLabel")
             }
 
             override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                pendingUnregistrations.updateAndGet { maxOf(0, it - 1) }
                 // Non-fatal: the service will expire via mDNS TTL (~4500ms by default)
                 Logger.w("mDNS unregistration failed for $serviceLabel, errorCode=$errorCode (non-fatal)")
             }

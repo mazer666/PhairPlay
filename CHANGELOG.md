@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The receiver was found only some of the time, and sometimes twice** (seen on a
+  Xiaomi TV Box S 2nd gen running LineageOS 24 / Android 17, iPhone as the sender).
+  Two causes, both measured on the device with `dumpsys servicediscovery`:
+  - **Two receiver stacks started at once.** Opening the app sends `ACTION_START`
+    from the boot receiver *and* from the app screen; both ran concurrently, so two
+    RTSP servers fought over port 7000 and a second `_airplay._tcp` advertisement was
+    renamed to `<Name> (AirPlay) (2)` — pointing at a server that was not listening.
+    `PhairPlayService` now runs start / stop / restart under one lock and ignores a
+    start while the receivers are already running.
+  - **Overlapping mDNS restarts leaked registrations.** Every end of a streaming
+    session restarted the advertisement, and iOS ends a session over several
+    connections, so three restarts ran within 50 ms. A restart also registered again
+    before the platform had released the old registration. The result was a stale,
+    duplicated `_raop._tcp` entry. `MdnsService.restart` now merges requests that
+    arrive within 500 ms and waits (up to 3 s) for the unregistration callbacks before
+    it registers again; after a streaming session the advertisement is only renewed
+    when it is actually incomplete (`ensureAdvertising`).
+
 - **The receiver was invisible in the AirPlay picker on Android 14** (issue #23,
   reported on an XGIMI MoGo 3 Pro with an iPhone 15 Pro as the sender). Since
   Android 14 the platform registers its own remote-control service

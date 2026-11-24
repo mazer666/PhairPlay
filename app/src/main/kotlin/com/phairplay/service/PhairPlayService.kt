@@ -19,6 +19,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * PhairPlayService — Android ForegroundService that hosts all receiver protocols.
@@ -82,6 +84,9 @@ class PhairPlayService : Service() {
     // Foreground notification — channel, status text and the Stop/Restart actions.
     private lateinit var notifications: ServiceNotificationManager
 
+    // Serialises start / stop / restart so two start requests cannot build two receiver stacks.
+    private val lifecycleLock = Mutex()
+
     // Protocol receivers — AirPlay, Miracast, Cast and DLNA.
     private lateinit var receivers: ReceiverSupervisor
 
@@ -116,11 +121,16 @@ class PhairPlayService : Service() {
         // Promote to foreground immediately with a persistent notification
         startForeground(NOTIFICATION_ID, notifications.buildNotification(isRunning = false))
 
+        // WHY every action goes through one lock: the boot receiver and the app screen both
+        // send ACTION_START when the app is opened. Run concurrently, both started a complete
+        // receiver stack — two RTSP servers fighting over port 7000 and a second AirPlay
+        // advertisement renamed to "Name (2)" that pointed at a server that was not listening.
+        // Senders then found the receiver only some of the time.
         when (intent?.action) {
-            ACTION_START   -> serviceScope.launch { startReceivers() }
-            ACTION_STOP    -> serviceScope.launch { stopReceivers(); stopSelf() }
-            ACTION_RESTART -> serviceScope.launch { restartReceivers() }
-            else           -> serviceScope.launch { startReceivers() } // default: start
+            ACTION_START   -> serviceScope.launch { lifecycleLock.withLock { startReceivers() } }
+            ACTION_STOP    -> serviceScope.launch { lifecycleLock.withLock { stopReceivers() }; stopSelf() }
+            ACTION_RESTART -> serviceScope.launch { lifecycleLock.withLock { restartReceivers() } }
+            else           -> serviceScope.launch { lifecycleLock.withLock { startReceivers() } } // default: start
         }
 
         // START_STICKY: if the system kills the service, restart it with a null intent
@@ -192,6 +202,10 @@ class PhairPlayService : Service() {
      * receivers according to the enabled flags.
      */
     private suspend fun startReceivers() {
+        if (_serviceState.value == ServiceState.Running) {
+            Logger.d("Receivers already running — start request ignored")
+            return
+        }
         val settings = settingsRepository.settingsFlow.first()
         Logger.i(
             "Starting receivers: AirPlay=${settings.airPlayEnabled}, " +

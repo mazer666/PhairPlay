@@ -339,9 +339,11 @@ class AirPlayReceiver(
 
         scope.launch {
             try {
-                mdnsService?.restart(displayName.ifBlank { null })
+                // Only re-registers when the advertisement is actually incomplete — a full
+                // restart after every session caused duplicate, stale picker entries.
+                mdnsService?.ensureAdvertising(displayName.ifBlank { null })
             } catch (e: Exception) {
-                Logger.e("Failed to restart mDNS after streaming", e)
+                Logger.e("Failed to check mDNS after streaming", e)
             }
         }
     }
