@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Pressing Back on the app's last screen switched the receiver off.** Back
+  finished the activity, which removed the task, and `onTaskRemoved` then stopped
+  every receiver. The TV disappeared from AirPlay and DLNA pickers until the app
+  was opened again. Back now sends the app to the background, as Home does, and
+  the receiver keeps advertising. If a session is on screen, Back still ends it,
+  then re-advertises. Swiping the app away from Recents still stops the service.
+
 ---
 
 ## [v1.0.0-alpha.8] — 2026-11-26

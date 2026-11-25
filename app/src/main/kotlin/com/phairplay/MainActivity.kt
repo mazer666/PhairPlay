@@ -8,6 +8,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -80,6 +81,8 @@ class MainActivity : AppCompatActivity() {
             navigator.showHome()
         }
 
+        setupBackHandling()
+
         // Start the service immediately so it's running before any sender discovers us
         ServiceController.start(this)
 
@@ -101,11 +104,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // A user-initiated exit (Back out of the app) should end any active mirror — closing the
-        // service stops the receiver, which drops the RTSP connection so the sender stops mirroring
-        // too. isFinishing distinguishes a real exit from a config-change recreation (where the
-        // service must keep running). Backgrounding via Home goes through onStop only (no destroy),
-        // so the receiver keeps advertising for a quick return.
+        // Back no longer finishes the activity (see setupBackHandling), so this branch is only
+        // reached when something else finishes it. isFinishing distinguishes a real exit from a
+        // config-change recreation (where the service must keep running).
         if (isFinishing) {
             Logger.d("MainActivity finishing — stopping service so mirroring doesn't linger")
             ServiceController.stop(this)
@@ -113,6 +114,41 @@ class MainActivity : AppCompatActivity() {
             Logger.d("MainActivity destroyed (recreation) — leaving service running")
         }
     }
+
+    /**
+     * Back on the last screen sends the app to the background instead of finishing it.
+     *
+     * WHY: on a TV, Back is the usual way out of an app. Finishing the activity removed the task,
+     * and [com.phairplay.service.PhairPlayService.onTaskRemoved] then stopped every receiver, so
+     * the device vanished from AirPlay/DLNA pickers until the app was opened again. Moving the
+     * task to the back behaves like Home: the receiver keeps advertising. Swiping the app away
+     * from Recents still removes the task and stops the service, as before.
+     *
+     * A session on screen still ends on Back, as it did when Back closed the app: restarting the
+     * receivers drops the sender's connection and re-advertises straight away.
+     */
+    private fun setupBackHandling() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (supportFragmentManager.backStackEntryCount > 0) {
+                    supportFragmentManager.popBackStack()
+                    return
+                }
+                if (isSessionOnScreen()) {
+                    Logger.i("Back during a session — ending it, receiver keeps advertising")
+                    ServiceController.restart(this@MainActivity)
+                }
+                moveTaskToBack(true)
+            }
+        })
+    }
+
+    private fun isSessionOnScreen(): Boolean =
+        binder.pairingPin != null ||
+            binder.nowPlaying != null ||
+            binder.photoFrame != null ||
+            binder.airPlayState == ProtocolState.CONNECTED ||
+            binder.dlnaState == ProtocolState.CONNECTED
 
     // ─── View Setup ──────────────────────────────────────────────────────────
 
