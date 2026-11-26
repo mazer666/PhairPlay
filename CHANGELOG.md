@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The screen mirroring had no sound on an iPhone, and switching the sound on stopped
+  the picture** (issue #25, reported with an iPhone as the sender).
+  - **The audio socket only listened on the IPv6 wildcard.** The sender delivers the
+    audio to the address it used for the RTSP control connection — IPv4 from an
+    iPhone, the IPv6 link-local address from a Mac. On the Android TV network stacks
+    that do not dual-stack an IPv6 socket onto the LAN's IPv4 interface, the audio
+    packet never arrived: the picture came, the television stayed silent. Every other
+    socket of the project binds the IPv4 wildcard explicitly for exactly that reason
+    (PR #15). The audio socket now binds **both** families on the **same** port — the
+    one port the SETUP answer names.
+  - **A stream that cannot start no longer fails the whole SETUP.** When the sender
+    added the audio stream to a running mirror and the audio server could not be
+    started, the whole SETUP was answered with "400 Bad Request" — and the sender tore
+    the session down, so the picture stopped as well. A stream that cannot be started
+    is now left out of the answer, and the mirror keeps running without it.
+
 - **The receiver was found only some of the time, and sometimes twice** (seen on a
   Xiaomi TV Box S 2nd gen running LineageOS 24 / Android 17, iPhone as the sender).
   Two causes, both measured on the device with `dumpsys servicediscovery`:
