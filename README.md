@@ -18,16 +18,11 @@ PhairPlay is a free, open-source, ad-free AirPlay 2 receiver for Android TV and 
 
 ## Current Status
 
-**The latest published release is [`v1.0.0-alpha.7`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.7) (2026-11-02)** — it is the **release for the Google Play Store**: the privacy policy is now reachable from inside the app (Google Play asks for that), a new gate keeps the policy in step with the declared permissions, and the certificate fingerprint in the guides — wrong in four places — was corrected against the keystore. The release before it, [`v1.0.0-alpha.6`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.6), fixed a **stretched AirPlay picture**: some hardware decoders scale the decoded picture to the panel and report that scaled size as a crop, and PhairPlay used to trust it ([issue #21](https://github.com/mazer666/PhairPlay/issues/21)). The crop is now only used when its aspect ratio agrees with the size parsed from the stream's SPS; otherwise the coded aspect wins, which undoes the distortion. The release was **cut with the project's own release script** (`scripts/release.sh`, guide in [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)), which refuses to publish anything it has not checked itself. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+), plus the Google Play Store bundle. It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
+**The latest release that carries an APK is [`v1.0.0-alpha.7`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.7) (2026-11-02)** — it is the **release for the Google Play Store**: the privacy policy is now reachable from inside the app (Google Play asks for that), a new gate keeps the policy in step with the declared permissions, and the certificate fingerprint in the guides — wrong in four places — was corrected against the keystore. The release before it, [`v1.0.0-alpha.6`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.6), fixed a **stretched AirPlay picture**: some hardware decoders scale the decoded picture to the panel and report that scaled size as a crop, and PhairPlay used to trust it ([issue #21](https://github.com/mazer666/PhairPlay/issues/21)). The crop is now only used when its aspect ratio agrees with the size parsed from the stream's SPS; otherwise the coded aspect wins, which undoes the distortion. The release was **cut with the project's own release script** (`scripts/release.sh`, guide in [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)), which refuses to publish anything it has not checked itself. It ships **both platforms**: a Google TV APK (Android 10+) and a Fire TV APK (Android 7.1+), plus the Google Play Store bundle. It is an **alpha**: it has not been tested on a television yet. The release plan — when alpha, beta and stable releases are built and what triggers them — is in [`docs/spec/PROJECT_PLAN.md`](docs/spec/PROJECT_PLAN.md#release-schedule).
 
-**The next release is built and verified, but not published.** `v1.0.0-alpha.8`
-(2026-11-05) carries the requirement baseline v4.0, the traceability chain, the
-hardening of the security findings and the supply-chain artefacts of the build
-— the SBOM, the third-party notices, the manifest and the checksums. The
-artefacts are signed and verified (`sha256sum -c`: 8 of 8 OK), but **there is
-no tag and no GitHub release**: building and publishing are two separate acts,
-and publishing needs an explicit authorisation. The guide is
-[`docs/guides/RELEASE_ARTIFACTS.md`](docs/guides/RELEASE_ARTIFACTS.md).
+**The release [`v1.0.0-alpha.8`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.8) (2026-11-26) carries the fixes of the three open television reports.** The receiver was invisible in the AirPlay picker on Android 14 ([issue #23](https://github.com/mazer666/PhairPlay/issues/23)), it was found twice and sometimes not at all ([issue #24](https://github.com/mazer666/PhairPlay/issues/24)), and the screen mirroring of an iPhone had no sound while switching the sound on stopped the picture ([issue #25](https://github.com/mazer666/PhairPlay/issues/25)). It carries the requirement baseline v4.0, the traceability chain, the hardening of the security findings and the supply-chain artefacts of the build — the SBOM, the third-party notices, the manifest and the checksums.
+
+The tag and the release notes are published; **the signed APKs are attached by the release pipeline** (`./scripts/release.sh v1.0.0-alpha.8`), which builds them, checks the version and the signature inside them and replaces the notes of the release. Until that has run, [`v1.0.0-alpha.7`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.7) is the newest release that carries an APK. The guide is [`docs/guides/RELEASE_ARTIFACTS.md`](docs/guides/RELEASE_ARTIFACTS.md).
 
 The AirPlay 2 stack is implemented end-to-end: mDNS advertising (with standby auto-recovery and Wi-Fi multicast lock), RTSP handshake (up to 1 MB payload support for iOS 17+ setups), HomeKit-style pairing, FairPlay key decryption, H.264 mirroring, AAC-ELD/AAC-LC/ALAC audio, NTP A/V sync, keep-screen-on display management, and DACP reverse remote.
 
@@ -160,6 +155,9 @@ Go to the [Releases page](https://github.com/mazer666/PhairPlay/releases) and do
 |-----|--------|----------------|
 | `PhairPlay-1.0.0-alpha.7-GoogleTV.apk` | Google TV, Android TV (Android 10+) | [`v1.0.0-alpha.7`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.7) |
 | `PhairPlay-1.0.0-alpha.7-FireTV.apk` | Amazon Fire TV (Android 7.1+) | [`v1.0.0-alpha.7`](https://github.com/mazer666/PhairPlay/releases/tag/v1.0.0-alpha.7) |
+
+The APKs of `v1.0.0-alpha.8` are attached to that release by the release
+pipeline; the table names the newest release that carries them **today**.
 
 Then install it via ADB (see the Sideloiding Guide below) or a sideloading app like *Downloader* on Fire TV.
 

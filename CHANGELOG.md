@@ -7,10 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+
+---
+
 ## [Unreleased]
 
-### Fixed
+---
 
+## [v1.0.0-alpha.8] — 2026-11-26
+
+> **What this release is.** The release of the *security, compliance and
+> production readiness* cycle **and of the three open issues of the television
+> reports**: the receiver was invisible in the AirPlay picker on Android 14
+> (issue #23), it was found twice and sometimes not at all (issue #24), and the
+> screen mirroring of an iPhone had no sound while switching the sound on
+> stopped the picture (issue #25). Nothing of the user interface changed; what
+> changed is what the app refuses, what the build proves, what the
+> documentation claims, and what the receiver announces. **No device test has
+> been executed** — the release is an alpha, and the 16 cases of the device
+> test plan are still open.
+
+### Added
+- **The requirement baseline v4.0** — every requirement with eight attributes,
+  a codec matrix, the acceptance criteria with a contradiction register, and a
+  **traceability matrix that is generated** instead of written. The generator
+  (`scripts/build-traceability.sh`) fails when a requirement loses its proof.
+- **Three new gates** — the native libraries (16 KB page size, the ELF and the
+  ZIP alignment of the artefacts that were built), the secret scan of the
+  repository, and the dependency decisions (the SBOM in the CycloneDX format
+  plus the allowlist of the assessed dependencies and the version ceilings of
+  the known advisories). Each gate has a self-test that proves it turns red.
+- **The third-party notices and the SBOM of the release** — the artefacts of a
+  release now say what is inside them.
+
+### Fixed
 - **The DLNA renderer could be advertised without being able to serve its
   description** (issue #23, second report, on a Google TV with Android 14). The SSDP
   answer named a `description.xml` on a port that nothing was listening on — a control
@@ -80,8 +110,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The hardware address of the television is no longer broadcast (finding
   SEC-12).
 
-### Documentation
+- **A stretched picture that the decoder scaled down** — a decoder that scales
+  the picture down reports the scaled size as its crop rectangle; a uniform
+  scaling does not change the aspect, so the aspect comparison could not see
+  it. A crop that shrinks the picture by more than a tenth in one dimension is
+  now treated as a scaling, and the size of the stream wins.
+- **A plist body could exhaust the stack** — the decoder of the binary
+  property lists refused a body above 1 MB and turns every failure of the
+  parse, including a `StackOverflowError`, into a refusal instead of letting
+  it kill the request thread.
+- **Two different rules for the media URL** — the AirPlay stack and the DLNA
+  stack had two scheme lists, and the DLNA one was the wider. There is now one
+  rule, in one place, and it returns the reason of the refusal.
 
+### Changed
+- **The diagnostics report carries no free text** — the name of the sender, the
+  title, the artist and the album are replaced by a truncated hash that keeps
+  two log lines correlatable and is useless to a reader.
+- **The cloud backup excludes the settings** — no state of the app leaves the
+  device through the backup of the system.
+
+### Documentation
 - **The documentation was consolidated and brought onto the state of the code
   (2026-11-13).** Every number in the documents was measured again:
   634 tests in 72 test classes, 129 translation keys, 16 device test cases,
@@ -105,51 +154,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gates are local measurements. The state and the two ways out are in
   `docs/quality/CI-PIPELINE.md`.
 
----
-
-## [v1.0.0-alpha.8] — 2026-11-05
-
-> **What this release is.** The release of the *security, compliance and
-> production readiness* cycle. Nothing of the user interface changed; what
-> changed is what the app refuses, what the build proves, and what the
-> documentation claims. **No device test has been executed** — the release is
-> an alpha, and the 16 cases of the device test plan are still open.
-
-### Added
-- **The requirement baseline v4.0** — every requirement with eight attributes,
-  a codec matrix, the acceptance criteria with a contradiction register, and a
-  **traceability matrix that is generated** instead of written. The generator
-  (`scripts/build-traceability.sh`) fails when a requirement loses its proof.
-- **Three new gates** — the native libraries (16 KB page size, the ELF and the
-  ZIP alignment of the artefacts that were built), the secret scan of the
-  repository, and the dependency decisions (the SBOM in the CycloneDX format
-  plus the allowlist of the assessed dependencies and the version ceilings of
-  the known advisories). Each gate has a self-test that proves it turns red.
-- **The third-party notices and the SBOM of the release** — the artefacts of a
-  release now say what is inside them.
-
-### Fixed
-- **A stretched picture that the decoder scaled down** — a decoder that scales
-  the picture down reports the scaled size as its crop rectangle; a uniform
-  scaling does not change the aspect, so the aspect comparison could not see
-  it. A crop that shrinks the picture by more than a tenth in one dimension is
-  now treated as a scaling, and the size of the stream wins.
-- **A plist body could exhaust the stack** — the decoder of the binary
-  property lists refused a body above 1 MB and turns every failure of the
-  parse, including a `StackOverflowError`, into a refusal instead of letting
-  it kill the request thread.
-- **Two different rules for the media URL** — the AirPlay stack and the DLNA
-  stack had two scheme lists, and the DLNA one was the wider. There is now one
-  rule, in one place, and it returns the reason of the refusal.
-
-### Changed
-- **The diagnostics report carries no free text** — the name of the sender, the
-  title, the artist and the album are replaced by a truncated hash that keeps
-  two log lines correlatable and is useless to a reader.
-- **The cloud backup excludes the settings** — no state of the app leaves the
-  device through the backup of the system.
-
-### Documentation
 - The compliance matrix of the Google Play Store with the source, the verbatim
   wording and the evidence of every requirement; the data safety draft; the
   checklist of the console; the threat model, the findings and the permission
