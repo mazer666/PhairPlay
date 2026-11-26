@@ -10,10 +10,15 @@ which was written against the commits `2267672` / `51933eb`, the version
 
 > **What changed since revision 2.1 (measured 2026-11-13).**
 >
-> 1. **The release `v1.0.0-alpha.8` is built and verified** — but **not
->    published**: there is no tag and no GitHub release. The artefacts, the
->    manifest, the checksums, the SBOM and the third-party notices are in
->    `dist/release/1.0.0-alpha.8/` of the build tree.
+> 1. **The release `v1.0.0-alpha.8` is published** — the tag and the release
+>    notes went out on 2026-11-26, together with the fixes of the three open
+>    television reports (issues #23, #24 and #25). **The signed APKs are not
+>    attached yet**: they are built and uploaded by the release pipeline
+>    (`./scripts/release.sh v1.0.0-alpha.8`), which replaces the notes of the
+>    release with its own. The artefacts of the build from 2026-11-13 — the
+>    manifest, the checksums, the SBOM and the third-party notices — are in
+>    `dist/release/1.0.0-alpha.8/` of the build tree and are **older than the
+>    published tag**: they do not contain the three fixes.
 > 2. **The quality gate has eight checks**, not five: the secret scan, the
 >    dependency gate and the traceability check were added in the cycle of
 >    2026-11-05.

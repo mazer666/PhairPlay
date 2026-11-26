@@ -32,7 +32,7 @@ constraint that every change is reviewed against.
 | Source root | `app/src/main/kotlin/com/phairplay/` |
 | Test roots | `app/src/test/kotlin/com/phairplay/` (JVM), `test-runner/src/` (CI protocol suite), `app/src/androidTest/kotlin/com/phairplay/` (device) |
 | Licence | Apache 2.0 — see [`LICENSE`](LICENSE) |
-| Current version | `1.0.0-alpha.7` published; `1.0.0-alpha.8` built and verified, not published (see [`CHANGELOG.md`](CHANGELOG.md)) |
+| Current version | `1.0.0-alpha.8` published (2026-11-26) — the signed APKs are attached by the release pipeline; `v1.0.0-alpha.7` is the newest release that carries them (see [`CHANGELOG.md`](CHANGELOG.md)) |
 
 ---
 
