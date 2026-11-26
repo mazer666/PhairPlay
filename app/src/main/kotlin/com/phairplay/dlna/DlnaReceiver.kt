@@ -75,6 +75,16 @@ class DlnaReceiver(
             val server = DlnaDescriptionServer(friendlyName, rendererUdn, localHost, this).also {
                 it.start(scope)
             }
+            // WHY the check: the advertisement names the URL of the description server. A
+            // server that does not serve would make the control point find the renderer and
+            // then wait for a description that never arrives — the renderer must not be
+            // announced in that case, and the app has to show the error instead.
+            if (!server.isListening) {
+                Logger.e("DLNA description server did not start — the renderer is not advertised")
+                server.stop()
+                onStateChanged(ProtocolState.ERROR)
+                return
+            }
             val advertiser = SsdpAdvertiser(
                 location = server.descriptionUrl,
                 udn = rendererUdn
@@ -121,10 +131,19 @@ class DlnaReceiver(
             advertiser.readvertise()
             return
         }
-        when (DlnaReadvertisePlan.decide(advertisedHost, approvedHost)) {
+        val serverListening = descriptionServer?.isListening == true
+        when (DlnaReadvertisePlan.decide(advertisedHost, approvedHost, serverListening)) {
             DlnaReadvertisePlan.Action.ANNOUNCE_ONLY -> advertiser.readvertise()
             DlnaReadvertisePlan.Action.REBUILD_DESCRIPTION ->
                 rebuildDescription(approvedHost, advertiser)
+            DlnaReadvertisePlan.Action.STOP_ADVERTISING -> {
+                // The description server does not serve and there is no address to rebuild it
+                // with: the advertised URL would point at a port nobody listens on. The
+                // renderer stops advertising and the app shows the error.
+                Logger.w("DLNA re-advertisement stopped — the description server does not serve")
+                advertiser.stop()
+                onStateChanged(ProtocolState.ERROR)
+            }
         }
     }
 

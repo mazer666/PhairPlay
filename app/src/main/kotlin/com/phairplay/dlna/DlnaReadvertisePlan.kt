@@ -32,7 +32,13 @@ internal object DlnaReadvertisePlan {
         ANNOUNCE_ONLY,
 
         /** The address changed — the description server has to be rebuilt. */
-        REBUILD_DESCRIPTION
+        REBUILD_DESCRIPTION,
+
+        /**
+         * The renderer stops advertising: the description server does not serve and there is
+         * no address to rebuild it with.
+         */
+        STOP_ADVERTISING
     }
 
     /**
@@ -43,12 +49,27 @@ internal object DlnaReadvertisePlan {
      * a new URL either. The description server that already runs keeps serving, and
      * the renderer stays visible in the device list of the control points.
      *
+     * WHY a server that does not serve must not be announced: the location the control
+     * point receives points at a port nobody listens on. The renderer is found and then
+     * the description times out — the exact symptom a control point reports as "the
+     * device is advertised but does not answer". With a usable address the server is
+     * rebuilt; without one the advertisement stops and the app shows the error.
+     *
      * @param previousAddress the address the renderer advertised, null when it never did.
      * @param currentAddress the address the device has now.
+     * @param descriptionServerListening true while the description server serves.
      * @return the action to take; the function never throws.
      */
-    fun decide(previousAddress: String?, currentAddress: String?): Action {
-        val current = approveAddress(currentAddress) ?: return Action.ANNOUNCE_ONLY
+    fun decide(
+        previousAddress: String?,
+        currentAddress: String?,
+        descriptionServerListening: Boolean = true
+    ): Action {
+        val current = approveAddress(currentAddress)
+        if (!descriptionServerListening) {
+            return if (current != null) Action.REBUILD_DESCRIPTION else Action.STOP_ADVERTISING
+        }
+        if (current == null) return Action.ANNOUNCE_ONLY
         val previous = approveAddress(previousAddress)
         return if (previous == current) Action.ANNOUNCE_ONLY else Action.REBUILD_DESCRIPTION
     }

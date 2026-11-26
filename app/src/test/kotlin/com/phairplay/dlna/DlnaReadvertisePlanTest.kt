@@ -150,6 +150,64 @@ class DlnaReadvertisePlanTest {
         )
     }
 
+    @Test
+    fun `a description server that does not serve is rebuilt when an address is available`() {
+        // The advertised URL points at a port nobody listens on — the control point finds
+        // the renderer and then waits for a description that never arrives. With a usable
+        // address the server is rebuilt, and the renderer answers again.
+        assertEquals(
+            DlnaReadvertisePlan.Action.REBUILD_DESCRIPTION,
+            DlnaReadvertisePlan.decide(
+                previousAddress = "192.168.1.5",
+                currentAddress = "192.168.1.5",
+                descriptionServerListening = false
+            )
+        )
+    }
+
+    @Test
+    fun `a description server that does not serve and no address stops the advertisement`() {
+        // Without an address there is nothing to rebuild the server with — announcing a URL
+        // that cannot be fetched is worse than staying invisible, so the renderer stops.
+        assertEquals(
+            DlnaReadvertisePlan.Action.STOP_ADVERTISING,
+            DlnaReadvertisePlan.decide(
+                previousAddress = "192.168.1.5",
+                currentAddress = null,
+                descriptionServerListening = false
+            )
+        )
+        assertEquals(
+            DlnaReadvertisePlan.Action.STOP_ADVERTISING,
+            DlnaReadvertisePlan.decide(
+                previousAddress = "192.168.1.5",
+                currentAddress = "0.0.0.0",
+                descriptionServerListening = false
+            )
+        )
+    }
+
+    @Test
+    fun `a serving description server keeps the announcements`() {
+        assertEquals(
+            DlnaReadvertisePlan.Action.ANNOUNCE_ONLY,
+            DlnaReadvertisePlan.decide(
+                previousAddress = "192.168.1.5",
+                currentAddress = "192.168.1.5",
+                descriptionServerListening = true
+            )
+        )
+    }
+
+    @Test
+    fun `a running description server reports that it serves`() {
+        val server = startServer("192.168.1.5")
+        assertTrue("a started description server has to report that it serves", server.isListening)
+
+        server.stop()
+        assertFalse("a stopped description server must not report that it serves", server.isListening)
+    }
+
     /**
      * Starts a description server on the given address and remembers it for the
      * clean-up.
