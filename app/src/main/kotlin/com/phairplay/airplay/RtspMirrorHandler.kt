@@ -80,7 +80,8 @@ internal class RtspMirrorHandler(
      *    (with the pairing secret) to the receiver, reply with event/timing ports.
      *  - msg 2 carries `streams`[type 110] → start the mirror data server, reply with its port.
      */
-    internal fun handleMirrorSetup(request: RtspRequest): RtspResponse = try {
+internal fun handleMirrorSetup(request: RtspRequest): RtspResponse {
+    return try {
         val req = PlistCodec.decode(request.bodyBytes)
         Logger.i("mirror SETUP plist: " + req.entries.joinToString { (k, v) ->
             "$k=" + when (v) {
@@ -107,12 +108,27 @@ internal class RtspMirrorHandler(
 
         val streams = req["streams"] as? List<*>
         if (streams != null) {
+            // True when a stream the sender asked for could not be started. A stream that is
+            // ignored on purpose (audio switched off in the settings) does not count.
+            var streamStartFailed = false
             val resStreams = streams.mapNotNull { s ->
                 val stream = s as? Map<*, *> ?: return@mapNotNull null
                 when ((stream["type"] as? Long)?.toInt()) {
                     110 -> {
                         val scid = (stream["streamConnectionID"] as? Long) ?: 0L
-                        val dataPort = onMirrorStreamStart(scid)
+                        // WHY the failure is caught here: the same isolation as for the audio
+                        // stream — a stream that cannot be started is left out of the answer
+                        // instead of failing the whole SETUP and the session with it.
+                        val dataPort = runCatching { onMirrorStreamStart(scid) }
+                            .getOrElse { e ->
+                                Logger.e("mirror video stream could not be started", e)
+                                0
+                            }
+                        if (dataPort <= 0) {
+                            Logger.w("mirror stream type=110 is not available — it is left out of the answer")
+                            streamStartFailed = true
+                            return@mapNotNull null
+                        }
                         activeStreamTypes.add(110)
                         Logger.i("mirror stream type=110 streamConnectionID=$scid dataPort=$dataPort")
                         mapOf("type" to 110L, "dataPort" to dataPort.toLong())
@@ -130,7 +146,20 @@ internal class RtspMirrorHandler(
                         val ch = (stream["channels"] as? Long)?.toInt() ?: 2
                         val ct = (stream["ct"] as? Long)?.toInt() ?: 8   // 8 = AAC-ELD (mirror), 4 = AAC-LC, 2 = ALAC
                         val spf = (stream["spf"] as? Long)?.toInt() ?: 352   // ALAC frameLength (samples/frame)
-                        val (dataPort, controlPort) = onMirrorAudioStart(sr, ch, ct, spf)
+                        // WHY the failure is caught here: a sender that adds the audio stream to a
+                        // running mirror must not lose the picture when the audio cannot be
+                        // started. The failure used to escape this handler, the whole SETUP was
+                        // answered with "400 Bad Request" — and the sender tore the session down.
+                        val (dataPort, controlPort) = runCatching { onMirrorAudioStart(sr, ch, ct, spf) }
+                            .getOrElse { e ->
+                                Logger.e("mirror audio stream could not be started — the mirror keeps running without audio", e)
+                                0 to 0
+                            }
+                        if (dataPort <= 0 || controlPort <= 0) {
+                            Logger.w("mirror audio stream type=96 is not available — the video mirror continues without audio")
+                            streamStartFailed = true
+                            return@mapNotNull null
+                        }
                         activeStreamTypes.add(96)
                         Logger.i("audio stream type=96 (ct=$ct ${sr}Hz x$ch spf=$spf) dataPort=$dataPort controlPort=$controlPort")
                         mapOf("type" to 96L, "dataPort" to dataPort.toLong(), "controlPort" to controlPort.toLong())
@@ -160,6 +189,14 @@ internal class RtspMirrorHandler(
                 }
             }
             response["streams"] = resStreams
+            // WHY the 400 only here: the sender asked for streams and not one of them could be
+            // started. An empty answer would leave the sender waiting for a stream that never
+            // comes. A stream that is ignored on purpose (audio off in the settings) keeps the
+            // 200 answer — the sender then simply runs without that stream.
+            if (streamStartFailed && resStreams.isEmpty()) {
+                Logger.e("mirror SETUP failed — none of the requested streams could be started")
+                return RtspResponse(400, "Bad Request", protocol = request.responseProtocol())
+            }
         }
 
         RtspResponse(
@@ -171,5 +208,6 @@ internal class RtspMirrorHandler(
     } catch (e: Exception) {
         Logger.e("mirror SETUP failed", e)
         RtspResponse(400, "Bad Request", protocol = request.responseProtocol())
+    }
     }
 }

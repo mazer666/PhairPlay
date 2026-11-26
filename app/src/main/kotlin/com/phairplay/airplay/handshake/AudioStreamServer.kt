@@ -18,6 +18,9 @@ import java.util.concurrent.ArrayBlockingQueue
  * 16-byte blocks; the trailing partial block is cleartext — the RAOP scheme), decode AAC-ELD via
  * MediaCodec, and play the PCM through AudioTrack.
  *
+ * WHY the sockets come in pairs: the audio arrives over IPv4 from an iPhone and over the IPv6
+ * link-local address from a Mac. Both families are bound to the same port — see [AudioUdpSocket].
+ *
  * Architecture — the receiver and the player run on SEPARATE threads, decoupled by a bounded
  * queue (same pattern as [MirrorStreamServer] for video):
  *
@@ -45,10 +48,20 @@ class AudioStreamServer(
     framesPerPacket: Int = DEFAULT_ALAC_FRAMES,   // SETUP spf — ALAC frameLength (352)
 ) {
 
-    // Bind to the IPv6 wildcard (dual-stack) — macOS sends the audio RTP over the session's
-    // IPv6 link-local address; a default DatagramSocket binds IPv4-only and never receives it.
-    private val socket = ipv6Socket()
-    private val controlSocket = ipv6Socket()   // realtime-audio control channel (drained)
+    // The audio RTP and the realtime-audio control channel. Both listen on the IPv4 **and** the
+    // IPv6 wildcard, on the same port — see [AudioUdpSocket] for why a single family is not
+    // enough: an iPhone sends its audio over IPv4, a Mac can send it over the IPv6 link-local
+    // address, and the socket that only listened on one of them stayed empty.
+    private val socket = AudioUdpSocket()
+    private val controlSocket = AudioUdpSocket()   // realtime-audio control channel (drained)
+
+    /**
+     * The control socket the sender's last packet arrived on.
+     *
+     * WHY: the resend request has to leave through the same address family the sender used,
+     * otherwise the answer arrives on a socket the sender is not reading.
+     */
+    @Volatile private var activeControlSocket: java.net.DatagramSocket? = null
 
     @Volatile private var running = false
 
@@ -64,7 +77,8 @@ class AudioStreamServer(
      */
     private inner class SocketControlChannel : RaopControlChannel {
         override fun send(payload: ByteArray, address: SocketAddress) {
-            runCatching { controlSocket.send(DatagramPacket(payload, payload.size, address)) }
+            val sender = activeControlSocket ?: controlSocket.sockets.firstOrNull() ?: return
+            runCatching { sender.send(DatagramPacket(payload, payload.size, address)) }
         }
     }
 
@@ -85,17 +99,22 @@ class AudioStreamServer(
     )
 
     /** UDP port macOS sends the audio RTP stream to (returned in the SETUP response). */
-    val dataPort: Int get() = socket.localPort
+    val dataPort: Int get() = socket.port
 
     /** UDP control port (returned in the SETUP response; macOS won't send audio without it). */
-    val controlPort: Int get() = controlSocket.localPort
+    val controlPort: Int get() = controlSocket.port
 
     fun start(scope: CoroutineScope) {
         running = true
         StreamStats.audioActive = true
         scope.launch(Dispatchers.IO) { playback.runPlayback() }   // decode + play (may block on AudioTrack)
-        scope.launch(Dispatchers.IO) { runReceive() }    // drain socket fast (never blocks on audio)
-        scope.launch(Dispatchers.IO) { runControl() }    // capture sender addr + handle resend replies
+        // One receive loop per socket: a blocked receive on one family would starve the other.
+        socket.sockets.forEach { family ->
+            scope.launch(Dispatchers.IO) { runReceive(family) }    // drain socket fast (never blocks on audio)
+        }
+        controlSocket.sockets.forEach { family ->
+            scope.launch(Dispatchers.IO) { runControl(family) }    // capture sender addr + handle resend replies
+        }
     }
 
     /**
@@ -104,14 +123,15 @@ class AudioStreamServer(
      * control address from whatever arrives (resend requests go back to it) and splice any resent
      * audio packet back into the reorder buffer.
      */
-    private fun runControl() {
+    private fun runControl(family: java.net.DatagramSocket) {
         val buf = ByteArray(2048)
         val pkt = DatagramPacket(buf, buf.size)
         var ctrlCount = 0
         try {
             while (running) {
                 pkt.length = buf.size     // reset capacity before each receive (see runReceive)
-                controlSocket.receive(pkt)
+                family.receive(pkt)
+                activeControlSocket = family
                 reorderBuffer.senderCtrlAddr = pkt.socketAddress   // where to send resend requests
                 if (ctrlCount < 6) {
                     Logger.i("Audio CTRL[$ctrlCount] ${pkt.length}B: ${hex(pkt.data, minOf(20, pkt.length))}")
@@ -132,8 +152,8 @@ class AudioStreamServer(
     fun stop() {
         running = false
         StreamStats.audioActive = false
-        runCatching { socket.close() }
-        runCatching { controlSocket.close() }
+        socket.close()
+        controlSocket.close()
         frameQueue.clear()
         reorderBuffer.clear()
         // NOTE: codec + audioTrack are deliberately NOT released here. They are owned and released
@@ -145,7 +165,7 @@ class AudioStreamServer(
     }
 
     /** Receive thread: pull RTP packets off the data socket and feed them to the reorder buffer. */
-    private fun runReceive() {
+    private fun runReceive(family: java.net.DatagramSocket) {
         try {
             Logger.i("AudioStreamServer listening on UDP $dataPort (ct=$codecType ${sampleRate}Hz x$channels)")
             val buf = ByteArray(2048)
@@ -154,7 +174,7 @@ class AudioStreamServer(
             var recv = 0
             while (running) {
                 packet.length = buf.size      // reset capacity — receive() shrinks length to the last datagram
-                socket.receive(packet)
+                family.receive(packet)
                 recv++
                 if (rtpCount < 6) {
                     Logger.i("Audio RTP[$rtpCount] ${packet.length}B hdr: ${hex(packet.data, minOf(20, packet.length))}")
@@ -198,12 +218,6 @@ class AudioStreamServer(
 
         private fun hex(b: ByteArray, len: Int): String =
             (0 until minOf(len, b.size)).joinToString(" ") { "%02x".format(b[it]) }
-
-        /** A UDP socket bound to the IPv6 wildcard (dual-stack), OS-assigned port. */
-        private fun ipv6Socket(): DatagramSocket = DatagramSocket(null).apply {
-            reuseAddress = true
-            bind(java.net.InetSocketAddress(java.net.InetAddress.getByName("::"), 0))
-        }
 
         @Suppress("unused")
         private val AUDIO_MANAGER_HINT = AudioManager.STREAM_MUSIC
