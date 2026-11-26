@@ -148,15 +148,79 @@ class MdnsServiceTest {
     @Test
     fun `restart unregisters then re-registers services`() {
         val service = MdnsService(mockContext)
+        confirmUnregistrations()
+        countRegistrations()
         service.start()
         service.restart()
 
-        // After restart: stop (2 unregisters) + start (2 registers) = 4 register calls total
-        // But first start = 2, restart start = 2 more
-        verify(atLeast = 4) {
-            mockNsdManager.registerService(any(), NsdManager.PROTOCOL_DNS_SD, any())
+        // The restart runs asynchronously: first start = 2 registrations, restart = 2 more.
+        waitUntil("restart re-registers both services") {
+            registerCalls() >= 4
+        }
+        verify(exactly = 2) { mockNsdManager.unregisterService(any()) }
+    }
+
+    /**
+     * Test: a burst of restart requests is merged into one re-registration.
+     *
+     * WHY: iOS closes several connections at the end of a mirroring session, and each used
+     * to restart the advertisement. The overlapping restarts leaked a registration and the
+     * AirPlay picker showed the receiver twice, one entry stale.
+     */
+    @Test
+    fun `burst of restarts re-registers only once`() {
+        val service = MdnsService(mockContext)
+        confirmUnregistrations()
+        countRegistrations()
+        service.start()
+        repeat(3) { service.restart() }
+
+        waitUntil("the coalesced restart registers again") { registerCalls() >= 4 }
+        Thread.sleep(1_000)
+        assertEquals("only one restart round may register", 4, registerCalls())
+    }
+
+    /**
+     * Test: a restart registers again only after the platform confirmed the unregistration.
+     *
+     * WHY: registering the same name while the old registration is still being released
+     * made the platform rename the new one to "Name (2)".
+     */
+    @Test
+    fun `restart waits for the unregistration to be confirmed`() {
+        val held = mutableListOf<NsdManager.RegistrationListener>()
+        every { mockNsdManager.unregisterService(any()) } answers {
+            held.add(firstArg())
+        }
+        countRegistrations()
+        val service = MdnsService(mockContext)
+        service.start()
+        service.restart()
+
+        Thread.sleep(1_200)
+        assertEquals("no re-registration before the platform confirmed", 2, registerCalls())
+
+        held.forEach { it.onServiceUnregistered(mockServiceInfo()) }
+        waitUntil("re-registration after confirmation") { registerCalls() >= 4 }
+    }
+
+    /** Makes the mocked platform confirm every unregistration at once. */
+    private fun confirmUnregistrations() {
+        every { mockNsdManager.unregisterService(any()) } answers {
+            firstArg<NsdManager.RegistrationListener>().onServiceUnregistered(mockServiceInfo())
         }
     }
+
+    private val registrations = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** Counts registrations in [registrations]; call before the service under test starts. */
+    private fun countRegistrations() {
+        every { mockNsdManager.registerService(any(), NsdManager.PROTOCOL_DNS_SD, any()) } answers {
+            registrations.incrementAndGet()
+        }
+    }
+
+    private fun registerCalls(): Int = registrations.get()
 
     /**
      * Test: restart() does NOT publish the DISABLED state.

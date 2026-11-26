@@ -14,6 +14,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * MdnsService — Advertises PhairPlay as an AirPlay 2 receiver on the local network.
@@ -180,6 +181,8 @@ class MdnsService(
         // Abandon any pending retry so it cannot resurrect the advertisement.
         retryJob?.cancel()
         retryJob = null
+        restartJob?.cancel()
+        restartJob = null
         registrar.unregisterAll()
         releaseMulticastLock()
         tracker.reset()
@@ -203,20 +206,63 @@ class MdnsService(
      * @param displayNameOverride Updated display name, if changed in Settings.
      */
     fun restart(displayNameOverride: String? = null) {
-        Logger.d("Restarting mDNS advertising")
-        retryJob?.cancel()
-        retryJob = null
-        registrar.unregisterAll()
-        tracker.reset()
+        pendingRestartName = displayNameOverride
         isStarted = true
-        ensureScope()
         // Keep the multicast lock across a restart — dropping it would briefly make the
         // receiver invisible to mDNS queries on a network that filters idle multicast.
         acquireMulticastLock()
-
-        val effectiveName = resolveDisplayName(displayNameOverride)
-        registrar.registerAll(effectiveName)
+        synchronized(this) {
+            ensureScope()
+            // WHY requests are coalesced: one session end or one network change can ask for
+            // several restarts within milliseconds (iOS closes several connections at the end
+            // of a mirroring session). Running them all overlapped leaked a registration and
+            // left two "MiTV (AirPlay)" entries in the picker, one of them stale.
+            if (restartJob?.isActive == true) {
+                Logger.d("mDNS restart already pending — request coalesced")
+                return
+            }
+            Logger.d("Restarting mDNS advertising")
+            restartJob = scope.launch {
+                delay(RESTART_COALESCE_MS)
+                performRestart()
+            }
+        }
     }
+
+    /**
+     * Re-advertises only when the advertisement is not complete.
+     *
+     * WHY: the registration survives a streaming session, so re-registering after every
+     * session only churns the platform's mDNS daemon at the very moment a sender looks for
+     * the receiver again.
+     */
+    fun ensureAdvertising(displayNameOverride: String? = null) {
+        if (isStarted && tracker.allRegistered()) {
+            Logger.d("mDNS advertisement intact — no re-registration needed")
+            return
+        }
+        restart(displayNameOverride)
+    }
+
+    private suspend fun performRestart() {
+        retryJob?.cancel()
+        retryJob = null
+        registrar.unregisterAll()
+        // Wait for the platform to drop the old registrations, so the new ones keep their
+        // name instead of colliding with the outgoing ones and being renamed to "(2)".
+        withTimeoutOrNull(UNREGISTER_TIMEOUT_MS) {
+            while (registrar.hasPendingUnregistrations()) delay(UNREGISTER_POLL_MS)
+        } ?: Logger.w("mDNS unregistration not confirmed in time — registering anyway")
+        if (!isStarted) return
+        tracker.reset()
+        registrar.registerAll(resolveDisplayName(pendingRestartName))
+    }
+
+    @Volatile
+    private var restartJob: Job? = null
+
+    @Volatile
+    private var pendingRestartName: String? = null
 
     private fun ensureScope() {
         if (!scope.isActive) {
@@ -339,5 +385,14 @@ class MdnsService(
          * would just be rejected again.
          */
         private const val ALREADY_ACTIVE_RETRY_DELAY_MS = 2_000L
+
+        /** Window in which restart requests are merged into one. */
+        private const val RESTART_COALESCE_MS = 500L
+
+        /** Longest wait for the platform to confirm an unregistration before a restart. */
+        private const val UNREGISTER_TIMEOUT_MS = 3_000L
+
+        /** Poll interval while waiting for unregistration callbacks. */
+        private const val UNREGISTER_POLL_MS = 50L
     }
 }
