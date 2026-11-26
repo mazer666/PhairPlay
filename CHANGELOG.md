@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The DLNA renderer could be advertised without being able to serve its
+  description** (issue #23, second report, on a Google TV with Android 14). The SSDP
+  answer named a `description.xml` on a port that nothing was listening on — a control
+  point found the renderer and then waited for a description that never arrived. The
+  renderer now checks that its description server really serves before it announces
+  anything, rebuilds the server when it stopped, and stops advertising — and shows the
+  error in the app — when it cannot serve.
+
 - **The screen mirroring had no sound on an iPhone, and switching the sound on stopped
   the picture** (issue #25, reported with an iPhone as the sender).
   - **The audio socket only listened on the IPv6 wildcard.** The sender delivers the

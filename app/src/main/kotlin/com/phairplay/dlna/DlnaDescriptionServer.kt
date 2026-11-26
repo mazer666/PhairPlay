@@ -60,6 +60,17 @@ class DlnaDescriptionServer(
     val port: Int
         get() = serverSocket?.localPort ?: 0
 
+    /**
+     * True while the server accepts connections on [port].
+     *
+     * WHY: the renderer advertises the URL of this server to every control point. A URL that
+     * cannot be fetched is worse than no advertisement at all — the control point finds the
+     * renderer, waits for a description that never arrives and shows an empty entry. The
+     * receiver therefore checks this before it announces anything.
+     */
+    val isListening: Boolean
+        get() = running && serverSocket?.let { !it.isClosed && it.isBound } == true
+
     /** The URL a control point has to fetch to learn about this renderer. */
     val descriptionUrl: String
         get() = "http://$localHost:$port/description.xml"
